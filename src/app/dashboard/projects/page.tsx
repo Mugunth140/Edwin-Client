@@ -1,9 +1,11 @@
+'use client';
+
 import { Card, Typography, Tag, Empty } from 'antd';
 import { ProjectOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
-export default async function ProjectsPage() {
+export default function ProjectsPage() {
   // When backend runs: const projects = await fetchProjects();
   return (
     <div>

@@ -1,9 +1,11 @@
+'use client';
+
 import { Card, Typography, Empty } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
-export default async function InvoicesPage() {
+export default function InvoicesPage() {
   return (
     <div>
       <Title level={3} style={{ color: '#e2e8f0', marginBottom: 24 }}>

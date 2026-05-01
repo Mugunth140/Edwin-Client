@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_URL || 'http://localhost:3001/api';
@@ -22,7 +22,7 @@ export async function createWorkOrder(data: Record<string, unknown>) {
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create work order');
-  revalidateTag('work-orders');
+  revalidatePath('/dashboard/work-orders');
   return res.json();
 }
 
@@ -34,6 +34,6 @@ export async function updateWorkOrderStatus(id: string, status: string) {
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error('Failed to update status');
-  revalidateTag('work-orders');
+  revalidatePath('/dashboard/work-orders');
   return res.json();
 }

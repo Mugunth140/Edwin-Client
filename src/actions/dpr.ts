@@ -1,18 +1,9 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_URL || 'http://localhost:3001/api';
-
-async function getAuthHeaders() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
 
 export async function uploadDpr(formData: FormData) {
   const cookieStore = await cookies();
@@ -26,6 +17,6 @@ export async function uploadDpr(formData: FormData) {
     body: formData,
   });
   if (!res.ok) throw new Error('Failed to upload DPR');
-  revalidateTag('dpr');
+  revalidatePath('/dashboard/dpr');
   return res.json();
 }

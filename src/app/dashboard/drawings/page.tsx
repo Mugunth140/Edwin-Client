@@ -1,9 +1,11 @@
+'use client';
+
 import { Card, Typography, Empty } from 'antd';
 import { FileImageOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
-export default async function DrawingsPage() {
+export default function DrawingsPage() {
   return (
     <div>
       <Title level={3} style={{ color: '#e2e8f0', marginBottom: 24 }}>

@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_URL || 'http://localhost:3001/api';
@@ -20,7 +20,7 @@ export async function createInvoice(data: Record<string, unknown>) {
     method: 'POST', headers, body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create invoice');
-  revalidateTag('invoices');
+  revalidatePath('/dashboard/accounts/invoices');
   return res.json();
 }
 
@@ -30,6 +30,6 @@ export async function updateInvoiceStatus(id: string, status: string) {
     method: 'PATCH', headers, body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error('Failed to update invoice');
-  revalidateTag('invoices');
+  revalidatePath('/dashboard/accounts/invoices');
   return res.json();
 }

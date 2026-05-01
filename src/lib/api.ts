@@ -8,21 +8,19 @@ const API_URL = process.env.API_URL || 'http://localhost:3001/api';
  */
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit & { tags?: string[] } = {},
+  options: RequestInit = {},
 ): Promise<T> {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
-  const { tags, ...fetchOptions } = options;
-
   const res = await fetch(`${API_URL}${path}`, {
-    ...fetchOptions,
+    ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...fetchOptions.headers,
+      ...options.headers,
     },
-    ...(tags ? { next: { tags } } : {}),
+    cache: 'no-store',
   });
 
   if (!res.ok) {
@@ -34,15 +32,15 @@ export async function apiFetch<T>(
 }
 
 // Convenience helpers
-export const fetchDashboard = () => apiFetch('/dashboard/master', { tags: ['dashboard'] });
-export const fetchProjects = () => apiFetch('/projects', { tags: ['projects'] });
-export const fetchProjectDashboard = (id: string) => apiFetch(`/projects/${id}/dashboard`, { tags: ['project-dashboard'] });
-export const fetchWorkOrders = (params?: string) => apiFetch(`/work-orders${params ? `?${params}` : ''}`, { tags: ['work-orders'] });
-export const fetchVendors = () => apiFetch('/vendors', { tags: ['vendors'] });
-export const fetchCustomers = () => apiFetch('/customers', { tags: ['customers'] });
-export const fetchInvoices = () => apiFetch('/invoices', { tags: ['invoices'] });
-export const fetchBills = () => apiFetch('/bills', { tags: ['bills'] });
-export const fetchExpenses = (params?: string) => apiFetch(`/expenses${params ? `?${params}` : ''}`, { tags: ['expenses'] });
-export const fetchPayments = (params?: string) => apiFetch(`/payments${params ? `?${params}` : ''}`, { tags: ['payments'] });
-export const fetchDpr = (params?: string) => apiFetch(`/dpr${params ? `?${params}` : ''}`, { tags: ['dpr'] });
-export const fetchDrawings = (params?: string) => apiFetch(`/drawings${params ? `?${params}` : ''}`, { tags: ['drawings'] });
+export const fetchDashboard = () => apiFetch('/dashboard/master');
+export const fetchProjects = () => apiFetch('/projects');
+export const fetchProjectDashboard = (id: string) => apiFetch(`/projects/${id}/dashboard`);
+export const fetchWorkOrders = (params?: string) => apiFetch(`/work-orders${params ? `?${params}` : ''}`);
+export const fetchVendors = () => apiFetch('/vendors');
+export const fetchCustomers = () => apiFetch('/customers');
+export const fetchInvoices = () => apiFetch('/invoices');
+export const fetchBills = () => apiFetch('/bills');
+export const fetchExpenses = (params?: string) => apiFetch(`/expenses${params ? `?${params}` : ''}`);
+export const fetchPayments = (params?: string) => apiFetch(`/payments${params ? `?${params}` : ''}`);
+export const fetchDpr = (params?: string) => apiFetch(`/dpr${params ? `?${params}` : ''}`);
+export const fetchDrawings = (params?: string) => apiFetch(`/drawings${params ? `?${params}` : ''}`);

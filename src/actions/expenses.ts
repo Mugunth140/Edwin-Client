@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_URL || 'http://localhost:3001/api';
@@ -20,6 +20,6 @@ export async function createExpense(data: Record<string, unknown>) {
     method: 'POST', headers, body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create expense');
-  revalidateTag('expenses');
+  revalidatePath('/dashboard/expenses');
   return res.json();
 }

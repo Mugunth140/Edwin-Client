@@ -1,9 +1,11 @@
+'use client';
+
 import { Card, Typography, Empty } from 'antd';
 import { BankOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
-export default async function AccountsPage() {
+export default function AccountsPage() {
   return (
     <div>
       <Title level={3} style={{ color: '#e2e8f0', marginBottom: 24 }}>
