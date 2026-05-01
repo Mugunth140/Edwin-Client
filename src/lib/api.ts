@@ -1,4 +1,15 @@
 import { cookies } from 'next/headers';
+import type {
+  Customer,
+  DashboardData,
+  Expense,
+  ExpenseSummary,
+  PagedResponse,
+  Project,
+  SalesInvoice,
+  Vendor,
+  WorkOrder,
+} from '@/types/erp';
 
 const API_URL = process.env.API_URL || 'http://localhost:3001/api';
 
@@ -32,15 +43,16 @@ export async function apiFetch<T>(
 }
 
 // Convenience helpers
-export const fetchDashboard = () => apiFetch('/dashboard/master');
-export const fetchProjects = () => apiFetch('/projects');
+export const fetchDashboard = () => apiFetch<DashboardData>('/dashboard/master');
+export const fetchProjects = () => apiFetch<Project[]>('/projects');
 export const fetchProjectDashboard = (id: string) => apiFetch(`/projects/${id}/dashboard`);
-export const fetchWorkOrders = (params?: string) => apiFetch(`/work-orders${params ? `?${params}` : ''}`);
-export const fetchVendors = () => apiFetch('/vendors');
-export const fetchCustomers = () => apiFetch('/customers');
-export const fetchInvoices = () => apiFetch('/invoices');
+export const fetchWorkOrders = (params?: string) => apiFetch<PagedResponse<WorkOrder>>(`/work-orders${params ? `?${params}` : ''}`);
+export const fetchVendors = () => apiFetch<Vendor[]>('/vendors');
+export const fetchCustomers = () => apiFetch<Customer[]>('/customers');
+export const fetchInvoices = () => apiFetch<SalesInvoice[]>('/invoices');
 export const fetchBills = () => apiFetch('/bills');
-export const fetchExpenses = (params?: string) => apiFetch(`/expenses${params ? `?${params}` : ''}`);
+export const fetchExpenses = (params?: string) => apiFetch<PagedResponse<Expense>>(`/expenses${params ? `?${params}` : ''}`);
+export const fetchExpenseSummary = () => apiFetch<ExpenseSummary[]>('/expenses/summary');
 export const fetchPayments = (params?: string) => apiFetch(`/payments${params ? `?${params}` : ''}`);
 export const fetchDpr = (params?: string) => apiFetch(`/dpr${params ? `?${params}` : ''}`);
 export const fetchDrawings = (params?: string) => apiFetch(`/drawings${params ? `?${params}` : ''}`);

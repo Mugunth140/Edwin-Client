@@ -1,25 +1,40 @@
-'use client';
+import { Alert } from 'antd';
+import { InvoicesClient } from '@/components/dashboard/InvoicesClient';
+import { fetchCustomers, fetchInvoices, fetchProjects } from '@/lib/api';
+import type { Customer, Project, SalesInvoice } from '@/types/erp';
 
-import { Card, Typography, Empty } from 'antd';
-import { FileTextOutlined } from '@ant-design/icons';
+type InvoicesPageData = {
+  invoices: SalesInvoice[];
+  customers: Customer[];
+  projects: Project[];
+  error?: string;
+};
 
-const { Title, Text } = Typography;
+async function loadPageData(): Promise<InvoicesPageData> {
+  try {
+    const [invoices, customers, projects] = await Promise.all([
+      fetchInvoices(),
+      fetchCustomers(),
+      fetchProjects(),
+    ]);
+    return { invoices, customers, projects };
+  } catch (error) {
+    return {
+      invoices: [],
+      customers: [],
+      projects: [],
+      error: error instanceof Error ? error.message : 'Unable to load invoices',
+    };
+  }
+}
 
-export default function InvoicesPage() {
+export default async function InvoicesPage() {
+  const { invoices, customers, projects, error } = await loadPageData();
+
   return (
-    <div>
-      <Title level={3} style={{ color: '#e2e8f0', marginBottom: 24 }}>
-        <FileTextOutlined style={{ marginRight: 8 }} /> Sales Invoices
-      </Title>
-      <Card
-        style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: 12,
-        }}
-      >
-        <Empty description={<Text style={{ color: '#64748b' }}>Connect to backend to manage invoices</Text>} />
-      </Card>
-    </div>
+    <>
+      {error && <Alert type="warning" showIcon message={error} style={{ marginBottom: 16 }} />}
+      <InvoicesClient invoices={invoices} customers={customers} projects={projects} />
+    </>
   );
 }

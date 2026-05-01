@@ -1,25 +1,37 @@
-'use client';
+import { Alert } from 'antd';
+import { ExpensesClient } from '@/components/dashboard/ExpensesClient';
+import { fetchExpenses, fetchProjects } from '@/lib/api';
+import type { Expense, Project } from '@/types/erp';
 
-import { Card, Typography, Empty } from 'antd';
-import { DollarOutlined } from '@ant-design/icons';
+type ExpensesPageData = {
+  expenses: Expense[];
+  projects: Project[];
+  error?: string;
+};
 
-const { Title, Text } = Typography;
+async function loadPageData(): Promise<ExpensesPageData> {
+  try {
+    const [expenses, projects] = await Promise.all([
+      fetchExpenses('limit=100'),
+      fetchProjects(),
+    ]);
+    return { expenses: expenses.data, projects };
+  } catch (error) {
+    return {
+      expenses: [],
+      projects: [],
+      error: error instanceof Error ? error.message : 'Unable to load expenses',
+    };
+  }
+}
 
-export default function ExpensesPage() {
+export default async function ExpensesPage() {
+  const { expenses, projects, error } = await loadPageData();
+
   return (
-    <div>
-      <Title level={3} style={{ color: '#e2e8f0', marginBottom: 24 }}>
-        <DollarOutlined style={{ marginRight: 8 }} /> Expenses
-      </Title>
-      <Card
-        style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: 12,
-        }}
-      >
-        <Empty description={<Text style={{ color: '#64748b' }}>Connect to backend to manage expenses</Text>} />
-      </Card>
-    </div>
+    <>
+      {error && <Alert type="warning" showIcon message={error} style={{ marginBottom: 16 }} />}
+      <ExpensesClient expenses={expenses} projects={projects} />
+    </>
   );
 }

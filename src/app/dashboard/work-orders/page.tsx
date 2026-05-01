@@ -1,25 +1,40 @@
-'use client';
+import { Alert } from 'antd';
+import { WorkOrdersClient } from '@/components/dashboard/WorkOrdersClient';
+import { fetchProjects, fetchVendors, fetchWorkOrders } from '@/lib/api';
+import type { Project, Vendor, WorkOrder } from '@/types/erp';
 
-import { Card, Typography, Empty } from 'antd';
-import { ShoppingCartOutlined } from '@ant-design/icons';
+type WorkOrdersPageData = {
+  workOrders: WorkOrder[];
+  projects: Project[];
+  vendors: Vendor[];
+  error?: string;
+};
 
-const { Title, Text } = Typography;
+async function loadPageData(): Promise<WorkOrdersPageData> {
+  try {
+    const [workOrders, projects, vendors] = await Promise.all([
+      fetchWorkOrders('limit=100'),
+      fetchProjects(),
+      fetchVendors(),
+    ]);
+    return { workOrders: workOrders.data, projects, vendors };
+  } catch (error) {
+    return {
+      workOrders: [],
+      projects: [],
+      vendors: [],
+      error: error instanceof Error ? error.message : 'Unable to load work orders',
+    };
+  }
+}
 
-export default function WorkOrdersPage() {
+export default async function WorkOrdersPage() {
+  const { workOrders, projects, vendors, error } = await loadPageData();
+
   return (
-    <div>
-      <Title level={3} style={{ color: '#e2e8f0', marginBottom: 24 }}>
-        <ShoppingCartOutlined style={{ marginRight: 8 }} /> Work Orders
-      </Title>
-      <Card
-        style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: 12,
-        }}
-      >
-        <Empty description={<Text style={{ color: '#64748b' }}>Connect to backend to manage work orders</Text>} />
-      </Card>
-    </div>
+    <>
+      {error && <Alert type="warning" showIcon message={error} style={{ marginBottom: 16 }} />}
+      <WorkOrdersClient workOrders={workOrders} projects={projects} vendors={vendors} />
+    </>
   );
 }

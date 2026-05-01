@@ -1,28 +1,26 @@
-'use client';
+import { Alert } from 'antd';
+import { ProjectsClient } from '@/components/dashboard/ProjectsClient';
+import { fetchProjects } from '@/lib/api';
+import type { Project } from '@/types/erp';
 
-import { Card, Typography, Tag, Empty } from 'antd';
-import { ProjectOutlined } from '@ant-design/icons';
+async function loadProjects(): Promise<{ projects: Project[]; error?: string }> {
+  try {
+    return { projects: await fetchProjects() };
+  } catch (error) {
+    return {
+      projects: [],
+      error: error instanceof Error ? error.message : 'Unable to load projects',
+    };
+  }
+}
 
-const { Title, Text } = Typography;
+export default async function ProjectsPage() {
+  const { projects, error } = await loadProjects();
 
-export default function ProjectsPage() {
-  // When backend runs: const projects = await fetchProjects();
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={3} style={{ color: '#e2e8f0', margin: 0 }}>
-          <ProjectOutlined style={{ marginRight: 8 }} /> Projects
-        </Title>
-      </div>
-      <Card
-        style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: 12,
-        }}
-      >
-        <Empty description={<Text style={{ color: '#64748b' }}>Connect to backend to view projects</Text>} />
-      </Card>
-    </div>
+    <>
+      {error && <Alert type="warning" showIcon message={error} style={{ marginBottom: 16 }} />}
+      <ProjectsClient projects={projects} />
+    </>
   );
 }
