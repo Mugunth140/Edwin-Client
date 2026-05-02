@@ -31,13 +31,13 @@ type DashboardClientProps = {
 const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7'];
 const chartHeight = 280;
 
-const statisticClassNames = { content: '!text-slate-200 !font-bold' };
+const statisticClassNames = { content: 'text-slate-200! font-bold!' };
 
 const kpiCardClassNames = {
-  blue: '!rounded-xl !border !border-blue-500/20 !bg-gradient-to-br !from-blue-500/15 !to-blue-500/5',
-  green: '!rounded-xl !border !border-emerald-500/20 !bg-gradient-to-br !from-emerald-500/15 !to-emerald-500/5',
-  amber: '!rounded-xl !border !border-amber-500/20 !bg-gradient-to-br !from-amber-500/15 !to-amber-500/5',
-  violet: '!rounded-xl !border !border-violet-500/20 !bg-gradient-to-br !from-violet-500/15 !to-violet-500/5',
+  blue: 'rounded-xl! border! border-blue-500/20! bg-linear-to-br! from-blue-500/15! to-blue-500/5!',
+  green: 'rounded-xl! border! border-emerald-500/20! bg-linear-to-br! from-emerald-500/15! to-emerald-500/5!',
+  amber: 'rounded-xl! border! border-amber-500/20! bg-linear-to-br! from-amber-500/15! to-amber-500/5!',
+  violet: 'rounded-xl! border! border-violet-500/20! bg-linear-to-br! from-violet-500/15! to-violet-500/5!',
 };
 
 function ChartFrame({ children }: { children: (width: number, height: number) => ReactNode }) {
@@ -57,7 +57,7 @@ function ChartFrame({ children }: { children: (width: number, height: number) =>
   }, []);
 
   return (
-    <div ref={frameRef} className="h-[280px] min-w-0 w-full">
+    <div ref={frameRef} className="h-70 min-w-0 w-full">
       {width > 0 ? children(width, chartHeight) : null}
     </div>
   );
@@ -100,7 +100,7 @@ export function DashboardClient({ data, expenseSummary }: DashboardClientProps) 
 
   return (
     <div>
-      <Typography.Title level={3} className="!mb-6 !text-slate-200">
+      <Typography.Title level={3} className="mb-6! text-slate-200!">
         Master Dashboard
       </Typography.Title>
 

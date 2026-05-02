@@ -45,7 +45,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
         {fields.map((field, index) => (
           <div
             key={field.id}
-            className="rounded-[10px] border border-white/10 bg-white/[0.025] p-3"
+            className="rounded-[10px] border border-white/10 bg-white/2.5 p-3"
           >
             <Flex gap={8} align="flex-start" wrap="wrap">
               <Controller
@@ -70,7 +70,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                     label="Qty"
                     validateStatus={fieldState.error ? 'error' : undefined}
                     help={fieldState.error?.message}
-                    className="mb-2 w-[120px]"
+                    className="mb-2 w-30"
                   >
                     <InputNumber
                       min={0}
@@ -90,7 +90,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                     label="Unit"
                     validateStatus={fieldState.error ? 'error' : undefined}
                     help={fieldState.error?.message}
-                    className="mb-2 w-[110px]"
+                    className="mb-2 w-27.5"
                   >
                     <Input {...inputField} placeholder="nos" />
                   </Form.Item>
@@ -104,7 +104,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                     label="Rate"
                     validateStatus={fieldState.error ? 'error' : undefined}
                     help={fieldState.error?.message}
-                    className="mb-2 w-[150px]"
+                    className="mb-2 w-37.5"
                   >
                     <InputNumber
                       min={0}
@@ -124,7 +124,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                 aria-label="Remove item"
                 onClick={() => remove(index)}
                 disabled={fields.length === 1}
-                className="mt-[30px]"
+                className="mt-7.5"
               />
             </Flex>
           </div>
