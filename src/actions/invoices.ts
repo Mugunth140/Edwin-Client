@@ -2,8 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-
-const API_URL = process.env.API_URL || 'http://localhost:3001/api';
+import { getApiBaseUrl } from '@/lib/api-url';
 
 async function getAuthHeaders() {
   const cookieStore = await cookies();
@@ -16,7 +15,7 @@ async function getAuthHeaders() {
 
 export async function createInvoice(data: Record<string, unknown>) {
   const headers = await getAuthHeaders();
-  const res = await fetch(`${API_URL}/invoices`, {
+  const res = await fetch(`${getApiBaseUrl()}/invoices`, {
     method: 'POST', headers, body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create invoice');
@@ -26,7 +25,7 @@ export async function createInvoice(data: Record<string, unknown>) {
 
 export async function updateInvoiceStatus(id: string, status: string) {
   const headers = await getAuthHeaders();
-  const res = await fetch(`${API_URL}/invoices/${id}/status`, {
+  const res = await fetch(`${getApiBaseUrl()}/invoices/${id}/status`, {
     method: 'PATCH', headers, body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error('Failed to update invoice');

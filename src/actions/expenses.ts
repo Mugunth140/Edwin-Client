@@ -2,8 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-
-const API_URL = process.env.API_URL || 'http://localhost:3001/api';
+import { getApiBaseUrl } from '@/lib/api-url';
 
 async function getAuthHeaders() {
   const cookieStore = await cookies();
@@ -16,7 +15,7 @@ async function getAuthHeaders() {
 
 export async function createExpense(data: Record<string, unknown>) {
   const headers = await getAuthHeaders();
-  const res = await fetch(`${API_URL}/expenses`, {
+  const res = await fetch(`${getApiBaseUrl()}/expenses`, {
     method: 'POST', headers, body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create expense');

@@ -43,22 +43,17 @@ type ThemeMode = 'dark' | 'light';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') return 'dark';
+
+    const stored = localStorage.getItem('erp-theme');
+    if (stored === 'light' || stored === 'dark') return stored;
+
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  });
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
-
-  useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('erp-theme') : null;
-    if (stored === 'light' || stored === 'dark') {
-      setThemeMode(stored);
-      return;
-    }
-    const prefersLight = typeof window !== 'undefined'
-      ? window.matchMedia('(prefers-color-scheme: light)').matches
-      : false;
-    setThemeMode(prefersLight ? 'light' : 'dark');
-  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -111,14 +106,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ConfigProvider
       theme={themeConfig}
     >
-      <Layout className={`min-h-screen ${isDark ? 'bg-[#0b1120]' : 'bg-slate-100'}`}>
+      <Layout className={`min-h-screen overflow-x-hidden ${isDark ? 'bg-[#0b1120]' : 'bg-slate-100'}`}>
         <Sider
           trigger={null}
           collapsible
           collapsed={collapsed}
           collapsedWidth={88}
           width={260}
-          className={`fixed left-0 top-0 z-100 h-screen border-r transition-[width] duration-300 ease-in-out will-change-[width] ${
+          className={`sticky left-0 top-0 z-100 h-screen shrink-0 border-r transition-[width] duration-300 ease-in-out will-change-[width] ${
             isDark
               ? 'border-white/10 bg-linear-to-b! from-[#0d1321]! via-[#0b1120]! to-[#090c15]!'
               : 'border-slate-200 bg-linear-to-b! from-white! via-slate-50! to-slate-100!'
@@ -199,13 +194,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </Sider>
 
-        <Layout
-          className={`transition-[margin-left] duration-300 ease-in-out ${
-            collapsed ? 'ml-22' : 'ml-65'
-          }`}
-        >
+        <Layout className="min-w-0 flex-1">
           <Header
-            className={`sticky top-0 z-99 flex h-16 items-center justify-between border-b pl-4 pr-6 backdrop-blur-xl ${
+            className={`sticky top-0 z-99 flex h-16 items-center justify-between border-b pr-6 backdrop-blur-xl ${
               isDark
                 ? 'border-white/10 bg-slate-900/80!'
                 : 'border-slate-200 bg-white/80!'
@@ -214,7 +205,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               type="button"
               onClick={() => setCollapsed(!collapsed)}
-              className={`cursor-pointer border-0 bg-transparent p-0 text-lg ${
+              className={`cursor-pointer border-0 bg-transparent px-4 py-0 text-lg ${
                 isDark ? 'text-slate-400 hover:text-slate-100' : 'text-slate-500 hover:text-slate-900'
               }`}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -246,7 +237,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Header>
 
           <Content
-            className={`min-h-[calc(100vh-64px)] py-6 pl-4 pr-6 ${
+            className={`min-h-[calc(100vh-64px)] py-6 pl-6 pr-6 ${
               isDark
                 ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),rgba(2,6,23,0.95))]'
                 : 'bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.14),rgba(248,250,252,0.95))]'

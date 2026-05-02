@@ -2,14 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-
-const API_URL = process.env.API_URL || 'http://localhost:3001/api';
+import { getApiBaseUrl } from '@/lib/api-url';
 
 export async function uploadDpr(formData: FormData) {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
-  const res = await fetch(`${API_URL}/dpr`, {
+  const res = await fetch(`${getApiBaseUrl()}/dpr`, {
     method: 'POST',
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

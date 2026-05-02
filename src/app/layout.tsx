@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Space_Grotesk } from 'next/font/google';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
+import { QueryProvider } from '@/components/providers/QueryProvider';
 import './globals.css';
 
 const spaceGrotesk = Space_Grotesk({
@@ -20,7 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${spaceGrotesk.variable} bg-[#0b1120] text-slate-200 antialiased font-(--app-font)`}
       >
-        <AntdRegistry>{children}</AntdRegistry>
+        <AntdRegistry>
+          <QueryProvider>{children}</QueryProvider>
+        </AntdRegistry>
       </body>
     </html>
   );

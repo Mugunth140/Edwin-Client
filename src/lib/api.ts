@@ -10,8 +10,7 @@ import type {
   Vendor,
   WorkOrder,
 } from '@/types/erp';
-
-const API_URL = process.env.API_URL || 'http://localhost:3001/api';
+import { getApiBaseUrl } from './api-url';
 
 /**
  * Typed fetch wrapper for server-side API calls.
@@ -24,7 +23,7 @@ export async function apiFetch<T>(
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { getApiBaseUrl } from './api-url';
 
 export async function getToken(): Promise<string | undefined> {
   const cookieStore = await cookies();
@@ -10,8 +11,7 @@ export async function getUserFromToken(): Promise<{ id: string; email: string; r
   if (!token) return null;
 
   try {
-    const API_URL = process.env.API_URL || 'http://localhost:3001/api';
-    const res = await fetch(`${API_URL}/auth/me`, {
+    const res = await fetch(`${getApiBaseUrl()}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
     });
