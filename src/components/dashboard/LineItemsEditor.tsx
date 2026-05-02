@@ -31,7 +31,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
 
   return (
     <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 12 }}>
+      <Flex justify="space-between" align="center" className="mb-3">
         <Typography.Text strong>Line Items</Typography.Text>
         <Button
           icon={<PlusOutlined />}
@@ -41,16 +41,11 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
         </Button>
       </Flex>
 
-      <Space direction="vertical" style={{ width: '100%' }} size={12}>
+      <Space direction="vertical" className="w-full" size={12}>
         {fields.map((field, index) => (
           <div
             key={field.id}
-            style={{
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 10,
-              padding: 12,
-              background: 'rgba(255,255,255,0.025)',
-            }}
+            className="rounded-[10px] border border-white/10 bg-white/[0.025] p-3"
           >
             <Flex gap={8} align="flex-start" wrap="wrap">
               <Controller
@@ -61,7 +56,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                     label="Description"
                     validateStatus={fieldState.error ? 'error' : undefined}
                     help={fieldState.error?.message}
-                    style={{ flex: '1 1 240px', marginBottom: 8 }}
+                    className="mb-2 min-w-60 flex-1"
                   >
                     <Input {...inputField} placeholder="Civil works, material, labour..." />
                   </Form.Item>
@@ -75,12 +70,12 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                     label="Qty"
                     validateStatus={fieldState.error ? 'error' : undefined}
                     help={fieldState.error?.message}
-                    style={{ width: 120, marginBottom: 8 }}
+                    className="mb-2 w-[120px]"
                   >
                     <InputNumber
                       min={0}
                       precision={3}
-                      style={{ width: '100%' }}
+                      className="w-full"
                       value={inputField.value}
                       onChange={inputField.onChange}
                     />
@@ -95,7 +90,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                     label="Unit"
                     validateStatus={fieldState.error ? 'error' : undefined}
                     help={fieldState.error?.message}
-                    style={{ width: 110, marginBottom: 8 }}
+                    className="mb-2 w-[110px]"
                   >
                     <Input {...inputField} placeholder="nos" />
                   </Form.Item>
@@ -109,13 +104,13 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                     label="Rate"
                     validateStatus={fieldState.error ? 'error' : undefined}
                     help={fieldState.error?.message}
-                    style={{ width: 150, marginBottom: 8 }}
+                    className="mb-2 w-[150px]"
                   >
                     <InputNumber
                       min={0}
                       precision={2}
                       prefix="₹"
-                      style={{ width: '100%' }}
+                      className="w-full"
                       value={inputField.value}
                       onChange={inputField.onChange}
                     />
@@ -129,7 +124,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                 aria-label="Remove item"
                 onClick={() => remove(index)}
                 disabled={fields.length === 1}
-                style={{ marginTop: 30 }}
+                className="mt-[30px]"
               />
             </Flex>
           </div>

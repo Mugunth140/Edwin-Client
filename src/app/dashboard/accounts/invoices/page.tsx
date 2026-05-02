@@ -33,7 +33,7 @@ export default async function InvoicesPage() {
 
   return (
     <>
-      {error && <Alert type="warning" showIcon message={error} style={{ marginBottom: 16 }} />}
+      {error && <Alert type="warning" showIcon title={error} className="mb-4" />}
       <InvoicesClient invoices={invoices} customers={customers} projects={projects} />
     </>
   );

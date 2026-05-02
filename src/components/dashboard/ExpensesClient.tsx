@@ -9,7 +9,17 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { createExpense } from '@/actions/expenses';
 import type { Expense, ExpenseCategory, Project } from '@/types/erp';
-import { StatusTag, cardStyle, formatCurrency, formatDate, titleCase } from './ui';
+import {
+  StatusTag,
+  cardClassName,
+  formatCurrency,
+  formatDate,
+  pageHeaderClassName,
+  pageTitleClassName,
+  secondaryTextClassName,
+  titleCase,
+  titleIconClassName,
+} from './ui';
 
 const categories = ['staff', 'office', 'transport', 'travel'] as const satisfies readonly ExpenseCategory[];
 
@@ -67,7 +77,7 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
       render: (value: string, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" className={`${secondaryTextClassName} text-xs`}>
             {record.project?.name || 'General'}
           </Typography.Text>
         </Space>
@@ -108,16 +118,16 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
   return (
     <div>
       {contextHolder}
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }} gap={16} wrap="wrap">
-        <Typography.Title level={3} style={{ color: '#e2e8f0', margin: 0 }}>
-          <DollarOutlined style={{ marginRight: 8 }} /> Expenses
+      <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
+        <Typography.Title level={3} className={pageTitleClassName}>
+          <DollarOutlined className={titleIconClassName} /> Expenses
         </Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
           Add Expense
         </Button>
       </Flex>
 
-      <Card style={cardStyle}>
+      <Card className={cardClassName}>
         <Table
           dataSource={expenses}
           columns={columns}
@@ -130,7 +140,7 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
 
       <Drawer
         title="Add Expense"
-        width={560}
+        size="default"
         open={open}
         onClose={() => setOpen(false)}
         destroyOnHidden
@@ -186,7 +196,7 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
                   min={0}
                   precision={2}
                   prefix="₹"
-                  style={{ width: '100%' }}
+                  className="w-full"
                   value={field.value}
                   onChange={field.onChange}
                 />
@@ -203,7 +213,7 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
                 help={fieldState.error?.message}
               >
                 <DatePicker
-                  style={{ width: '100%' }}
+                  className="w-full"
                   onChange={(_, dateString) => field.onChange(Array.isArray(dateString) ? dateString[0] : dateString)}
                 />
               </Form.Item>

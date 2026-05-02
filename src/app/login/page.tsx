@@ -32,7 +32,7 @@ export default function LoginPage() {
       setUser(data.user);
       message.success('Login successful!');
       router.push('/dashboard');
-    } catch (error) {
+    } catch {
       message.error('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -41,48 +41,25 @@ export default function LoginPage() {
 
   return (
     <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0a1628 0%, #1a2744 50%, #0d1f3c 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#0a1628_0%,#1a2744_50%,#0d1f3c_100%)]"
     >
       {/* Ambient background circles */}
-      <div style={{
-        position: 'absolute', width: 400, height: 400, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
-        top: -100, right: -100,
-      }} />
-      <div style={{
-        position: 'absolute', width: 300, height: 300, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%)',
-        bottom: -50, left: -50,
-      }} />
+      <div className="absolute -right-[100px] -top-[100px] h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
+      <div className="absolute -bottom-[50px] -left-[50px] h-[300px] w-[300px] rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
 
       <Card
-        style={{
-          width: 420,
-          background: 'rgba(255, 255, 255, 0.03)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: 16,
-          boxShadow: '0 32px 64px rgba(0, 0, 0, 0.4)',
-        }}
-        styles={{ body: { padding: '40px 32px' } }}
+        className="w-[420px] !rounded-2xl !border !border-white/10 !bg-white/[0.03] shadow-[0_32px_64px_rgba(0,0,0,0.4)] backdrop-blur-2xl"
+        classNames={{ body: 'px-8 py-10' }}
       >
-        <Space direction="vertical" size="large" style={{ width: '100%', textAlign: 'center' }}>
+        <Space direction="vertical" size="large" className="w-full text-center">
           <div>
             <SafetyCertificateOutlined
-              style={{ fontSize: 48, color: '#3b82f6', marginBottom: 12 }}
+              className="mb-3 text-5xl text-blue-500"
             />
-            <Title level={3} style={{ color: '#e2e8f0', margin: 0, fontWeight: 700 }}>
+            <Title level={3} className="!m-0 !font-bold !text-slate-200">
               Edwin Constructions
             </Title>
-            <Text style={{ color: '#94a3b8', fontSize: 14 }}>ERP Management System</Text>
+            <Text className="text-sm !text-slate-400">ERP Management System</Text>
           </div>
 
           <Form
@@ -90,7 +67,7 @@ export default function LoginPage() {
             onFinish={onFinish}
             layout="vertical"
             size="large"
-            style={{ textAlign: 'left' }}
+            className="text-left"
           >
             <Form.Item
               name="email"
@@ -100,15 +77,9 @@ export default function LoginPage() {
               ]}
             >
               <Input
-                prefix={<UserOutlined style={{ color: '#64748b' }} />}
+                prefix={<UserOutlined className="text-slate-500" />}
                 placeholder="Email address"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: 10,
-                  color: '#e2e8f0',
-                  height: 48,
-                }}
+                className="h-12 !rounded-[10px] !border-white/10 !bg-white/5 !text-slate-200"
               />
             </Form.Item>
 
@@ -117,39 +88,26 @@ export default function LoginPage() {
               rules={[{ required: true, message: 'Please enter your password' }]}
             >
               <Input.Password
-                prefix={<LockOutlined style={{ color: '#64748b' }} />}
+                prefix={<LockOutlined className="text-slate-500" />}
                 placeholder="Password"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: 10,
-                  color: '#e2e8f0',
-                  height: 48,
-                }}
+                className="h-12 !rounded-[10px] !border-white/10 !bg-white/5 !text-slate-200"
               />
             </Form.Item>
 
-            <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
+            <Form.Item className="!mb-0 mt-2">
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={loading}
                 block
-                style={{
-                  height: 48,
-                  borderRadius: 10,
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                  border: 'none',
-                  fontWeight: 600,
-                  fontSize: 15,
-                }}
+                className="h-12 rounded-[10px] border-0 !bg-gradient-to-br !from-blue-500 !to-violet-500 text-[15px] font-semibold"
               >
                 Sign In
               </Button>
             </Form.Item>
           </Form>
 
-          <Text style={{ color: '#64748b', fontSize: 12 }}>
+          <Text className="text-xs !text-slate-500">
             Default: admin@edwinconstructions.com / admin123
           </Text>
         </Space>

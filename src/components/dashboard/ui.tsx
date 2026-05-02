@@ -19,11 +19,12 @@ const statusColors: Record<string, string> = {
   travel: 'gold',
 };
 
-export const cardStyle = {
-  background: 'rgba(255,255,255,0.02)',
-  border: '1px solid rgba(255,255,255,0.06)',
-  borderRadius: 12,
-};
+export const cardClassName = '!rounded-xl !border !border-white/10 !bg-white/[0.02]';
+export const pageHeaderClassName = 'mb-6 flex flex-wrap items-center justify-between gap-4';
+export const pageTitleClassName = '!m-0 !text-slate-200';
+export const titleIconClassName = 'mr-2';
+export const mutedTextClassName = '!text-slate-500';
+export const secondaryTextClassName = '!text-slate-400';
 
 export function formatCurrency(value: number | string | null | undefined) {
   return `₹${Number(value || 0).toLocaleString('en-IN', {

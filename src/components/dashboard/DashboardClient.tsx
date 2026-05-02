@@ -1,7 +1,8 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
-import { Card, Col, Progress, Row, Space, Statistic, Table, Typography } from 'antd';
+import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Card, Col, Progress, Row, Statistic, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DollarOutlined,
@@ -15,13 +16,12 @@ import {
   Cell,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 import type { DashboardData, DashboardProject, ExpenseSummary } from '@/types/erp';
-import { cardStyle, formatCurrency, titleCase } from './ui';
+import { cardClassName, formatCurrency, secondaryTextClassName, titleCase } from './ui';
 
 type DashboardClientProps = {
   data: DashboardData;
@@ -29,16 +29,41 @@ type DashboardClientProps = {
 };
 
 const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7'];
-const subscribe = () => () => undefined;
+const chartHeight = 280;
 
-const kpiCard = (color: string) => ({
-  background: `linear-gradient(135deg, ${color}26 0%, ${color}0d 100%)`,
-  border: `1px solid ${color}33`,
-  borderRadius: 12,
-});
+const statisticClassNames = { content: '!text-slate-200 !font-bold' };
+
+const kpiCardClassNames = {
+  blue: '!rounded-xl !border !border-blue-500/20 !bg-gradient-to-br !from-blue-500/15 !to-blue-500/5',
+  green: '!rounded-xl !border !border-emerald-500/20 !bg-gradient-to-br !from-emerald-500/15 !to-emerald-500/5',
+  amber: '!rounded-xl !border !border-amber-500/20 !bg-gradient-to-br !from-amber-500/15 !to-amber-500/5',
+  violet: '!rounded-xl !border !border-violet-500/20 !bg-gradient-to-br !from-violet-500/15 !to-violet-500/5',
+};
+
+function ChartFrame({ children }: { children: (width: number, height: number) => ReactNode }) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const element = frameRef.current;
+    if (!element) return undefined;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setWidth(Math.floor(entry.contentRect.width));
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={frameRef} className="h-[280px] min-w-0 w-full">
+      {width > 0 ? children(width, chartHeight) : null}
+    </div>
+  );
+}
 
 export function DashboardClient({ data, expenseSummary }: DashboardClientProps) {
-  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const totalRevenue = Number(data.revenueVsCost.totalRevenue || 0);
   const totalCost = Number(data.revenueVsCost.totalCost || 0);
   const margin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0;
@@ -75,82 +100,80 @@ export function DashboardClient({ data, expenseSummary }: DashboardClientProps) 
 
   return (
     <div>
-      <Typography.Title level={3} style={{ color: '#e2e8f0', marginBottom: 24 }}>
+      <Typography.Title level={3} className="!mb-6 !text-slate-200">
         Master Dashboard
       </Typography.Title>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
-          <Card style={kpiCard('#3b82f6')}>
+          <Card className={kpiCardClassNames.blue}>
             <Statistic
-              title={<Typography.Text style={{ color: '#94a3b8' }}>Total Projects</Typography.Text>}
+              title={<Typography.Text className={secondaryTextClassName}>Total Projects</Typography.Text>}
               value={data.totalProjects}
-              prefix={<ProjectOutlined style={{ color: '#3b82f6' }} />}
-              valueStyle={{ color: '#e2e8f0', fontWeight: 700 }}
+              prefix={<ProjectOutlined className="text-blue-500" />}
+              classNames={statisticClassNames}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card style={kpiCard('#10b981')}>
+          <Card className={kpiCardClassNames.green}>
             <Statistic
-              title={<Typography.Text style={{ color: '#94a3b8' }}>Total Revenue</Typography.Text>}
+              title={<Typography.Text className={secondaryTextClassName}>Total Revenue</Typography.Text>}
               value={formatCurrency(totalRevenue)}
-              prefix={<DollarOutlined style={{ color: '#10b981' }} />}
-              valueStyle={{ color: '#e2e8f0', fontWeight: 700 }}
+              prefix={<DollarOutlined className="text-emerald-500" />}
+              classNames={statisticClassNames}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card style={kpiCard('#f59e0b')}>
+          <Card className={kpiCardClassNames.amber}>
             <Statistic
-              title={<Typography.Text style={{ color: '#94a3b8' }}>Total Cost</Typography.Text>}
+              title={<Typography.Text className={secondaryTextClassName}>Total Cost</Typography.Text>}
               value={formatCurrency(totalCost)}
-              prefix={<RiseOutlined style={{ color: '#f59e0b' }} />}
-              valueStyle={{ color: '#e2e8f0', fontWeight: 700 }}
+              prefix={<RiseOutlined className="text-amber-500" />}
+              classNames={statisticClassNames}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card style={kpiCard('#a855f7')}>
+          <Card className={kpiCardClassNames.violet}>
             <Statistic
-              title={<Typography.Text style={{ color: '#94a3b8' }}>Profit Margin</Typography.Text>}
+              title={<Typography.Text className={secondaryTextClassName}>Profit Margin</Typography.Text>}
               value={margin}
               precision={1}
               suffix="%"
-              prefix={<TeamOutlined style={{ color: '#a855f7' }} />}
-              valueStyle={{ color: '#e2e8f0', fontWeight: 700 }}
+              prefix={<TeamOutlined className="text-violet-500" />}
+              classNames={statisticClassNames}
             />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={14}>
-          <Card title={<Typography.Text strong>Revenue vs Cost</Typography.Text>} style={cardStyle}>
-            <div style={{ height: 280 }}>
-              {mounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueCostData}>
-                    <XAxis dataKey="name" stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" tickFormatter={(value) => `₹${Number(value) / 100000}L`} />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                    <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                      {revenueCostData.map((entry, index) => (
-                        <Cell key={entry.name} fill={chartColors[index]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+          <Card title={<Typography.Text strong>Revenue vs Cost</Typography.Text>} className={cardClassName}>
+            <ChartFrame>
+              {(width, height) => (
+                <BarChart width={width} height={height} data={revenueCostData}>
+                  <XAxis dataKey="name" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" tickFormatter={(value) => `₹${Number(value) / 100000}L`} />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                  <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                    {revenueCostData.map((entry, index) => (
+                      <Cell key={entry.name} fill={chartColors[index]} />
+                    ))}
+                  </Bar>
+                </BarChart>
               )}
-            </div>
+            </ChartFrame>
           </Card>
         </Col>
         <Col xs={24} lg={10}>
-          <Card title={<Typography.Text strong>Expenses by Category</Typography.Text>} style={cardStyle}>
-            <div style={{ height: 280 }}>
-              {mounted && expenseChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+          <Card title={<Typography.Text strong>Expenses by Category</Typography.Text>} className={cardClassName}>
+            <ChartFrame>
+              {(width, height) => (
+                expenseChartData.length > 0 ? (
+                  <PieChart width={width} height={height}>
                     <Pie
                       data={expenseChartData}
                       dataKey="value"
@@ -165,18 +188,18 @@ export function DashboardClient({ data, expenseSummary }: DashboardClientProps) 
                     </Pie>
                     <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                   </PieChart>
-                </ResponsiveContainer>
-              ) : mounted ? (
-                <Space align="center" style={{ height: '100%', width: '100%', justifyContent: 'center' }}>
-                  <Typography.Text type="secondary">No expense data yet</Typography.Text>
-                </Space>
-              ) : null}
-            </div>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Typography.Text type="secondary">No expense data yet</Typography.Text>
+                  </div>
+                )
+              )}
+            </ChartFrame>
           </Card>
         </Col>
       </Row>
 
-      <Card title={<Typography.Text strong>Active Projects</Typography.Text>} style={cardStyle}>
+      <Card title={<Typography.Text strong>Active Projects</Typography.Text>} className={cardClassName}>
         <Table
           dataSource={data.projects}
           columns={projectColumns}

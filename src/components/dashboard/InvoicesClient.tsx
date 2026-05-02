@@ -10,7 +10,16 @@ import { z } from 'zod';
 import { createInvoice } from '@/actions/invoices';
 import type { Customer, Project, SalesInvoice } from '@/types/erp';
 import { LineItemsEditor } from './LineItemsEditor';
-import { StatusTag, cardStyle, formatCurrency, formatDate } from './ui';
+import {
+  StatusTag,
+  cardClassName,
+  formatCurrency,
+  formatDate,
+  pageHeaderClassName,
+  pageTitleClassName,
+  secondaryTextClassName,
+  titleIconClassName,
+} from './ui';
 
 const itemSchema = z.object({
   description: z.string().min(2, 'Enter an item description'),
@@ -92,9 +101,9 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
       align: 'right',
       sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount),
       render: (value: number | string, record) => (
-        <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
+        <Space direction="vertical" size={0} className="items-end">
           <Typography.Text>{formatCurrency(value)}</Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" className={`${secondaryTextClassName} text-xs`}>
             GST {formatCurrency(record.gstAmount)}
           </Typography.Text>
         </Space>
@@ -128,16 +137,16 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
   return (
     <div>
       {contextHolder}
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }} gap={16} wrap="wrap">
-        <Typography.Title level={3} style={{ color: '#e2e8f0', margin: 0 }}>
-          <FileTextOutlined style={{ marginRight: 8 }} /> Sales Invoices
+      <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
+        <Typography.Title level={3} className={pageTitleClassName}>
+          <FileTextOutlined className={titleIconClassName} /> Sales Invoices
         </Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
           Create Invoice
         </Button>
       </Flex>
 
-      <Card style={cardStyle}>
+      <Card className={cardClassName}>
         <Table
           dataSource={invoices}
           columns={columns}
@@ -150,7 +159,7 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
 
       <Drawer
         title="Create Sales Invoice"
-        width={720}
+        size="large"
         open={open}
         onClose={() => setOpen(false)}
         destroyOnHidden
@@ -213,7 +222,7 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
                 help={fieldState.error?.message}
               >
                 <DatePicker
-                  style={{ width: '100%' }}
+                  className="w-full"
                   onChange={(_, dateString) => field.onChange(Array.isArray(dateString) ? dateString[0] : dateString)}
                 />
               </Form.Item>
@@ -221,7 +230,7 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
           />
           <LineItemsEditor control={control} name="items" />
           {errors.items?.message && (
-            <Typography.Text type="danger" style={{ display: 'block', marginTop: 8 }}>
+            <Typography.Text type="danger" className="mt-2 block">
               {errors.items.message}
             </Typography.Text>
           )}

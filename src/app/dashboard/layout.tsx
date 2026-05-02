@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Layout, Menu, Typography, Avatar, Dropdown, Space, theme, ConfigProvider } from 'antd';
 import {
@@ -64,44 +64,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           colorBgContainer: '#111827',
           colorBgElevated: '#1f2937',
           colorBgLayout: '#0a0f1a',
-          borderRadius: 10,
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: 'inherit',
         },
       }}
     >
-      <Layout style={{ minHeight: '100vh' }}>
+      <Layout className="min-h-screen">
         <Sider
           trigger={null}
           collapsible
           collapsed={collapsed}
           width={260}
-          style={{
-            background: 'linear-gradient(180deg, #111827 0%, #0a0f1a 100%)',
-            borderRight: '1px solid rgba(255,255,255,0.06)',
-            position: 'fixed',
-            height: '100vh',
-            left: 0,
-            top: 0,
-            zIndex: 100,
-          }}
+          className="fixed left-0 top-0 z-[100] h-screen border-r border-white/10 !bg-gradient-to-b !from-slate-900 !to-[#0a0f1a]"
         >
           <div
-            style={{
-              padding: collapsed ? '20px 12px' : '20px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-              marginBottom: 8,
-            }}
+            className={`mb-2 flex items-center gap-3 border-b border-white/10 ${
+              collapsed ? 'px-3 py-5' : 'px-5 py-5'
+            }`}
           >
-            <SafetyCertificateOutlined style={{ fontSize: 28, color: '#3b82f6' }} />
+            <SafetyCertificateOutlined className="text-[28px] text-blue-500" />
             {!collapsed && (
               <div>
-                <Text strong style={{ color: '#e2e8f0', fontSize: 16, display: 'block', lineHeight: 1.2 }}>
+                <Text strong className="block text-base !leading-tight !text-slate-200">
                   Edwin ERP
                 </Text>
-                <Text style={{ color: '#64748b', fontSize: 11 }}>Construction Management</Text>
+                <Text className="text-[11px] !text-slate-500">Construction Management</Text>
               </div>
             )}
           </div>
@@ -111,36 +97,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             selectedKeys={[pathname]}
             items={menuItems}
             onClick={({ key }) => router.push(key)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              padding: '0 8px',
-            }}
+            className="!border-none !bg-transparent px-2"
           />
         </Sider>
 
-        <Layout style={{ marginLeft: collapsed ? 80 : 260, transition: 'margin-left 0.2s' }}>
+        <Layout className={`transition-[margin-left] duration-200 ${collapsed ? 'ml-20' : 'ml-[260px]'}`}>
           <Header
-            style={{
-              background: 'rgba(17, 24, 39, 0.8)',
-              backdropFilter: 'blur(12px)',
-              padding: '0 24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-              position: 'sticky',
-              top: 0,
-              zIndex: 99,
-              height: 64,
-            }}
+            className="sticky top-0 z-[99] flex h-16 items-center justify-between border-b border-white/10 !bg-slate-900/80 px-6 backdrop-blur-xl"
           >
-            <div
+            <button
+              type="button"
               onClick={() => setCollapsed(!collapsed)}
-              style={{ cursor: 'pointer', fontSize: 18, color: '#94a3b8' }}
+              className="cursor-pointer border-0 bg-transparent p-0 text-lg text-slate-400"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            </div>
+            </button>
 
             <Dropdown
               menu={{
@@ -151,22 +123,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               }}
               placement="bottomRight"
             >
-              <Space style={{ cursor: 'pointer' }}>
+              <Space className="cursor-pointer">
                 <Avatar
-                  style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}
+                  className="!bg-gradient-to-br !from-blue-500 !to-violet-500"
                   icon={<UserOutlined />}
                 />
-                {user && <Text style={{ color: '#e2e8f0' }}>{user.name}</Text>}
+                {user && <Text className="!text-slate-200">{user.name}</Text>}
               </Space>
             </Dropdown>
           </Header>
 
           <Content
-            style={{
-              padding: 24,
-              minHeight: 'calc(100vh - 64px)',
-              background: '#0a0f1a',
-            }}
+            className="min-h-[calc(100vh-64px)] bg-[#0a0f1a] p-6"
           >
             {children}
           </Content>

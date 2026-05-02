@@ -4,7 +4,16 @@ import { Card, Flex, Progress, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ProjectOutlined } from '@ant-design/icons';
 import type { Project } from '@/types/erp';
-import { StatusTag, cardStyle, formatCurrency, formatDate } from './ui';
+import {
+  StatusTag,
+  cardClassName,
+  formatCurrency,
+  formatDate,
+  pageHeaderClassName,
+  pageTitleClassName,
+  secondaryTextClassName,
+  titleIconClassName,
+} from './ui';
 
 type ProjectsClientProps = {
   projects: Project[];
@@ -19,7 +28,7 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       render: (value: string, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" className={`${secondaryTextClassName} text-xs`}>
             {record.clientName || record.location || 'No client assigned'}
           </Typography.Text>
         </Space>
@@ -62,7 +71,7 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       render: (_, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text>{formatDate(record.startDate)}</Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" className={`${secondaryTextClassName} text-xs`}>
             to {formatDate(record.endDate)}
           </Typography.Text>
         </Space>
@@ -72,12 +81,12 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
 
   return (
     <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }} gap={16} wrap="wrap">
-        <Typography.Title level={3} style={{ color: '#e2e8f0', margin: 0 }}>
-          <ProjectOutlined style={{ marginRight: 8 }} /> Projects
+      <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
+        <Typography.Title level={3} className={pageTitleClassName}>
+          <ProjectOutlined className={titleIconClassName} /> Projects
         </Typography.Title>
       </Flex>
-      <Card style={cardStyle}>
+      <Card className={cardClassName}>
         <Table
           dataSource={projects}
           columns={columns}

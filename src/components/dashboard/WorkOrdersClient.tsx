@@ -10,7 +10,16 @@ import { z } from 'zod';
 import { createWorkOrder } from '@/actions/workorders';
 import type { Project, Vendor, WorkOrder } from '@/types/erp';
 import { LineItemsEditor } from './LineItemsEditor';
-import { StatusTag, cardStyle, formatCurrency, formatDate } from './ui';
+import {
+  StatusTag,
+  cardClassName,
+  formatCurrency,
+  formatDate,
+  pageHeaderClassName,
+  pageTitleClassName,
+  secondaryTextClassName,
+  titleIconClassName,
+} from './ui';
 
 const itemSchema = z.object({
   description: z.string().min(2, 'Enter an item description'),
@@ -90,9 +99,9 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
       align: 'right',
       sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount),
       render: (value: number | string, record) => (
-        <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
+        <Space direction="vertical" size={0} className="items-end">
           <Typography.Text>{formatCurrency(value)}</Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" className={`${secondaryTextClassName} text-xs`}>
             GST {formatCurrency(record.gstAmount)}
           </Typography.Text>
         </Space>
@@ -122,16 +131,16 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
   return (
     <div>
       {contextHolder}
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }} gap={16} wrap="wrap">
-        <Typography.Title level={3} style={{ color: '#e2e8f0', margin: 0 }}>
-          <ShoppingCartOutlined style={{ marginRight: 8 }} /> Work Orders
+      <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
+        <Typography.Title level={3} className={pageTitleClassName}>
+          <ShoppingCartOutlined className={titleIconClassName} /> Work Orders
         </Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
           Create Work Order
         </Button>
       </Flex>
 
-      <Card style={cardStyle}>
+      <Card className={cardClassName}>
         <Table
           dataSource={workOrders}
           columns={columns}
@@ -144,7 +153,7 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
 
       <Drawer
         title="Create Work Order"
-        width={720}
+        size="large"
         open={open}
         onClose={() => setOpen(false)}
         destroyOnHidden
@@ -207,7 +216,7 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
           />
           <LineItemsEditor control={control} name="items" />
           {errors.items?.message && (
-            <Typography.Text type="danger" style={{ display: 'block', marginTop: 8 }}>
+            <Typography.Text type="danger" className="mt-2 block">
               {errors.items.message}
             </Typography.Text>
           )}

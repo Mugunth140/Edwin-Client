@@ -19,7 +19,7 @@ export default async function ProjectsPage() {
 
   return (
     <>
-      {error && <Alert type="warning" showIcon message={error} style={{ marginBottom: 16 }} />}
+      {error && <Alert type="warning" showIcon title={error} className="mb-4" />}
       <ProjectsClient projects={projects} />
     </>
   );

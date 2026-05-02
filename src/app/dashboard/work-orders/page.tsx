@@ -33,7 +33,7 @@ export default async function WorkOrdersPage() {
 
   return (
     <>
-      {error && <Alert type="warning" showIcon message={error} style={{ marginBottom: 16 }} />}
+      {error && <Alert type="warning" showIcon title={error} className="mb-4" />}
       <WorkOrdersClient workOrders={workOrders} projects={projects} vendors={vendors} />
     </>
   );

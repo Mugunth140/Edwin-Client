@@ -2,13 +2,8 @@ import { Spin } from 'antd';
 
 export default function DashboardLoading() {
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 400,
-    }}>
-      <Spin size="large" tip="Loading dashboard..." />
+    <div className="flex min-h-[400px] items-center justify-center">
+      <Spin size="large" description="Loading dashboard..." />
     </div>
   );
 }
