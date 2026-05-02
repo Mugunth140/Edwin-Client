@@ -3,43 +3,65 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Layout, Menu, Typography, Avatar, Dropdown, Space, theme, ConfigProvider } from 'antd';
+import type { MenuProps } from 'antd';
 import {
-  DashboardOutlined,
-  ProjectOutlined,
-  FileTextOutlined,
-  FileImageOutlined,
+  AppstoreOutlined,
+  AuditOutlined,
   BankOutlined,
-  DollarOutlined,
-  CreditCardOutlined,
-  ShoppingCartOutlined,
   CalendarOutlined,
+  CreditCardOutlined,
+  FileDoneOutlined,
+  FileImageOutlined,
+  FileProtectOutlined,
+  FolderOpenOutlined,
   LogoutOutlined,
-  UserOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  MoonOutlined,
   SafetyCertificateOutlined,
   SunOutlined,
-  MoonOutlined,
+  UserOutlined,
+  WalletOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 
 const { Sider, Content, Header } = Layout;
 const { Text } = Typography;
 
-const menuItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
-  { key: '/dashboard/projects', icon: <ProjectOutlined />, label: 'Projects' },
-  { key: '/dashboard/work-orders', icon: <ShoppingCartOutlined />, label: 'Work Orders' },
-  { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports' },
-  { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings' },
-  { key: '/dashboard/accounts', icon: <BankOutlined />, label: 'Accounts' },
-  { key: '/dashboard/accounts/invoices', icon: <FileTextOutlined />, label: 'Invoices' },
-  { key: '/dashboard/accounts/bills', icon: <FileTextOutlined />, label: 'Bills' },
-  { key: '/dashboard/expenses', icon: <DollarOutlined />, label: 'Expenses' },
-  { key: '/dashboard/payments', icon: <CreditCardOutlined />, label: 'Payments' },
-];
+const SIDEBAR_WIDTH = 280;
+const COLLAPSED_WIDTH = 84;
 
 type ThemeMode = 'dark' | 'light';
+type NavItem = {
+  key: string;
+  icon: React.ReactNode;
+  label: string;
+};
+
+const navigationSections: Array<{ title: string; items: NavItem[] }> = [
+  {
+    title: 'Workspace',
+    items: [
+      { key: '/dashboard', icon: <AppstoreOutlined />, label: 'Dashboard' },
+      { key: '/dashboard/projects', icon: <FolderOpenOutlined />, label: 'Projects' },
+      { key: '/dashboard/work-orders', icon: <AuditOutlined />, label: 'Work Orders' },
+      { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports' },
+      { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings' },
+    ],
+  },
+  {
+    title: 'Finance',
+    items: [
+      { key: '/dashboard/accounts', icon: <BankOutlined />, label: 'Accounts' },
+      { key: '/dashboard/accounts/invoices', icon: <FileProtectOutlined />, label: 'Invoices' },
+      { key: '/dashboard/accounts/bills', icon: <FileDoneOutlined />, label: 'Bills' },
+      { key: '/dashboard/expenses', icon: <WalletOutlined />, label: 'Expenses' },
+      { key: '/dashboard/payments', icon: <CreditCardOutlined />, label: 'Payments' },
+    ],
+  },
+];
+
+const navItems = navigationSections.flatMap((section) => section.items);
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -58,8 +80,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('erp-theme', themeMode);
+      document.documentElement.dataset.theme = themeMode;
     }
   }, [themeMode]);
+
+  const sidebarWidth = collapsed ? COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+  const isDark = themeMode === 'dark';
+
+  const selectedKey = useMemo(() => {
+    const match = navItems
+      .filter((item) => pathname === item.key || pathname.startsWith(`${item.key}/`))
+      .sort((a, b) => b.key.length - a.key.length)[0];
+
+    return match?.key || '/dashboard';
+  }, [pathname]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -67,35 +101,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/login');
   };
 
-  const userMenuItems = [
+  const userMenuItems: MenuProps['items'] = [
     { key: 'profile', icon: <UserOutlined />, label: `${user?.name || 'User'} (${user?.role || ''})` },
-    { type: 'divider' as const },
+    { type: 'divider' },
     { key: 'logout', icon: <LogoutOutlined />, label: 'Sign Out', danger: true },
   ];
 
-  const isDark = themeMode === 'dark';
   const themeConfig = useMemo(
     () => ({
       algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
       token: {
-        colorPrimary: isDark ? '#38bdf8' : '#0284c7',
-        colorBgContainer: isDark ? '#0f172a' : '#ffffff',
+        colorPrimary: isDark ? '#38bdf8' : '#0f766e',
+        colorInfo: isDark ? '#38bdf8' : '#0f766e',
+        colorBgBase: isDark ? '#0b1120' : '#f8fafc',
+        colorBgContainer: isDark ? '#101827' : '#ffffff',
         colorBgElevated: isDark ? '#111827' : '#ffffff',
-        colorBgLayout: isDark ? '#0b1120' : '#f8fafc',
-        colorText: isDark ? '#e2e8f0' : '#0f172a',
-        colorTextSecondary: isDark ? '#94a3b8' : '#475569',
-        colorBorderSecondary: isDark ? 'rgba(148,163,184,0.25)' : '#e2e8f0',
+        colorBgLayout: isDark ? '#0b1120' : '#f6f8fb',
+        colorText: isDark ? '#e5e7eb' : '#111827',
+        colorTextSecondary: isDark ? '#94a3b8' : '#64748b',
+        colorBorder: isDark ? 'rgba(148,163,184,0.18)' : '#e2e8f0',
+        colorBorderSecondary: isDark ? 'rgba(148,163,184,0.14)' : '#e5e7eb',
         fontFamily: 'var(--app-font)',
-        borderRadius: 12,
+        borderRadius: 8,
       },
       components: {
+        Button: {
+          borderRadius: 8,
+          controlHeight: 36,
+        },
+        Card: {
+          borderRadiusLG: 8,
+        },
+        Layout: {
+          headerBg: isDark ? '#101827' : '#ffffff',
+          bodyBg: isDark ? '#0b1120' : '#f6f8fb',
+          siderBg: isDark ? '#0b1120' : '#ffffff',
+        },
         Menu: {
           itemBg: 'transparent',
-          subMenuItemBg: 'transparent',
-          itemSelectedBg: isDark ? 'rgba(56,189,248,0.18)' : 'rgba(14,116,144,0.12)',
-          itemSelectedColor: isDark ? '#e0f2fe' : '#0e7490',
-          itemHoverBg: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)',
-          itemHoverColor: isDark ? '#e2e8f0' : '#0f172a',
+          itemBorderRadius: 8,
+          itemColor: isDark ? '#cbd5e1' : '#475569',
+          itemHoverBg: isDark ? 'rgba(148,163,184,0.10)' : '#f1f5f9',
+          itemHoverColor: isDark ? '#f8fafc' : '#0f172a',
+          itemSelectedBg: isDark ? 'rgba(56,189,248,0.14)' : '#e0f2fe',
+          itemSelectedColor: isDark ? '#e0f2fe' : '#075985',
         },
       },
     }),
@@ -103,59 +152,79 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 
   return (
-    <ConfigProvider
-      theme={themeConfig}
-    >
-      <Layout className={`min-h-screen overflow-x-hidden ${isDark ? 'bg-[#0b1120]' : 'bg-slate-100'}`}>
+    <ConfigProvider theme={themeConfig}>
+      <Layout className={`min-h-screen ${isDark ? 'bg-[#0b1120]' : 'bg-[#f6f8fb]'}`}>
         <Sider
           trigger={null}
           collapsible
           collapsed={collapsed}
-          collapsedWidth={88}
-          width={260}
-          className={`sticky left-0 top-0 z-100 h-screen shrink-0 border-r transition-[width] duration-300 ease-in-out will-change-[width] ${
+          collapsedWidth={COLLAPSED_WIDTH}
+          width={SIDEBAR_WIDTH}
+          className={`fixed! left-0 top-0 bottom-0 z-100 h-screen overflow-hidden border-r transition-[width] duration-300 ease-in-out ${
             isDark
-              ? 'border-white/10 bg-linear-to-b! from-[#0d1321]! via-[#0b1120]! to-[#090c15]!'
-              : 'border-slate-200 bg-linear-to-b! from-white! via-slate-50! to-slate-100!'
+              ? 'border-white/10 bg-[#0b1120]!'
+              : 'border-slate-200 bg-white!'
           }`}
         >
           <div className="flex h-full flex-col">
             <div
-              className={`mb-2 flex items-center gap-3 border-b ${
-                collapsed ? 'px-3 py-5' : 'px-5 py-5'
+              className={`flex h-18 items-center border-b ${
+                collapsed ? 'justify-center px-3' : 'gap-3 px-5'
               } ${isDark ? 'border-white/10' : 'border-slate-200'}`}
             >
-              <SafetyCertificateOutlined className={`text-[28px] ${isDark ? 'text-sky-400' : 'text-sky-600'}`} />
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${
+                  isDark
+                    ? 'border-sky-400/30 bg-sky-400/10 text-sky-300'
+                    : 'border-teal-200 bg-teal-50 text-teal-700'
+                }`}
+              >
+                <SafetyCertificateOutlined className="text-[22px]" />
+              </div>
               {!collapsed && (
-                <div>
-                  <Text strong className={`block text-base leading-tight! ${isDark ? 'text-slate-100!' : 'text-slate-900!'}`}>
+                <div className="min-w-0">
+                  <Text strong className={`block truncate text-[15px] leading-tight! ${isDark ? 'text-slate-100!' : 'text-slate-950!'}`}>
                     Edwin ERP
                   </Text>
-                  <Text className={`text-[11px] ${isDark ? 'text-slate-500!' : 'text-slate-500!'}`}>
+                  <Text className={`block truncate text-xs ${isDark ? 'text-slate-400!' : 'text-slate-500!'}`}>
                     Construction Management
                   </Text>
                 </div>
               )}
             </div>
 
-            <Menu
-              mode="inline"
-              selectedKeys={[pathname]}
-              items={menuItems}
-              onClick={({ key }) => router.push(key)}
-              className="border-none! bg-transparent! px-2"
-            />
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+              {navigationSections.map((section) => (
+                <div key={section.title} className="mb-5 last:mb-0">
+                  {!collapsed && (
+                    <Text className={`mb-2 block px-3 text-[11px] font-semibold uppercase tracking-[0.08em] ${
+                      isDark ? 'text-slate-500!' : 'text-slate-400!'
+                    }`}>
+                      {section.title}
+                    </Text>
+                  )}
+                  <Menu
+                    mode="inline"
+                    inlineCollapsed={collapsed}
+                    selectedKeys={[selectedKey]}
+                    items={section.items}
+                    onClick={({ key }) => router.push(key)}
+                    className="border-none! bg-transparent!"
+                  />
+                </div>
+              ))}
+            </div>
 
-            <div className={`mt-auto px-4 pb-5 ${collapsed ? 'flex justify-center' : ''}`}>
+            <div className={`border-t p-4 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
               <div
-                className={`flex items-center gap-2 rounded-full border px-2 py-1 transition-all ${
+                className={`flex items-center rounded-lg border p-1 ${
                   isDark
                     ? 'border-white/10 bg-white/5'
-                    : 'border-slate-200 bg-white'
-                } ${collapsed ? 'w-fit' : 'w-full justify-between'}`}
+                    : 'border-slate-200 bg-slate-50'
+                } ${collapsed ? 'justify-center' : 'justify-between'}`}
               >
                 {!collapsed && (
-                  <Text className={`text-xs ${isDark ? 'text-slate-400!' : 'text-slate-500!'}`}>
+                  <Text className={`pl-2 text-xs font-medium ${isDark ? 'text-slate-400!' : 'text-slate-500!'}`}>
                     Theme
                   </Text>
                 )}
@@ -164,12 +233,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     type="button"
                     onClick={() => setThemeMode('light')}
                     aria-label="Switch to light mode"
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-md transition ${
                       themeMode === 'light'
-                        ? 'bg-amber-200 text-amber-900'
+                        ? 'bg-white text-amber-600 shadow-sm'
                         : isDark
-                          ? 'text-slate-400 hover:bg-white/10'
-                          : 'text-slate-500 hover:bg-slate-100'
+                          ? 'text-slate-400 hover:bg-white/10 hover:text-slate-100'
+                          : 'text-slate-500 hover:bg-white hover:text-slate-900'
                     }`}
                   >
                     <SunOutlined />
@@ -178,12 +247,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     type="button"
                     onClick={() => setThemeMode('dark')}
                     aria-label="Switch to dark mode"
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-md transition ${
                       themeMode === 'dark'
-                        ? 'bg-slate-800 text-slate-100'
+                        ? 'bg-slate-800 text-sky-200 shadow-sm'
                         : isDark
-                          ? 'text-slate-400 hover:bg-white/10'
-                          : 'text-slate-500 hover:bg-slate-100'
+                          ? 'text-slate-400 hover:bg-white/10 hover:text-slate-100'
+                          : 'text-slate-500 hover:bg-white hover:text-slate-900'
                     }`}
                   >
                     <MoonOutlined />
@@ -194,19 +263,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </Sider>
 
-        <Layout className="min-w-0 flex-1">
+        <Layout
+          className="min-w-0 transition-[margin-left,width] duration-300 ease-in-out"
+          style={{
+            marginLeft: sidebarWidth,
+            width: `calc(100% - ${sidebarWidth}px)`,
+          }}
+        >
           <Header
-            className={`sticky top-0 z-99 flex h-16 items-center justify-between border-b pr-6 backdrop-blur-xl ${
+            className={`sticky top-0 z-90 flex h-16 items-center justify-between border-b px-5 backdrop-blur-xl ${
               isDark
-                ? 'border-white/10 bg-slate-900/80!'
-                : 'border-slate-200 bg-white/80!'
+                ? 'border-white/10 bg-[#101827]/95!'
+                : 'border-slate-200 bg-white/95!'
             }`}
           >
             <button
               type="button"
               onClick={() => setCollapsed(!collapsed)}
-              className={`cursor-pointer border-0 bg-transparent px-4 py-0 text-lg ${
-                isDark ? 'text-slate-400 hover:text-slate-100' : 'text-slate-500 hover:text-slate-900'
+              className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border transition ${
+                isDark
+                  ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-white hover:text-slate-950'
               }`}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -222,13 +299,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               }}
               placement="bottomRight"
             >
-              <Space className="cursor-pointer">
+              <Space className="cursor-pointer rounded-lg px-2 py-1 transition hover:bg-slate-500/10">
                 <Avatar
-                  className={`bg-linear-to-br! ${isDark ? 'from-sky-500! to-cyan-500!' : 'from-sky-600! to-indigo-500!'}`}
+                  className={`bg-linear-to-br! ${isDark ? 'from-sky-500! to-cyan-500!' : 'from-teal-600! to-sky-600!'}`}
                   icon={<UserOutlined />}
                 />
                 {user && (
-                  <Text className={isDark ? 'text-slate-200!' : 'text-slate-800!'}>
+                  <Text className={`hidden text-sm font-medium sm:inline ${isDark ? 'text-slate-200!' : 'text-slate-800!'}`}>
                     {user.name}
                   </Text>
                 )}
@@ -237,13 +314,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Header>
 
           <Content
-            className={`min-h-[calc(100vh-64px)] py-6 pl-6 pr-6 ${
-              isDark
-                ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),rgba(2,6,23,0.95))]'
-                : 'bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.14),rgba(248,250,252,0.95))]'
+            className={`min-h-[calc(100vh-64px)] px-6 py-6 ${
+              isDark ? 'bg-[#0b1120]' : 'bg-[#f6f8fb]'
             }`}
           >
-            {children}
+            <div className="mx-auto w-full max-w-[1600px]">
+              {children}
+            </div>
           </Content>
         </Layout>
       </Layout>
