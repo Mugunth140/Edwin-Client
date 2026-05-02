@@ -51,7 +51,7 @@ export default function LoginPage() {
         className="w-105 rounded-2xl! border! border-white/10! bg-white/3! shadow-[0_32px_64px_rgba(0,0,0,0.4)] backdrop-blur-2xl"
         classNames={{ body: 'px-8 py-10' }}
       >
-        <Space direction="vertical" size="large" className="w-full text-center">
+        <Space orientation="vertical" size="large" className="w-full text-center">
           <div>
             <SafetyCertificateOutlined
               className="mb-3 text-5xl text-blue-500"

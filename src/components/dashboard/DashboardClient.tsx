@@ -175,7 +175,7 @@ export function DashboardClient() {
         <Alert
           type="error"
           showIcon
-          message="Dashboard data is unavailable"
+          title="Dashboard data is unavailable"
           description={error instanceof Error ? error.message : 'Unable to load dashboard data.'}
           action={
             <Button size="small" onClick={() => void refetch()} loading={isFetching}>
