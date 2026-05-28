@@ -1,20 +1,30 @@
-'use client';
+import { Alert } from 'antd';
+import { PaymentsClient } from '@/components/dashboard/PaymentsClient';
+import { fetchPayables, fetchReceivables } from '@/lib/api';
 
-import { Card, Typography, Empty } from 'antd';
-import { CreditCardOutlined } from '@ant-design/icons';
-import { cardClassName, mutedTextClassName, pageTitleClassName, titleIconClassName } from '@/components/dashboard/ui';
+async function loadPageData() {
+  try {
+    const [payables, receivables] = await Promise.all([
+      fetchPayables(),
+      fetchReceivables(),
+    ]);
+    return { payables, receivables };
+  } catch (error) {
+    return {
+      payables: [],
+      receivables: [],
+      error: error instanceof Error ? error.message : 'Unable to load payments data',
+    };
+  }
+}
 
-const { Title, Text } = Typography;
+export default async function PaymentsPage() {
+  const { payables, receivables, error } = await loadPageData();
 
-export default function PaymentsPage() {
   return (
-    <div>
-      <Title level={3} className={`${pageTitleClassName} mb-6`}>
-        <CreditCardOutlined className={titleIconClassName} /> Payments
-      </Title>
-      <Card className={cardClassName}>
-        <Empty description={<Text className={mutedTextClassName}>Connect to backend to manage payments</Text>} />
-      </Card>
-    </div>
+    <>
+      {error && <Alert type="warning" showIcon title={error} className="mb-4" />}
+      <PaymentsClient payables={payables} receivables={receivables} />
+    </>
   );
 }

@@ -20,6 +20,7 @@ import {
   MoonOutlined,
   SafetyCertificateOutlined,
   SunOutlined,
+  TeamOutlined,
   UserOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
@@ -44,7 +45,10 @@ const navigationSections: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { key: '/dashboard', icon: <AppstoreOutlined />, label: 'Dashboard' },
       { key: '/dashboard/projects', icon: <FolderOpenOutlined />, label: 'Projects' },
+      { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors' },
+      { key: '/dashboard/customers', icon: <UserOutlined />, label: 'Customers' },
       { key: '/dashboard/work-orders', icon: <AuditOutlined />, label: 'Work Orders' },
+      { key: '/dashboard/purchase-orders', icon: <FileProtectOutlined />, label: 'Purchase Orders' },
       { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports' },
       { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings' },
     ],

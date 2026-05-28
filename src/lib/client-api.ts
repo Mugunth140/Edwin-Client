@@ -19,6 +19,15 @@ export async function clientApiFetch<T>(path: string, options: RequestInit = {})
     credentials: 'same-origin',
   });
 
+  if (response.status === 401) {
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      // Clear token and redirect to login
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login?expired=true';
+      return new Promise(() => {}); // Halt execution
+    }
+  }
+
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {

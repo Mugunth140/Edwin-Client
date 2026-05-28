@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, DatePicker, Drawer, Flex, Form, Select, Space, Table, Typography, message, Modal } from 'antd';
+import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { FileTextOutlined, PlusOutlined, FilePdfOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-import { createInvoice } from '@/actions/invoices';
-import type { Customer, Project, SalesInvoice } from '@/types/erp';
+import { createPurchaseOrder, convertPoToBill } from '@/actions/purchase-orders';
+import type { Project, Vendor, PurchaseOrder } from '@/types/erp';
 import { LineItemsEditor } from './LineItemsEditor';
-import { InvoicePdf } from './InvoicePdf';
+import { PurchaseOrderPdf } from './PurchaseOrderPdf';
 import {
   StatusTag,
   cardClassName,
@@ -30,24 +30,31 @@ const itemSchema = z.object({
   rate: z.number().nonnegative('Rate cannot be negative'),
 });
 
-const invoiceSchema = z.object({
-  customerId: z.string().min(1, 'Select a customer'),
-  projectId: z.string().optional(),
-  dueDate: z.string().optional(),
+const poSchema = z.object({
+  vendorId: z.string().min(1, 'Select a vendor'),
+  projectId: z.string().min(1, 'Select a project'),
+  paymentTerms: z.string().optional(),
   items: z.array(itemSchema).min(1, 'Add at least one line item'),
 });
 
-type InvoiceFormValues = z.infer<typeof invoiceSchema>;
+type PoFormValues = z.infer<typeof poSchema>;
 
-type InvoicesClientProps = {
-  invoices: SalesInvoice[];
-  customers: Customer[];
+type PurchaseOrdersClientProps = {
+  purchaseOrders: PurchaseOrder[];
   projects: Project[];
+  vendors: Vendor[];
 };
 
-export function InvoicesClient({ invoices, customers, projects }: InvoicesClientProps) {
+const STATUS_OPTIONS = [
+  { label: 'Draft', value: 'draft' },
+  { label: 'Sent', value: 'sent' },
+  { label: 'Approved', value: 'approved' },
+  { label: 'Cancelled', value: 'cancelled' },
+];
+
+export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: PurchaseOrdersClientProps) {
   const [open, setOpen] = useState(false);
-  const [previewInvoice, setPreviewInvoice] = useState<SalesInvoice | null>(null);
+  const [previewPo, setPreviewPo] = useState<PurchaseOrder | null>(null);
   const [isPending, startTransition] = useTransition();
   const [messageApi, contextHolder] = message.useMessage();
   const [isClient, setIsClient] = useState(false);
@@ -61,17 +68,28 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<InvoiceFormValues>({
-    resolver: zodResolver(invoiceSchema),
+  } = useForm<PoFormValues>({
+    resolver: zodResolver(poSchema),
     defaultValues: {
-      customerId: '',
-      projectId: undefined,
-      dueDate: undefined,
+      vendorId: '',
+      projectId: '',
+      paymentTerms: '',
       items: [{ description: '', quantity: 1, unit: 'nos', rate: 0 }],
     },
   });
 
-  const columns: ColumnsType<SalesInvoice> = [
+  const handleConvert = (id: string) => {
+    startTransition(async () => {
+      try {
+        await convertPoToBill(id);
+        messageApi.success('Converted to Bill successfully');
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : 'Conversion failed');
+      }
+    });
+  };
+
+  const columns: ColumnsType<PurchaseOrder> = [
     {
       title: 'S.No',
       key: 'sno',
@@ -79,49 +97,37 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
       render: (_text, _record, index) => index + 1,
     },
     {
-      title: 'Invoice',
-      dataIndex: 'invoiceNumber',
-      sorter: (a, b) => a.invoiceNumber.localeCompare(b.invoiceNumber),
+      title: 'PO Number',
+      dataIndex: 'poNumber',
+      sorter: (a, b) => a.poNumber.localeCompare(b.poNumber),
       render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
     },
     {
-      title: 'Customer',
-      dataIndex: ['customer', 'name'],
-      sorter: (a, b) => (a.customer?.name || '').localeCompare(b.customer?.name || ''),
-      render: (_value, record) => record.customer?.name || '-',
+      title: 'Vendor',
+      dataIndex: ['vendor', 'name'],
+      sorter: (a, b) => (a.vendor?.name || '').localeCompare(b.vendor?.name || ''),
+      render: (_value, record) => record.vendor?.name || '-',
+    },
+    {
+      title: 'Project',
+      dataIndex: ['project', 'name'],
+      sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''),
+      render: (_value, record) => record.project?.name || '-',
     },
     {
       title: 'Status',
       dataIndex: 'status',
-      filters: [
-        { text: 'Draft', value: 'draft' },
-        { text: 'Sent', value: 'sent' },
-        { text: 'Paid', value: 'paid' },
-        { text: 'Overdue', value: 'overdue' },
-        { text: 'Cancelled', value: 'cancelled' },
-      ],
+      width: 120,
+      filters: STATUS_OPTIONS.map(opt => ({ text: opt.label, value: opt.value })),
       onFilter: (value, record) => record.status === value,
       render: (value: string) => <StatusTag value={value} />,
-    },
-    {
-      title: 'Due Date',
-      dataIndex: 'dueDate',
-      sorter: (a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime(),
-      render: formatDate,
     },
     {
       title: 'Total',
       dataIndex: 'totalAmount',
       align: 'right',
       sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount),
-      render: (value: number | string, record) => (
-        <Flex vertical gap={0} className="items-end">
-          <Typography.Text>{formatCurrency(value)}</Typography.Text>
-          <Typography.Text type="secondary" className={`${secondaryTextClassName} text-xs`}>
-            GST {formatCurrency(record.gstAmount)}
-          </Typography.Text>
-        </Flex>
-      ),
+      render: (value: number | string) => formatCurrency(value),
     },
     {
       title: 'Created',
@@ -133,7 +139,7 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
       title: 'Actions',
       key: 'actions',
       fixed: 'right',
-      width: 80,
+      width: 130,
       render: (_, record) => (
         <Space>
           {isClient && (
@@ -141,27 +147,37 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
               type="text"
               icon={<FilePdfOutlined className="text-red-500" />}
               title="Preview PDF"
-              onClick={() => setPreviewInvoice(record)}
+              onClick={() => setPreviewPo(record)}
             />
           )}
+          <Popconfirm
+            title="Convert to Bill?"
+            description="This will create a purchase bill from this PO."
+            onConfirm={() => handleConvert(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button
+              type="text"
+              icon={<CheckCircleOutlined className="text-green-500" />}
+              title="Convert to Bill"
+              loading={isPending}
+            />
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  const submit = (values: InvoiceFormValues) => {
+  const submit = (values: PoFormValues) => {
     startTransition(async () => {
       try {
-        await createInvoice({
-          ...values,
-          projectId: values.projectId || undefined,
-          dueDate: values.dueDate || undefined,
-        });
-        messageApi.success('Invoice created');
-        reset();
+        await createPurchaseOrder(values);
+        messageApi.success('Purchase order created successfully');
         setOpen(false);
+        reset();
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to create invoice');
+        messageApi.error(error instanceof Error ? error.message : 'Failed to create purchase order');
       }
     });
   };
@@ -171,30 +187,30 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
       {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
-          <FileTextOutlined className={titleIconClassName} /> Sales Invoices
+          <ShoppingCartOutlined className={titleIconClassName} /> Purchase Orders
         </Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-          Create Invoice
+          Create PO
         </Button>
       </Flex>
 
       <Card className={cardClassName}>
         <Table
-          dataSource={invoices}
+          dataSource={purchaseOrders}
           columns={columns}
           rowKey="id"
           size="middle"
-          scroll={{ x: 920 }}
-          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} invoices` }}
+          scroll={{ x: 1000 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} POs` }}
         />
       </Card>
 
       <Drawer
-        title="Create Sales Invoice"
+        title="Create Purchase Order"
         size="large"
         open={open}
         onClose={() => setOpen(false)}
-        destroyOnHidden
+        destroyOnClose
         extra={
           <Space>
             <Button onClick={() => setOpen(false)}>Cancel</Button>
@@ -207,19 +223,19 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
         <Form layout="vertical" onFinish={handleSubmit(submit)}>
           <Controller
             control={control}
-            name="customerId"
+            name="vendorId"
             render={({ field, fieldState }) => (
               <Form.Item
-                label="Customer"
+                label="Vendor"
                 validateStatus={fieldState.error ? 'error' : undefined}
                 help={fieldState.error?.message}
               >
                 <Select
                   {...field}
                   showSearch
-                  placeholder="Select customer"
+                  placeholder="Select vendor"
                   optionFilterProp="label"
-                  options={customers.map((customer) => ({ value: customer.id, label: customer.name }))}
+                  options={vendors.map((vendor) => ({ value: vendor.id, label: vendor.name }))}
                 />
               </Form.Item>
             )}
@@ -235,9 +251,8 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
               >
                 <Select
                   {...field}
-                  allowClear
                   showSearch
-                  placeholder="Link to project"
+                  placeholder="Select project"
                   optionFilterProp="label"
                   options={projects.map((project) => ({ value: project.id, label: project.name }))}
                 />
@@ -246,17 +261,10 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
           />
           <Controller
             control={control}
-            name="dueDate"
-            render={({ field, fieldState }) => (
-              <Form.Item
-                label="Due Date"
-                validateStatus={fieldState.error ? 'error' : undefined}
-                help={fieldState.error?.message}
-              >
-                <DatePicker
-                  className="w-full"
-                  onChange={(_, dateString) => field.onChange(Array.isArray(dateString) ? dateString[0] : dateString)}
-                />
+            name="paymentTerms"
+            render={({ field }) => (
+              <Form.Item label="Payment Terms">
+                <Input.TextArea {...field} rows={3} placeholder="Net 30, 50% advance, etc..." />
               </Form.Item>
             )}
           />
@@ -270,18 +278,18 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
       </Drawer>
 
       <Modal
-        title={`Invoice Preview — ${previewInvoice?.invoiceNumber}`}
-        open={!!previewInvoice}
-        onCancel={() => setPreviewInvoice(null)}
+        title={`Purchase Order Preview — ${previewPo?.poNumber}`}
+        open={!!previewPo}
+        onCancel={() => setPreviewPo(null)}
         width="90%"
         style={{ top: 20 }}
         footer={[
-          <Button key="close" onClick={() => setPreviewInvoice(null)}>Close</Button>,
-          previewInvoice && (
+          <Button key="close" onClick={() => setPreviewPo(null)}>Close</Button>,
+          previewPo && (
             <PDFDownloadLink
               key="download"
-              document={<InvoicePdf invoice={previewInvoice} />}
-              fileName={`${previewInvoice.invoiceNumber}.pdf`}
+              document={<PurchaseOrderPdf purchaseOrder={previewPo} />}
+              fileName={`${previewPo.poNumber}.pdf`}
             >
               <Button type="primary" icon={<FilePdfOutlined />}>
                 Download PDF
@@ -291,9 +299,9 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
         ]}
       >
         <div style={{ height: '75vh', width: '100%', backgroundColor: '#f0f2f5' }}>
-          {previewInvoice && (
+          {previewPo && (
             <PDFViewer width="100%" height="100%" showToolbar={false} style={{ border: 'none' }}>
-              <InvoicePdf invoice={previewInvoice} />
+              <PurchaseOrderPdf purchaseOrder={previewPo} />
             </PDFViewer>
           )}
         </div>

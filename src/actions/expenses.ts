@@ -22,3 +22,24 @@ export async function createExpense(data: Record<string, unknown>) {
   revalidatePath('/dashboard/expenses');
   return res.json();
 }
+
+
+export async function updateExpense(id: string, data: Record<string, unknown>) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/expenses/${id}`, {
+    method: 'PATCH', headers, body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update expense');
+  revalidatePath('/dashboard/expenses');
+  return res.json();
+}
+
+export async function deleteExpense(id: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/expenses/${id}`, {
+    method: 'DELETE', headers,
+  });
+  if (!res.ok) throw new Error('Failed to delete expense');
+  revalidatePath('/dashboard/expenses');
+  return { success: true };
+}

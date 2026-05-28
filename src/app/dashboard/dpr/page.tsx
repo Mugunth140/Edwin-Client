@@ -1,20 +1,31 @@
-'use client';
+import { Alert } from 'antd';
+import { DprClient } from '@/components/dashboard/DprClient';
+import { fetchProjects, fetchDpr } from '@/lib/api';
+import type { Project, DprReport } from '@/types/erp';
 
-import { Card, Typography, Empty } from 'antd';
-import { CalendarOutlined } from '@ant-design/icons';
-import { cardClassName, mutedTextClassName, pageTitleClassName, titleIconClassName } from '@/components/dashboard/ui';
+async function loadData() {
+  try {
+    const [projects, dprs] = await Promise.all([
+      fetchProjects(),
+      fetchDpr('page=1&limit=10') as Promise<{ data: DprReport[]; total: number }>,
+    ]);
+    return { projects, dprs, error: null };
+  } catch (error) {
+    return {
+      projects: [],
+      dprs: { data: [], total: 0 },
+      error: error instanceof Error ? error.message : 'Unable to load DPR data',
+    };
+  }
+}
 
-const { Title, Text } = Typography;
+export default async function DprPage() {
+  const { projects, dprs, error } = await loadData();
 
-export default function DprPage() {
   return (
-    <div>
-      <Title level={3} className={`${pageTitleClassName} mb-6`}>
-        <CalendarOutlined className={titleIconClassName} /> Daily Progress Reports
-      </Title>
-      <Card className={cardClassName}>
-        <Empty description={<Text className={mutedTextClassName}>Connect to backend to manage DPR</Text>} />
-      </Card>
-    </div>
+    <>
+      {error && <Alert type="warning" showIcon message={error} className="mb-4" />}
+      <DprClient projects={projects} initialDprs={dprs} />
+    </>
   );
 }

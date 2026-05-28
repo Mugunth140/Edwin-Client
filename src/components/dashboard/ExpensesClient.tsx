@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Select, Space, Table, Typography, message } from 'antd';
+import { Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Select, Space, Table, Typography, message, Popconfirm, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DollarOutlined, PlusOutlined } from '@ant-design/icons';
+import { DollarOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { createExpense } from '@/actions/expenses';
+import dayjs from 'dayjs';
+import { createExpense, updateExpense, deleteExpense } from '@/actions/expenses';
 import type { Expense, ExpenseCategory, Project } from '@/types/erp';
 import {
   StatusTag,
@@ -41,10 +42,11 @@ type ExpensesClientProps = {
 
 export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
   const [open, setOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isPending, startTransition] = useTransition();
   const [messageApi, contextHolder] = message.useMessage();
 
-  const { control, handleSubmit, reset } = useForm<ExpenseFormValues>({
+  const { control, handleSubmit, reset, setValue } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       category: 'staff',
@@ -56,7 +58,41 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
     },
   });
 
+  const handleEdit = (record: Expense) => {
+    setEditingExpense(record);
+    setValue('category', record.category);
+    setValue('description', record.description);
+    setValue('amount', Number(record.amount));
+    setValue('expenseDate', record.expenseDate ? dayjs(record.expenseDate).format('YYYY-MM-DD') : '');
+    setValue('paidBy', record.paidBy || '');
+    setValue('projectId', record.projectId || undefined);
+    setOpen(true);
+  };
+
+  const handleAdd = () => {
+    setEditingExpense(null);
+    reset();
+    setOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      try {
+        await deleteExpense(id);
+        messageApi.success('Expense deleted');
+      } catch (error) {
+        messageApi.error('Failed to delete expense');
+      }
+    });
+  };
+
   const columns: ColumnsType<Expense> = [
+    {
+      title: 'S.No',
+      key: 'sno',
+      width: 60,
+      render: (_text, _record, index) => index + 1,
+    },
     {
       title: 'Date',
       dataIndex: 'expenseDate',
@@ -75,12 +111,12 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
       dataIndex: 'description',
       sorter: (a, b) => a.description.localeCompare(b.description),
       render: (value: string, record) => (
-        <Space direction="vertical" size={0}>
+        <Flex vertical gap={0}>
           <Typography.Text strong>{value}</Typography.Text>
           <Typography.Text type="secondary" className={`${secondaryTextClassName} text-xs`}>
             {record.project?.name || 'General'}
           </Typography.Text>
-        </Space>
+        </Flex>
       ),
     },
     {
@@ -96,21 +132,60 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
       sorter: (a, b) => Number(a.amount) - Number(b.amount),
       render: formatCurrency,
     },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 100,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Edit">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Delete Expense"
+            description="Are you sure you want to delete this expense?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
+            okButtonProps={{ danger: true, loading: isPending }}
+          >
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+            />
+          </Popconfirm>
+        </Space>
+      ),
+    },
   ];
 
   const submit = (values: ExpenseFormValues) => {
     startTransition(async () => {
       try {
-        await createExpense({
+        const payload = {
           ...values,
           paidBy: values.paidBy || undefined,
           projectId: values.projectId || undefined,
-        });
-        messageApi.success('Expense added');
+        };
+        
+        if (editingExpense) {
+          await updateExpense(editingExpense.id, payload);
+          messageApi.success('Expense updated');
+        } else {
+          await createExpense(payload);
+          messageApi.success('Expense added');
+        }
+        
         reset();
         setOpen(false);
+        setEditingExpense(null);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to add expense');
+        messageApi.error(error instanceof Error ? error.message : 'Failed to save expense');
       }
     });
   };
@@ -122,7 +197,7 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
         <Typography.Title level={3} className={pageTitleClassName}>
           <DollarOutlined className={titleIconClassName} /> Expenses
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           Add Expense
         </Button>
       </Flex>
@@ -139,16 +214,24 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
       </Card>
 
       <Drawer
-        title="Add Expense"
+        title={editingExpense ? "Edit Expense" : "Add Expense"}
         size="default"
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setEditingExpense(null);
+          reset();
+        }}
         destroyOnHidden
         extra={
           <Space>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={() => {
+              setOpen(false);
+              setEditingExpense(null);
+              reset();
+            }}>Cancel</Button>
             <Button type="primary" loading={isPending} onClick={handleSubmit(submit)}>
-              Save
+              {editingExpense ? "Update" : "Save"}
             </Button>
           </Space>
         }
@@ -214,6 +297,7 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
               >
                 <DatePicker
                   className="w-full"
+                  value={field.value ? dayjs(field.value) : null}
                   onChange={(_, dateString) => field.onChange(Array.isArray(dateString) ? dateString[0] : dateString)}
                 />
               </Form.Item>

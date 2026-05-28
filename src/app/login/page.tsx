@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Form, Input, Button, Card, Typography, message, Space } from 'antd';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Form, Input, Button, Card, Typography, message, Space, Alert } from 'antd';
 import { UserOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 
@@ -11,7 +11,19 @@ const { Title, Text } = Typography;
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isExpired = searchParams.get('expired') === 'true';
   const setUser = useAuthStore((state) => state.setUser);
+
+  useEffect(() => {
+    if (isExpired) {
+      // Small delay to ensure the UI is ready
+      const timer = setTimeout(() => {
+        message.warning('Your session has expired. Please log in again.');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isExpired]);
 
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true);

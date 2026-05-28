@@ -28,9 +28,13 @@ export type Project = {
 export type Vendor = {
   id: string;
   name: string;
+  address?: string | null;
+  gstNumber?: string | null;
   state?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Customer = {
@@ -84,6 +88,22 @@ export type SalesInvoice = {
   createdAt?: string;
 };
 
+export type PurchaseOrderStatus = 'draft' | 'sent' | 'approved' | 'cancelled';
+
+export type PurchaseOrder = {
+  id: string;
+  poNumber: string;
+  vendorId: string;
+  projectId: string;
+  vendor?: Vendor;
+  project?: Project;
+  paymentTerms?: string | null;
+  status: PurchaseOrderStatus;
+  totalAmount: number | string;
+  items?: LineItem[];
+  createdAt?: string;
+};
+
 export type Expense = {
   id: string;
   category: ExpenseCategory;
@@ -119,4 +139,31 @@ export type DashboardData = {
 export type ExpenseSummary = {
   category: ExpenseCategory;
   total: number | string;
+};
+
+export type DrawingCategory = 'structural' | 'as_built' | 'general_arrangement' | 'architectural' | 'hvac' | 'mep';
+
+export type Drawing = {
+  id: string;
+  projectId: string;
+  project?: Project;
+  title: string;
+  category: DrawingCategory;
+  revision: string;
+  fileUrl: string;
+  fileKey: string;
+  uploadedBy?: string | null;
+  createdAt: string;
+};
+
+export type DprReport = {
+  id: string;
+  projectId: string;
+  project?: Project;
+  reportDate: string;
+  fileUrl: string;
+  fileType: string;
+  fileKey: string;
+  uploadedBy?: string | null;
+  createdAt: string;
 };

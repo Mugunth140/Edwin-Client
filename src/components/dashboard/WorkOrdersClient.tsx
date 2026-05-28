@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, Select, Space, Table, Typography, message } from 'antd';
+import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { createWorkOrder } from '@/actions/workorders';
+import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
+import { createWorkOrder, deleteWorkOrder, updateWorkOrder, updateWorkOrderStatus } from '@/actions/workorders';
 import type { Project, Vendor, WorkOrder } from '@/types/erp';
 import { LineItemsEditor } from './LineItemsEditor';
+import { WorkOrderPdf } from './WorkOrderPdf';
 import {
   StatusTag,
   cardClassName,
@@ -43,15 +45,29 @@ type WorkOrdersClientProps = {
   vendors: Vendor[];
 };
 
+const STATUS_OPTIONS = [
+  { label: 'Draft', value: 'draft' },
+  { label: 'Sent', value: 'sent' },
+  { label: 'Approved', value: 'approved' },
+];
+
 export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersClientProps) {
   const [open, setOpen] = useState(false);
+  const [editingWo, setEditingWo] = useState<WorkOrder | null>(null);
+  const [previewWo, setPreviewWo] = useState<WorkOrder | null>(null);
   const [isPending, startTransition] = useTransition();
   const [messageApi, contextHolder] = message.useMessage();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<WorkOrderFormValues>({
     resolver: zodResolver(workOrderSchema),
@@ -63,7 +79,61 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
     },
   });
 
+  useEffect(() => {
+    if (editingWo) {
+      setValue('vendorId', editingWo.vendorId);
+      setValue('projectId', editingWo.projectId);
+      setValue('terms', editingWo.terms || '');
+      setValue('items', editingWo.items?.map(item => ({
+        description: item.description,
+        quantity: Number(item.quantity),
+        unit: item.unit,
+        rate: Number(item.rate)
+      })) || []);
+    } else {
+      reset({
+        vendorId: '',
+        projectId: '',
+        terms: '',
+        items: [{ description: '', quantity: 1, unit: 'nos', rate: 0 }],
+      });
+    }
+  }, [editingWo, setValue, reset]);
+
+  const handleEdit = (wo: WorkOrder) => {
+    setEditingWo(wo);
+    setOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      try {
+        await deleteWorkOrder(id);
+        messageApi.success('Work order deleted successfully');
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : 'Failed to delete work order');
+      }
+    });
+  };
+
+  const handleStatusChange = (id: string, status: string) => {
+    startTransition(async () => {
+      try {
+        await updateWorkOrderStatus(id, status);
+        messageApi.success('Status updated');
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : 'Failed to update status');
+      }
+    });
+  };
+
   const columns: ColumnsType<WorkOrder> = [
+    {
+      title: 'S.No',
+      key: 'sno',
+      width: 60,
+      render: (_text, _record, index) => index + 1,
+    },
     {
       title: 'WO Number',
       dataIndex: 'woNumber',
@@ -77,19 +147,35 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
       render: (_value, record) => record.vendor?.name || '-',
     },
     {
+      title: 'Project',
+      dataIndex: ['project', 'name'],
+      sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''),
+      render: (_value, record) => record.project?.name || '-',
+    },
+    {
       title: 'Status',
       dataIndex: 'status',
-      filters: [
-        { text: 'Draft', value: 'draft' },
-        { text: 'Sent', value: 'sent' },
-        { text: 'Approved', value: 'approved' },
-      ],
+      width: 140,
+      filters: STATUS_OPTIONS.map(opt => ({ text: opt.label, value: opt.value })),
       onFilter: (value, record) => record.status === value,
-      render: (value: string) => <StatusTag value={value} />,
+      render: (value: string, record) => (
+        <Select
+          defaultValue={value}
+          size="small"
+          bordered={false}
+          className="w-full"
+          onChange={(newStatus) => handleStatusChange(record.id, newStatus)}
+          options={STATUS_OPTIONS}
+          popupMatchSelectWidth={false}
+          dropdownStyle={{ minWidth: 120 }}
+          disabled={isPending}
+        />
+      ),
     },
     {
       title: 'Items',
       dataIndex: 'items',
+      width: 80,
       render: (items: WorkOrder['items']) => items?.length || 0,
       sorter: (a, b) => (a.items?.length || 0) - (b.items?.length || 0),
     },
@@ -99,12 +185,12 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
       align: 'right',
       sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount),
       render: (value: number | string, record) => (
-        <Space direction="vertical" size={0} className="items-end">
+        <Flex vertical gap={0} className="items-end">
           <Typography.Text>{formatCurrency(value)}</Typography.Text>
           <Typography.Text type="secondary" className={`${secondaryTextClassName} text-xs`}>
             GST {formatCurrency(record.gstAmount)}
           </Typography.Text>
-        </Space>
+        </Flex>
       ),
     },
     {
@@ -113,19 +199,66 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
       sorter: (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(),
       render: formatDate,
     },
+    {
+      title: 'Actions',
+      key: 'actions',
+      fixed: 'right',
+      width: 130,
+      render: (_, record) => (
+        <Space>
+          {isClient && (
+            <Button
+              type="text"
+              icon={<FilePdfOutlined className="text-red-500" />}
+              title="Preview PDF"
+              onClick={() => setPreviewWo(record)}
+            />
+          )}
+          <Button
+            type="text"
+            icon={<EditOutlined className="text-sky-500" />}
+            onClick={() => handleEdit(record)}
+          />
+          <Popconfirm
+            title="Delete Work Order"
+            description="Are you sure you want to delete this work order?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
+            okButtonProps={{ danger: true, loading: isPending }}
+          >
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+            />
+          </Popconfirm>
+        </Space>
+      ),
+    },
   ];
 
   const submit = (values: WorkOrderFormValues) => {
     startTransition(async () => {
       try {
-        await createWorkOrder(values);
-        messageApi.success('Work order created');
-        reset();
+        if (editingWo) {
+          await updateWorkOrder(editingWo.id, values);
+          messageApi.success('Work order updated successfully');
+        } else {
+          await createWorkOrder(values);
+          messageApi.success('Work order created successfully');
+        }
         setOpen(false);
+        setEditingWo(null);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to create work order');
+        messageApi.error(error instanceof Error ? error.message : 'Failed to save work order');
       }
     });
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setEditingWo(null);
   };
 
   return (
@@ -146,22 +279,22 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
           columns={columns}
           rowKey="id"
           size="middle"
-          scroll={{ x: 900 }}
+          scroll={{ x: 1000 }}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} work orders` }}
         />
       </Card>
 
       <Drawer
-        title="Create Work Order"
+        title={editingWo ? 'Edit Work Order' : 'Create Work Order'}
         size="large"
         open={open}
-        onClose={() => setOpen(false)}
-        destroyOnHidden
+        onClose={handleClose}
+        destroyOnClose
         extra={
           <Space>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={handleClose}>Cancel</Button>
             <Button type="primary" loading={isPending} onClick={handleSubmit(submit)}>
-              Save
+              {editingWo ? 'Update' : 'Save'}
             </Button>
           </Space>
         }
@@ -222,6 +355,37 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
           )}
         </Form>
       </Drawer>
+
+      {/* PDF Preview Modal */}
+      <Modal
+        title={`Work Order Preview — ${previewWo?.woNumber}`}
+        open={!!previewWo}
+        onCancel={() => setPreviewWo(null)}
+        width="90%"
+        style={{ top: 20 }}
+        footer={[
+          <Button key="close" onClick={() => setPreviewWo(null)}>Close</Button>,
+          previewWo && (
+            <PDFDownloadLink
+              key="download"
+              document={<WorkOrderPdf workOrder={previewWo} />}
+              fileName={`${previewWo.woNumber}.pdf`}
+            >
+              <Button type="primary" icon={<FilePdfOutlined />}>
+                Download PDF
+              </Button>
+            </PDFDownloadLink>
+          )
+        ]}
+      >
+        <div style={{ height: '75vh', width: '100%', backgroundColor: '#f0f2f5' }}>
+          {previewWo && (
+            <PDFViewer width="100%" height="100%" showToolbar={false} style={{ border: 'none' }}>
+              <WorkOrderPdf workOrder={previewWo} />
+            </PDFViewer>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

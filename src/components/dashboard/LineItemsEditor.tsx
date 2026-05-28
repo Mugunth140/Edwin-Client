@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Flex, Form, Input, InputNumber, Space, Typography } from 'antd';
+import { Button, Flex, Form, Input, InputNumber, Typography } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   Controller,
@@ -41,7 +41,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
         </Button>
       </Flex>
 
-      <Space direction="vertical" className="w-full" size={12}>
+      <Flex vertical className="w-full" gap={12}>
         {fields.map((field, index) => (
           <div
             key={field.id}
@@ -126,10 +126,10 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                 disabled={fields.length === 1}
                 className="mt-7.5"
               />
-            </Flex>
-          </div>
-        ))}
-      </Space>
-    </div>
-  );
-}
+              </Flex>
+              </div>
+              ))}
+              </Flex>
+              </div>
+              );
+              }

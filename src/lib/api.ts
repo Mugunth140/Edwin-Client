@@ -9,6 +9,8 @@ import type {
   SalesInvoice,
   Vendor,
   WorkOrder,
+  Drawing,
+  PurchaseOrder,
 } from '@/types/erp';
 import { getApiBaseUrl } from './api-url';
 
@@ -54,4 +56,9 @@ export const fetchExpenses = (params?: string) => apiFetch<PagedResponse<Expense
 export const fetchExpenseSummary = () => apiFetch<ExpenseSummary[]>('/expenses/summary');
 export const fetchPayments = (params?: string) => apiFetch(`/payments${params ? `?${params}` : ''}`);
 export const fetchDpr = (params?: string) => apiFetch(`/dpr${params ? `?${params}` : ''}`);
-export const fetchDrawings = (params?: string) => apiFetch(`/drawings${params ? `?${params}` : ''}`);
+export const fetchDrawings = (params?: string) => apiFetch<Drawing[]>(`/drawings${params ? `?${params}` : ''}`);
+export const fetchPurchaseOrders = () => apiFetch<PurchaseOrder[]>('/purchase-orders');
+export const fetchLedger = () => apiFetch<any[]>('/accounts/ledger');
+export const fetchBalance = () => apiFetch<{ totalRevenue: number; totalCost: number }>('/accounts/balance');
+export const fetchPayables = () => apiFetch<any[]>('/accounts/payables');
+export const fetchReceivables = () => apiFetch<any[]>('/accounts/receivables');

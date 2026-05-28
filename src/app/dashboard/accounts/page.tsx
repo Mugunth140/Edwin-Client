@@ -1,20 +1,30 @@
-'use client';
+import { Alert } from 'antd';
+import { AccountsClient } from '@/components/dashboard/AccountsClient';
+import { fetchBalance, fetchLedger } from '@/lib/api';
 
-import { Card, Typography, Empty } from 'antd';
-import { BankOutlined } from '@ant-design/icons';
-import { cardClassName, mutedTextClassName, pageTitleClassName, titleIconClassName } from '@/components/dashboard/ui';
+async function loadPageData() {
+  try {
+    const [ledger, balance] = await Promise.all([
+      fetchLedger(),
+      fetchBalance(),
+    ]);
+    return { ledger, balance };
+  } catch (error) {
+    return {
+      ledger: [],
+      balance: { totalRevenue: 0, totalCost: 0 },
+      error: error instanceof Error ? error.message : 'Unable to load accounts data',
+    };
+  }
+}
 
-const { Title, Text } = Typography;
+export default async function AccountsPage() {
+  const { ledger, balance, error } = await loadPageData();
 
-export default function AccountsPage() {
   return (
-    <div>
-      <Title level={3} className={`${pageTitleClassName} mb-6`}>
-        <BankOutlined className={titleIconClassName} /> Accounts & Purchase
-      </Title>
-      <Card className={cardClassName}>
-        <Empty description={<Text className={mutedTextClassName}>Connect to backend to view accounts</Text>} />
-      </Card>
-    </div>
+    <>
+      {error && <Alert type="warning" showIcon title={error} className="mb-4" />}
+      <AccountsClient ledger={ledger} balance={balance} />
+    </>
   );
 }

@@ -32,3 +32,13 @@ export async function updateInvoiceStatus(id: string, status: string) {
   revalidatePath('/dashboard/accounts/invoices');
   return res.json();
 }
+
+export async function createBill(data: Record<string, unknown>) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/bills`, {
+    method: 'POST', headers, body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create bill');
+  revalidatePath('/dashboard/accounts/bills');
+  return res.json();
+}

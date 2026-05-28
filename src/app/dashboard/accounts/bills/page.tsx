@@ -1,20 +1,33 @@
-'use client';
+import { Alert } from 'antd';
+import { BillsClient } from '@/components/dashboard/BillsClient';
+import { fetchBills, fetchProjects, fetchVendors } from '@/lib/api';
 
-import { Card, Typography, Empty } from 'antd';
-import { FileTextOutlined } from '@ant-design/icons';
-import { cardClassName, mutedTextClassName, pageTitleClassName, titleIconClassName } from '@/components/dashboard/ui';
+async function loadPageData() {
+  try {
+    const [bills, vendors, projects] = await Promise.all([
+      fetchBills(),
+      fetchVendors(),
+      fetchProjects(),
+    ]);
+    return { bills, vendors, projects };
+  } catch (error) {
+    return {
+      bills: [],
+      vendors: [],
+      projects: [],
+      error: error instanceof Error ? error.message : 'Unable to load bills',
+    };
+  }
+}
 
-const { Title, Text } = Typography;
+export default async function BillsPage() {
+  const { bills, vendors, projects, error } = await loadPageData();
 
-export default function BillsPage() {
   return (
-    <div>
-      <Title level={3} className={`${pageTitleClassName} mb-6`}>
-        <FileTextOutlined className={titleIconClassName} /> Purchase Bills
-      </Title>
-      <Card className={cardClassName}>
-        <Empty description={<Text className={mutedTextClassName}>Connect to backend to manage bills</Text>} />
-      </Card>
-    </div>
+    <>
+      {error && <Alert type="warning" showIcon title={error} className="mb-4" />}
+      <BillsClient bills={bills} vendors={vendors} projects={projects} />
+    </>
   );
 }
+

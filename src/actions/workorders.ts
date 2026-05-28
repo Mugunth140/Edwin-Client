@@ -25,6 +25,18 @@ export async function createWorkOrder(data: Record<string, unknown>) {
   return res.json();
 }
 
+export async function updateWorkOrder(id: string, data: Record<string, unknown>) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/work-orders/${id}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update work order');
+  revalidatePath('/dashboard/work-orders');
+  return res.json();
+}
+
 export async function updateWorkOrderStatus(id: string, status: string) {
   const headers = await getAuthHeaders();
   const res = await fetch(`${getApiBaseUrl()}/work-orders/${id}/status`, {
@@ -35,4 +47,15 @@ export async function updateWorkOrderStatus(id: string, status: string) {
   if (!res.ok) throw new Error('Failed to update status');
   revalidatePath('/dashboard/work-orders');
   return res.json();
+}
+
+export async function deleteWorkOrder(id: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/work-orders/${id}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to delete work order');
+  revalidatePath('/dashboard/work-orders');
+  return { success: true };
 }
