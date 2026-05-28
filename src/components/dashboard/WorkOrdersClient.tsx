@@ -162,12 +162,12 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
         <Select
           defaultValue={value}
           size="small"
-          bordered={false}
+          variant="borderless"
           className="w-full"
           onChange={(newStatus) => handleStatusChange(record.id, newStatus)}
           options={STATUS_OPTIONS}
           popupMatchSelectWidth={false}
-          dropdownStyle={{ minWidth: 120 }}
+          styles={{ popup: { root: { minWidth: 120 } } }}
           disabled={isPending}
         />
       ),
