@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiBaseUrl } from '@/lib/api-url';
 
+function getSecureCookieSetting() {
+  const value = process.env.AUTH_COOKIE_SECURE;
+  if (value !== undefined && value !== '') {
+    return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+  }
+
+  return process.env.NODE_ENV === 'production';
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
 
@@ -22,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Set httpOnly cookie with JWT
     response.cookies.set('token', data.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: getSecureCookieSetting(),
       sameSite: 'lax',
       maxAge: 60 * 60 * 8, // 8 hours
       path: '/',
