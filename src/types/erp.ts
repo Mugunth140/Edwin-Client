@@ -167,3 +167,17 @@ export type DprReport = {
   uploadedBy?: string | null;
   createdAt: string;
 };
+
+export type PurchaseBill = {
+  id: string;
+  billNumber: string;
+  vendorId: string;
+  vendor?: Vendor;
+  projectId?: string | null;
+  project?: Project;
+  amount: number | string;
+  billDate: string;
+  dueDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};

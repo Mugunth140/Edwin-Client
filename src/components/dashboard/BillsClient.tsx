@@ -8,7 +8,7 @@ import { FileDoneOutlined, PlusOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { createBill } from '@/actions/invoices';
-import type { Vendor, Project } from '@/types/erp';
+import type { Vendor, Project, PurchaseBill } from '@/types/erp';
 import {
   cardClassName,
   formatCurrency,
@@ -30,7 +30,7 @@ const billSchema = z.object({
 type BillFormValues = z.infer<typeof billSchema>;
 
 type BillsClientProps = {
-  bills: any[];
+  bills: PurchaseBill[];
   vendors: Vendor[];
   projects: Project[];
 };
@@ -55,7 +55,7 @@ export function BillsClient({ bills, vendors, projects }: BillsClientProps) {
     },
   });
 
-  const columns: ColumnsType<any> = [
+  const columns: ColumnsType<PurchaseBill> = [
     {
       title: 'S.No',
       key: 'sno',

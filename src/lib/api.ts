@@ -11,6 +11,7 @@ import type {
   WorkOrder,
   Drawing,
   PurchaseOrder,
+  PurchaseBill,
 } from '@/types/erp';
 import { getApiBaseUrl } from './api-url';
 
@@ -46,19 +47,19 @@ export async function apiFetch<T>(
 // Convenience helpers
 export const fetchDashboard = () => apiFetch<DashboardData>('/dashboard/master');
 export const fetchProjects = () => apiFetch<Project[]>('/projects');
-export const fetchProjectDashboard = (id: string) => apiFetch(`/projects/${id}/dashboard`);
+export const fetchProjectDashboard = (id: string) => apiFetch<any>(`/projects/${id}/dashboard`);
 export const fetchWorkOrders = (params?: string) => apiFetch<PagedResponse<WorkOrder>>(`/work-orders${params ? `?${params}` : ''}`);
 export const fetchVendors = () => apiFetch<Vendor[]>('/vendors');
 export const fetchCustomers = () => apiFetch<Customer[]>('/customers');
 export const fetchInvoices = () => apiFetch<SalesInvoice[]>('/invoices');
-export const fetchBills = () => apiFetch('/bills');
+export const fetchBills = () => apiFetch<PurchaseBill[]>('/bills');
 export const fetchExpenses = (params?: string) => apiFetch<PagedResponse<Expense>>(`/expenses${params ? `?${params}` : ''}`);
 export const fetchExpenseSummary = () => apiFetch<ExpenseSummary[]>('/expenses/summary');
-export const fetchPayments = (params?: string) => apiFetch(`/payments${params ? `?${params}` : ''}`);
-export const fetchDpr = (params?: string) => apiFetch(`/dpr${params ? `?${params}` : ''}`);
+export const fetchPayments = (params?: string) => apiFetch<any>(`/payments${params ? `?${params}` : ''}`);
+export const fetchDpr = (params?: string) => apiFetch<any>(`/dpr${params ? `?${params}` : ''}`);
 export const fetchDrawings = (params?: string) => apiFetch<Drawing[]>(`/drawings${params ? `?${params}` : ''}`);
 export const fetchPurchaseOrders = () => apiFetch<PurchaseOrder[]>('/purchase-orders');
 export const fetchLedger = () => apiFetch<any[]>('/accounts/ledger');
 export const fetchBalance = () => apiFetch<{ totalRevenue: number; totalCost: number }>('/accounts/balance');
-export const fetchPayables = () => apiFetch<any[]>('/accounts/payables');
-export const fetchReceivables = () => apiFetch<any[]>('/accounts/receivables');
+export const fetchPayables = () => apiFetch<PurchaseBill[]>('/accounts/payables');
+export const fetchReceivables = () => apiFetch<SalesInvoice[]>('/accounts/receivables');
