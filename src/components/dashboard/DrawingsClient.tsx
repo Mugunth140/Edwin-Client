@@ -343,7 +343,7 @@ export function DrawingsClient({ projects, initialDrawings }: DrawingsClientProp
         title={editingDrawing ? "Edit Project Drawing" : "Add New Project Drawing"}
         open={open}
         onClose={() => setOpen(false)}
-        width={450}
+        size="default"
         destroyOnClose
         extra={
           <Space>

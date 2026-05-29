@@ -75,7 +75,7 @@ export function AccountsClient({ ledger, balance }: AccountsClientProps) {
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={8}>
-          <Card className={cardClassName} bordered={false}>
+          <Card className={cardClassName} variant="borderless">
             <Statistic
               title="Total Revenue (Paid Invoices)"
               value={balance.totalRevenue}
@@ -87,7 +87,7 @@ export function AccountsClient({ ledger, balance }: AccountsClientProps) {
           </Card>
         </Col>
         <Col xs={24} sm={8}>
-          <Card className={cardClassName} bordered={false}>
+          <Card className={cardClassName} variant="borderless">
             <Statistic
               title="Total Cost (Bills)"
               value={balance.totalCost}
@@ -99,7 +99,7 @@ export function AccountsClient({ ledger, balance }: AccountsClientProps) {
           </Card>
         </Col>
         <Col xs={24} sm={8}>
-          <Card className={cardClassName} bordered={false}>
+          <Card className={cardClassName} variant="borderless">
             <Statistic
               title="Estimated Balance"
               value={netProfit}
@@ -114,7 +114,7 @@ export function AccountsClient({ ledger, balance }: AccountsClientProps) {
       <Title level={4} className="mb-4">
         <HistoryOutlined /> General Ledger (Derived)
       </Title>
-      <Card className={cardClassName} bodyStyle={{ padding: 0 }}>
+      <Card className={cardClassName} styles={{ body: { padding: 0 } }}>
         <Table
           dataSource={ledger}
           columns={columns}

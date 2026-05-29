@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Form, Input, Button, Card, Typography, message, Space, Alert } from 'antd';
+import { Form, Input, Button, Card, Typography, message, Space, Alert, ConfigProvider, theme } from 'antd';
 import { UserOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 
@@ -120,16 +120,18 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div
-      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#0a1628_0%,#1a2744_50%,#0d1f3c_100%)]"
-    >
-      {/* Ambient background circles */}
-      <div className="absolute -right-25 -top-25 h-100 w-100 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
-      <div className="absolute -bottom-12.5 -left-12.5 h-75 w-75 rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
+    <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
+      <div
+        className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#0a1628_0%,#1a2744_50%,#0d1f3c_100%)]"
+      >
+        {/* Ambient background circles */}
+        <div className="absolute -right-25 -top-25 h-100 w-100 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
+        <div className="absolute -bottom-12.5 -left-12.5 h-75 w-75 rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
 
-      <Suspense fallback={<div className="text-slate-200">Loading...</div>}>
-        <LoginForm />
-      </Suspense>
-    </div>
+        <Suspense fallback={<div className="text-slate-200">Loading...</div>}>
+          <LoginForm />
+        </Suspense>
+      </div>
+    </ConfigProvider>
   );
 }

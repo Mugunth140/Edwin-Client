@@ -284,7 +284,7 @@ export function DprClient({ projects, initialDprs }: DprClientProps) {
         title="Upload Daily Progress Report"
         open={open}
         onClose={() => setOpen(false)}
-        width={450}
+        size="default"
         destroyOnClose
         extra={
           <Space>
