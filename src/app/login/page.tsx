@@ -112,9 +112,7 @@ function LoginForm() {
           </Form.Item>
         </Form>
 
-        <Text className="text-xs text-slate-500!">
-          Default: admin@edwinconstructions.com / admin123
-        </Text>
+        
       </Space>
     </Card>
   );
