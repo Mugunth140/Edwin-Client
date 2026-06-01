@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, Popconfirm, Space, Table, Typography, message } from 'antd';
+import { Button, Card, Drawer, Flex, Form, Input, Popconfirm, Space, Table, Typography, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -36,7 +36,7 @@ export function VendorsClient({ vendors }: VendorsClientProps) {
   const [open, setOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
 
   const {
     control,
@@ -85,9 +85,9 @@ export function VendorsClient({ vendors }: VendorsClientProps) {
     startTransition(async () => {
       try {
         await deleteVendor(id);
-        messageApi.success('Vendor deleted successfully');
+        message.success('Vendor deleted successfully');
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to delete vendor');
+        message.error(error instanceof Error ? error.message : 'Failed to delete vendor');
       }
     });
   };
@@ -169,15 +169,15 @@ export function VendorsClient({ vendors }: VendorsClientProps) {
       try {
         if (editingVendor) {
           await updateVendor(editingVendor.id, values);
-          messageApi.success('Vendor updated successfully');
+          message.success('Vendor updated successfully');
         } else {
           await createVendor(values);
-          messageApi.success('Vendor created successfully');
+          message.success('Vendor created successfully');
         }
         setOpen(false);
         setEditingVendor(null);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to save vendor');
+        message.error(error instanceof Error ? error.message : 'Failed to save vendor');
       }
     });
   };
@@ -189,7 +189,6 @@ export function VendorsClient({ vendors }: VendorsClientProps) {
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <TeamOutlined className={titleIconClassName} /> Vendors

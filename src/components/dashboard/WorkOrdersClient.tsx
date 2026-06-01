@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, message } from 'antd';
+import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -56,7 +56,7 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
   const [editingWo, setEditingWo] = useState<WorkOrder | null>(null);
   const [previewWo, setPreviewWo] = useState<WorkOrder | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -109,9 +109,9 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
     startTransition(async () => {
       try {
         await deleteWorkOrder(id);
-        messageApi.success('Work order deleted successfully');
+        message.success('Work order deleted successfully');
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to delete work order');
+        message.error(error instanceof Error ? error.message : 'Failed to delete work order');
       }
     });
   };
@@ -120,9 +120,9 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
     startTransition(async () => {
       try {
         await updateWorkOrderStatus(id, status);
-        messageApi.success('Status updated');
+        message.success('Status updated');
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to update status');
+        message.error(error instanceof Error ? error.message : 'Failed to update status');
       }
     });
   };
@@ -243,15 +243,15 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
       try {
         if (editingWo) {
           await updateWorkOrder(editingWo.id, values);
-          messageApi.success('Work order updated successfully');
+          message.success('Work order updated successfully');
         } else {
           await createWorkOrder(values);
-          messageApi.success('Work order created successfully');
+          message.success('Work order created successfully');
         }
         setOpen(false);
         setEditingWo(null);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to save work order');
+        message.error(error instanceof Error ? error.message : 'Failed to save work order');
       }
     });
   };
@@ -263,7 +263,6 @@ export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersCl
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <ShoppingCartOutlined className={titleIconClassName} /> Work Orders

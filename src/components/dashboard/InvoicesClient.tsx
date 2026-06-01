@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, DatePicker, Drawer, Flex, Form, Select, Space, Table, Typography, message, Modal } from 'antd';
+import { App, Button, Card, DatePicker, Drawer, Flex, Form, Select, Space, Table, Typography, Modal } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { FileTextOutlined, PlusOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -49,7 +49,7 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
   const [open, setOpen] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<SalesInvoice | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -157,18 +157,17 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
           projectId: values.projectId || undefined,
           dueDate: values.dueDate || undefined,
         });
-        messageApi.success('Invoice created');
+        message.success('Invoice created');
         reset();
         setOpen(false);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to create invoice');
+        message.error(error instanceof Error ? error.message : 'Failed to create invoice');
       }
     });
   };
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <FileTextOutlined className={titleIconClassName} /> Sales Invoices

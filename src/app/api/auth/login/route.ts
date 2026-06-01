@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: getSecureCookieSetting(request),
       sameSite: 'lax',
-      maxAge: 60 * 60 * 8, // 8 hours
       path: '/',
     });
 

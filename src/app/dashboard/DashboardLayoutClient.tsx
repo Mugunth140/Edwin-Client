@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Layout, Menu, Typography, Avatar, Dropdown, Space, theme, ConfigProvider } from 'antd';
+import { Layout, Menu, Typography, Avatar, Dropdown, Space, theme, ConfigProvider, App } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   AppstoreOutlined,
@@ -144,7 +144,8 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
   return (
     <ConfigProvider theme={themeConfig}>
-      <Layout className="min-h-screen bg-[#0b1120]">
+      <App>
+        <Layout className="min-h-screen bg-[#0b1120]">
         <Sider
           trigger={null}
           collapsible
@@ -243,6 +244,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
           </Content>
         </Layout>
       </Layout>
-    </ConfigProvider>
-  );
+    </App>
+  </ConfigProvider>
+);
 }

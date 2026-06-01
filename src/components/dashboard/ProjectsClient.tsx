@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Progress, Select, Space, Table, Typography, message } from 'antd';
+import { Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Progress, Select, Space, Table, Typography, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ProjectOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -43,7 +43,7 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
   const [open, setOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
 
   const {
     control,
@@ -98,9 +98,9 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
     startTransition(async () => {
       try {
         await deleteProject(id);
-        messageApi.success('Project deleted successfully');
+        message.success('Project deleted successfully');
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to delete project');
+        message.error(error instanceof Error ? error.message : 'Failed to delete project');
       }
     });
   };
@@ -211,15 +211,15 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       try {
         if (editingProject) {
           await updateProject(editingProject.id, data);
-          messageApi.success('Project updated successfully');
+          message.success('Project updated successfully');
         } else {
           await createProject(data);
-          messageApi.success('Project created successfully');
+          message.success('Project created successfully');
         }
         setOpen(false);
         setEditingProject(null);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to save project');
+        message.error(error instanceof Error ? error.message : 'Failed to save project');
       }
     });
   };
@@ -231,7 +231,6 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <ProjectOutlined className={titleIconClassName} /> Projects

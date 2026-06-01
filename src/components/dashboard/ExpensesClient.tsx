@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Select, Space, Table, Typography, message, Popconfirm, Tooltip } from 'antd';
+import { App, Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Select, Space, Table, Typography, Popconfirm, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DollarOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -44,7 +44,7 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
   const [open, setOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
 
   const { control, handleSubmit, reset, setValue } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -79,9 +79,9 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
     startTransition(async () => {
       try {
         await deleteExpense(id);
-        messageApi.success('Expense deleted');
+        message.success('Expense deleted');
       } catch (error) {
-        messageApi.error('Failed to delete expense');
+        message.error('Failed to delete expense');
       }
     });
   };
@@ -175,24 +175,23 @@ export function ExpensesClient({ expenses, projects }: ExpensesClientProps) {
         
         if (editingExpense) {
           await updateExpense(editingExpense.id, payload);
-          messageApi.success('Expense updated');
+          message.success('Expense updated');
         } else {
           await createExpense(payload);
-          messageApi.success('Expense added');
+          message.success('Expense added');
         }
         
         reset();
         setOpen(false);
         setEditingExpense(null);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to save expense');
+        message.error(error instanceof Error ? error.message : 'Failed to save expense');
       }
     });
   };
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <DollarOutlined className={titleIconClassName} /> Expenses

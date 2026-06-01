@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Form, Input, Button, Card, Typography, message, Space, Alert, ConfigProvider, theme } from 'antd';
+import { Form, Input, Button, Card, Typography, Space, Alert, ConfigProvider, theme, App } from 'antd';
 import { UserOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 
@@ -12,18 +12,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isExpired = searchParams.get('expired') === 'true';
   const setUser = useAuthStore((state) => state.setUser);
-
-  useEffect(() => {
-    if (isExpired) {
-      // Small delay to ensure the UI is ready
-      const timer = setTimeout(() => {
-        message.warning('Your session has expired. Please log in again.');
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isExpired]);
+  const { message } = App.useApp();
 
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true);
@@ -129,7 +119,9 @@ export default function LoginPage() {
         <div className="absolute -bottom-12.5 -left-12.5 h-75 w-75 rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
 
         <Suspense fallback={<div className="text-slate-200">Loading...</div>}>
-          <LoginForm />
+          <App>
+            <LoginForm />
+          </App>
         </Suspense>
       </div>
     </ConfigProvider>

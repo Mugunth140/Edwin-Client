@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import {
+  App,
   Button,
   Card,
   DatePicker,
@@ -13,7 +14,6 @@ import {
   Space,
   Table,
   Typography,
-  message,
   Upload,
   Tag,
   Tooltip,
@@ -58,7 +58,7 @@ export function DprClient({ projects, initialDprs }: DprClientProps) {
   const [total, setTotal] = useState(initialDprs.total);
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   
   // Filter states
@@ -81,7 +81,7 @@ export function DprClient({ projects, initialDprs }: DprClientProps) {
       setTotal(result.total);
       setPage(p);
     } catch (error) {
-      messageApi.error('Failed to load reports');
+      message.error('Failed to load reports');
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ export function DprClient({ projects, initialDprs }: DprClientProps) {
         setDprs(result.data);
         setTotal(result.total);
       })
-      .catch(() => messageApi.error('Failed to load reports'))
+      .catch(() => message.error('Failed to load reports'))
       .finally(() => setLoading(false));
   };
 
@@ -111,19 +111,19 @@ export function DprClient({ projects, initialDprs }: DprClientProps) {
     if (values.file?.fileList?.[0]?.originFileObj) {
       formData.append('file', values.file.fileList[0].originFileObj);
     } else {
-      messageApi.error('Please select a file');
+      message.error('Please select a file');
       return;
     }
 
     startTransition(async () => {
       try {
         await uploadDpr(formData);
-        messageApi.success('DPR uploaded successfully');
+        message.success('DPR uploaded successfully');
         setOpen(false);
         form.resetFields();
         fetchFilteredDprs();
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Upload failed');
+        message.error(error instanceof Error ? error.message : 'Upload failed');
       }
     });
   };
@@ -132,10 +132,10 @@ export function DprClient({ projects, initialDprs }: DprClientProps) {
     startTransition(async () => {
       try {
         await deleteDpr(id);
-        messageApi.success('Report deleted successfully');
+        message.success('Report deleted successfully');
         fetchFilteredDprs(page);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Delete failed');
+        message.error(error instanceof Error ? error.message : 'Delete failed');
       }
     });
   };
@@ -221,7 +221,6 @@ export function DprClient({ projects, initialDprs }: DprClientProps) {
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <CalendarOutlined className={titleIconClassName} /> Daily Progress Reports

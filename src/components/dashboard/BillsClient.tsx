@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Select, Space, Table, Typography, message } from 'antd';
+import { App, Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Select, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { FileDoneOutlined, PlusOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -38,7 +38,7 @@ type BillsClientProps = {
 export function BillsClient({ bills, vendors, projects }: BillsClientProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
 
   const {
     control,
@@ -103,18 +103,17 @@ export function BillsClient({ bills, vendors, projects }: BillsClientProps) {
           projectId: values.projectId || undefined,
           dueDate: values.dueDate || undefined,
         });
-        messageApi.success('Bill recorded successfully');
+        message.success('Bill recorded successfully');
         reset();
         setOpen(false);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to record bill');
+        message.error(error instanceof Error ? error.message : 'Failed to record bill');
       }
     });
   };
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <FileDoneOutlined className={titleIconClassName} /> Purchase Bills

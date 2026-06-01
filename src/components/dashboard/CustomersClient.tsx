@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, Popconfirm, Space, Table, Typography, message } from 'antd';
+import { App, Button, Card, Drawer, Flex, Form, Input, Popconfirm, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -33,7 +33,7 @@ export function CustomersClient({ customers }: CustomersClientProps) {
   const [open, setOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
 
   const {
     control,
@@ -75,9 +75,9 @@ export function CustomersClient({ customers }: CustomersClientProps) {
     startTransition(async () => {
       try {
         await deleteCustomer(id);
-        messageApi.success('Customer deleted successfully');
+        message.success('Customer deleted successfully');
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to delete customer');
+        message.error(error instanceof Error ? error.message : 'Failed to delete customer');
       }
     });
   };
@@ -147,15 +147,15 @@ export function CustomersClient({ customers }: CustomersClientProps) {
       try {
         if (editingCustomer) {
           await updateCustomer(editingCustomer.id, values);
-          messageApi.success('Customer updated successfully');
+          message.success('Customer updated successfully');
         } else {
           await createCustomer(values);
-          messageApi.success('Customer created successfully');
+          message.success('Customer created successfully');
         }
         setOpen(false);
         setEditingCustomer(null);
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to save customer');
+        message.error(error instanceof Error ? error.message : 'Failed to save customer');
       }
     });
   };
@@ -167,7 +167,6 @@ export function CustomersClient({ customers }: CustomersClientProps) {
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <UserOutlined className={titleIconClassName} /> Customers

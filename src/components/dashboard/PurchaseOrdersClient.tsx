@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, message } from 'antd';
+import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -56,7 +56,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
   const [open, setOpen] = useState(false);
   const [previewPo, setPreviewPo] = useState<PurchaseOrder | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -82,9 +82,9 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
     startTransition(async () => {
       try {
         await convertPoToBill(id);
-        messageApi.success('Converted to Bill successfully');
+        message.success('Converted to Bill successfully');
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Conversion failed');
+        message.error(error instanceof Error ? error.message : 'Conversion failed');
       }
     });
   };
@@ -173,18 +173,17 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
     startTransition(async () => {
       try {
         await createPurchaseOrder(values);
-        messageApi.success('Purchase order created successfully');
+        message.success('Purchase order created successfully');
         setOpen(false);
         reset();
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Failed to create purchase order');
+        message.error(error instanceof Error ? error.message : 'Failed to create purchase order');
       }
     });
   };
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <ShoppingCartOutlined className={titleIconClassName} /> Purchase Orders

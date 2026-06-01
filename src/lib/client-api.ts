@@ -23,7 +23,7 @@ export async function clientApiFetch<T>(path: string, options: RequestInit = {})
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
       // Clear token and redirect to login
       await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login?expired=true';
+      window.location.href = '/login';
       return new Promise(() => {}); // Halt execution
     }
   }

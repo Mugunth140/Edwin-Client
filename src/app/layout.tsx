@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { QueryProvider } from '@/components/providers/QueryProvider';
+import { App } from 'antd';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,7 +14,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="bg-[#0b1120] text-slate-200 antialiased font-(--app-font)">
         <AntdRegistry>
-          <QueryProvider>{children}</QueryProvider>
+          <App>
+            <QueryProvider>{children}</QueryProvider>
+          </App>
         </AntdRegistry>
       </body>
     </html>

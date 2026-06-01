@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import {
+  App,
   Button,
   Card,
   Drawer,
@@ -12,7 +13,6 @@ import {
   Space,
   Table,
   Typography,
-  message,
   Upload,
   Tag,
   Tooltip,
@@ -64,7 +64,7 @@ export function DrawingsClient({ projects, initialDrawings }: DrawingsClientProp
   const [open, setOpen] = useState(false);
   const [editingDrawing, setEditingDrawing] = useState<Drawing | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   
   // Filter states
@@ -82,7 +82,7 @@ export function DrawingsClient({ projects, initialDrawings }: DrawingsClientProp
       const result = await clientApiFetch<Drawing[]>(`/drawings${params}`);
       setDrawings(result);
     } catch (error) {
-      messageApi.error('Failed to load drawings');
+      message.error('Failed to load drawings');
     } finally {
       setLoading(false);
     }
@@ -94,7 +94,7 @@ export function DrawingsClient({ projects, initialDrawings }: DrawingsClientProp
     setLoading(true);
     clientApiFetch<Drawing[]>(`/drawings`)
       .then(setDrawings)
-      .catch(() => messageApi.error('Failed to load drawings'))
+      .catch(() => message.error('Failed to load drawings'))
       .finally(() => setLoading(false));
   };
 
@@ -129,32 +129,32 @@ export function DrawingsClient({ projects, initialDrawings }: DrawingsClientProp
       startTransition(async () => {
         try {
           await updateDrawing(editingDrawing.id, formData);
-          messageApi.success('Drawing updated successfully');
+          message.success('Drawing updated successfully');
           setOpen(false);
           setEditingDrawing(null);
           form.resetFields();
           fetchFilteredDrawings();
         } catch (error) {
-          messageApi.error(error instanceof Error ? error.message : 'Update failed');
+          message.error(error instanceof Error ? error.message : 'Update failed');
         }
       });
     } else {
       formData.append('projectId', values.projectId);
       
       if (!values.file?.fileList?.[0]?.originFileObj) {
-        messageApi.error('Please select a file');
+        message.error('Please select a file');
         return;
       }
 
       startTransition(async () => {
         try {
           await uploadDrawing(formData);
-          messageApi.success('Drawing uploaded successfully');
+          message.success('Drawing uploaded successfully');
           setOpen(false);
           form.resetFields();
           fetchFilteredDrawings();
         } catch (error) {
-          messageApi.error(error instanceof Error ? error.message : 'Upload failed');
+          message.error(error instanceof Error ? error.message : 'Upload failed');
         }
       });
     }
@@ -164,10 +164,10 @@ export function DrawingsClient({ projects, initialDrawings }: DrawingsClientProp
     startTransition(async () => {
       try {
         await deleteDrawing(id);
-        messageApi.success('Drawing deleted successfully');
+        message.success('Drawing deleted successfully');
         fetchFilteredDrawings();
       } catch (error) {
-        messageApi.error(error instanceof Error ? error.message : 'Delete failed');
+        message.error(error instanceof Error ? error.message : 'Delete failed');
       }
     });
   };
@@ -279,7 +279,6 @@ export function DrawingsClient({ projects, initialDrawings }: DrawingsClientProp
 
   return (
     <div>
-      {contextHolder}
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <FileImageOutlined className={titleIconClassName} /> Project Drawings
