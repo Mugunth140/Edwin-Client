@@ -17,8 +17,6 @@ const statusColors: Record<string, string> = {
   partial: 'warning',
   overdue: 'error',
   cancelled: 'default',
-  overdue: 'error',
-  cancelled: 'default',
   staff: 'geekblue',
   office: 'purple',
   transport: 'cyan',
@@ -29,7 +27,6 @@ const statusColors: Record<string, string> = {
   accommodation: 'blue',
   office_maintenance: 'purple',
   staff_expense: 'geekblue',
-  transport: 'cyan',
 };
 
 export const cardClassName = 'rounded-xl! border! border-white/10! bg-white/2!';
