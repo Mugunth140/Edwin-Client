@@ -55,7 +55,7 @@ const navigationSections: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { key: '/dashboard/accounts', icon: <BankOutlined />, label: 'Accounts' },
       { key: '/dashboard/accounts/invoices', icon: <FileProtectOutlined />, label: 'Invoices' },
-      { key: '/dashboard/accounts/bills', icon: <FileDoneOutlined />, label: 'Bills' },
+      { key: '/dashboard/accounts/bills', icon: <FileDoneOutlined />, label: 'Purchase Bills' },
       { key: '/dashboard/expenses', icon: <WalletOutlined />, label: 'Expenses' },
       { key: '/dashboard/payments', icon: <CreditCardOutlined />, label: 'Payments' },
     ],

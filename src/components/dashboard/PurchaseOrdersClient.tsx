@@ -4,12 +4,12 @@ import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-import { createPurchaseOrder, convertPoToBill } from '@/actions/purchase-orders';
-import type { Project, Vendor, PurchaseOrder } from '@/types/erp';
+import { createPurchaseOrder, updatePurchaseOrderStatus, updatePurchaseOrder, deletePurchaseOrder } from '@/actions/purchase-orders';
+import type { Project, Vendor, PurchaseOrder, WorkOrder } from '@/types/erp';
 import { LineItemsEditor } from './LineItemsEditor';
 import { PurchaseOrderPdf } from './PurchaseOrderPdf';
 import {
@@ -43,17 +43,20 @@ type PurchaseOrdersClientProps = {
   purchaseOrders: PurchaseOrder[];
   projects: Project[];
   vendors: Vendor[];
+  workOrders: WorkOrder[];
 };
 
 const STATUS_OPTIONS = [
   { label: 'Draft', value: 'draft' },
-  { label: 'Sent', value: 'sent' },
-  { label: 'Approved', value: 'approved' },
+  { label: 'Issued', value: 'issued' },
+  { label: 'Partially Received', value: 'partially_received' },
+  { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
 ];
 
-export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: PurchaseOrdersClientProps) {
+export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, workOrders }: PurchaseOrdersClientProps) {
   const [open, setOpen] = useState(false);
+  const [editingPo, setEditingPo] = useState<PurchaseOrder | null>(null);
   const [previewPo, setPreviewPo] = useState<PurchaseOrder | null>(null);
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
@@ -67,6 +70,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<PoFormValues>({
     resolver: zodResolver(poSchema),
@@ -78,13 +82,66 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
     },
   });
 
-  const handleConvert = (id: string) => {
+  useEffect(() => {
+    if (editingPo) {
+      reset({
+        vendorId: editingPo.vendorId,
+        projectId: editingPo.projectId,
+        paymentTerms: editingPo.paymentTerms || '',
+        items: editingPo.items?.map((item) => ({
+          description: item.description,
+          quantity: Number(item.quantity),
+          unit: item.unit || 'nos',
+          rate: Number(item.rate),
+        })) || [{ description: '', quantity: 1, unit: 'nos', rate: 0 }],
+      });
+      setOpen(true);
+    }
+  }, [editingPo, reset]);
+
+  const handleEdit = (po: PurchaseOrder) => {
+    setEditingPo(po);
+  };
+
+  const handleDelete = (id: string) => {
     startTransition(async () => {
       try {
-        await convertPoToBill(id);
-        message.success('Converted to Bill successfully');
+        await deletePurchaseOrder(id);
+        message.success('Purchase order deleted');
       } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Conversion failed');
+        message.error(error instanceof Error ? error.message : 'Delete failed');
+      }
+    });
+  };
+
+  const handleWoSelect = (woId: string) => {
+    const wo = workOrders.find((w) => w.id === woId);
+    if (!wo) return;
+
+    setValue('vendorId', wo.vendorId);
+    setValue('projectId', wo.projectId);
+    setValue('paymentTerms', wo.terms || '');
+
+    if (wo.items && wo.items.length > 0) {
+      const items = wo.items.map((item) => ({
+        description: item.description,
+        quantity: Number(item.quantity),
+        unit: item.unit || 'nos',
+        rate: Number(item.rate),
+      }));
+      setValue('items', items);
+    }
+
+    message.info(`Autofilled from Work Order ${wo.woNumber}`);
+  };
+
+  const handleStatusChange = (id: string, status: string) => {
+    startTransition(async () => {
+      try {
+        await updatePurchaseOrderStatus(id, status);
+        message.success('Status updated');
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed to update status');
       }
     });
   };
@@ -117,10 +174,22 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
     {
       title: 'Status',
       dataIndex: 'status',
-      width: 120,
-      filters: STATUS_OPTIONS.map(opt => ({ text: opt.label, value: opt.value })),
+      width: 150,
+      filters: STATUS_OPTIONS.map((opt) => ({ text: opt.label, value: opt.value })),
       onFilter: (value, record) => record.status === value,
-      render: (value: string) => <StatusTag value={value} />,
+      render: (value: string, record) => (
+        <Select
+          defaultValue={value}
+          size="small"
+          variant="borderless"
+          className="w-full"
+          onChange={(newStatus) => handleStatusChange(record.id, newStatus)}
+          options={STATUS_OPTIONS}
+          popupMatchSelectWidth={false}
+          styles={{ popup: { root: { minWidth: 140 } } }}
+          disabled={isPending}
+        />
+      ),
     },
     {
       title: 'Total',
@@ -139,9 +208,15 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
       title: 'Actions',
       key: 'actions',
       fixed: 'right',
-      width: 130,
+      width: 150,
       render: (_, record) => (
         <Space>
+          <Button
+            type="text"
+            icon={<EditOutlined className="text-blue-500" />}
+            title="Edit"
+            onClick={() => handleEdit(record)}
+          />
           {isClient && (
             <Button
               type="text"
@@ -151,16 +226,17 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
             />
           )}
           <Popconfirm
-            title="Convert to Bill?"
-            description="This will create a purchase bill from this PO."
-            onConfirm={() => handleConvert(record.id)}
+            title="Delete Purchase Order?"
+            description="This will permanently delete this PO."
+            onConfirm={() => handleDelete(record.id)}
             okText="Yes"
             cancelText="No"
+            okButtonProps={{ danger: true }}
           >
             <Button
               type="text"
-              icon={<CheckCircleOutlined className="text-green-500" />}
-              title="Convert to Bill"
+              icon={<DeleteOutlined className="text-red-500" />}
+              title="Delete"
               loading={isPending}
             />
           </Popconfirm>
@@ -172,12 +248,18 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
   const submit = (values: PoFormValues) => {
     startTransition(async () => {
       try {
-        await createPurchaseOrder(values);
-        message.success('Purchase order created successfully');
+        if (editingPo) {
+          await updatePurchaseOrder(editingPo.id, values);
+          message.success('Purchase order updated successfully');
+        } else {
+          await createPurchaseOrder(values);
+          message.success('Purchase order created successfully');
+        }
         setOpen(false);
+        setEditingPo(null);
         reset();
       } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to create purchase order');
+        message.error(error instanceof Error ? error.message : 'Operation failed');
       }
     });
   };
@@ -188,7 +270,20 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
         <Typography.Title level={3} className={pageTitleClassName}>
           <ShoppingCartOutlined className={titleIconClassName} /> Purchase Orders
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            setEditingPo(null);
+            reset({
+              vendorId: '',
+              projectId: '',
+              paymentTerms: '',
+              items: [{ description: '', quantity: 1, unit: 'nos', rate: 0 }],
+            });
+            setOpen(true);
+          }}
+        >
           Create PO
         </Button>
       </Flex>
@@ -205,21 +300,49 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: Purc
       </Card>
 
       <Drawer
-        title="Create Purchase Order"
+        title={editingPo ? `Edit Purchase Order — ${editingPo.poNumber}` : 'Create Purchase Order'}
         size="large"
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setEditingPo(null);
+        }}
         destroyOnClose
         extra={
           <Space>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setOpen(false);
+                setEditingPo(null);
+              }}
+            >
+              Cancel
+            </Button>
             <Button type="primary" loading={isPending} onClick={handleSubmit(submit)}>
-              Save
+              {editingPo ? 'Update' : 'Save'}
             </Button>
           </Space>
         }
       >
         <Form layout="vertical" onFinish={handleSubmit(submit)}>
+          {!editingPo && (
+            <Form.Item
+              label="Import from Work Order"
+              className="mb-6 rounded-lg border border-white/10 bg-slate-50/5 p-4"
+            >
+              <Select
+                showSearch
+                placeholder="Search Work Order number to autofill..."
+                optionFilterProp="label"
+                onChange={handleWoSelect}
+                options={workOrders.map((wo) => ({
+                  value: wo.id,
+                  label: `${wo.woNumber} - ${wo.vendor?.name || 'Unknown Vendor'}`,
+                }))}
+              />
+            </Form.Item>
+          )}
+
           <Controller
             control={control}
             name="vendorId"

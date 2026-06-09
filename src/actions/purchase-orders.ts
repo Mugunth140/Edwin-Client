@@ -36,3 +36,46 @@ export async function convertPoToBill(id: string) {
   revalidatePath('/dashboard/accounts/bills');
   return res.json();
 }
+
+export async function updatePurchaseOrderStatus(id: string, status: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/purchase-orders/${id}/status`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    let errorMessage = 'Failed to update purchase order status';
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      // ignore
+    }
+    throw new Error(errorMessage);
+  }
+  revalidatePath('/dashboard/purchase-orders');
+  return res.json();
+}
+
+export async function updatePurchaseOrder(id: string, data: Record<string, unknown>) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/purchase-orders/${id}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update purchase order');
+  revalidatePath('/dashboard/purchase-orders');
+  return res.json();
+}
+
+export async function deletePurchaseOrder(id: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/purchase-orders/${id}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to delete purchase order');
+  revalidatePath('/dashboard/purchase-orders');
+}

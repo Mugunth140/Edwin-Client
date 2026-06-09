@@ -8,7 +8,10 @@ export type PagedResponse<T> = {
 export type ProjectStatus = 'planning' | 'in_progress' | 'on_hold' | 'completed';
 export type WorkOrderStatus = 'draft' | 'sent' | 'approved';
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+export type BillStatus = 'unpaid' | 'partial' | 'paid';
+export type PaymentMode = 'cash' | 'upi' | 'rtgs' | 'cheque';
 export type ExpenseCategory = 'staff' | 'office' | 'transport' | 'travel';
+export type PaymentType = 'material' | 'labour' | 'rent' | 'accommodation' | 'office_maintenance';
 
 export type Project = {
   id: string;
@@ -88,7 +91,7 @@ export type SalesInvoice = {
   createdAt?: string;
 };
 
-export type PurchaseOrderStatus = 'draft' | 'sent' | 'approved' | 'cancelled';
+export type PurchaseOrderStatus = 'draft' | 'issued' | 'partially_received' | 'completed' | 'cancelled';
 
 export type PurchaseOrder = {
   id: string;
@@ -176,8 +179,29 @@ export type PurchaseBill = {
   projectId?: string | null;
   project?: Project;
   amount: number | string;
+  status: BillStatus;
+  paidAmount: number | string;
   billDate: string;
   dueDate?: string | null;
+  payments?: Payment[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type Payment = {
+  id: string;
+  paymentType: PaymentType;
+  purchaseBillId?: string | null;
+  purchaseBill?: PurchaseBill;
+  vendorId?: string | null;
+  vendor?: Vendor;
+  payeeName?: string | null;
+  amount: number | string;
+  paymentDate: string;
+  paymentMode: PaymentMode;
+  referenceNumber?: string | null;
+  projectId?: string | null;
+  project?: Project;
+  notes?: string | null;
+  createdAt: string;
 };
