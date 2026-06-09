@@ -363,7 +363,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
         {/* ... payment drawer content */}
         {paymentBill && (
           <div className="mb-6 p-4 rounded-lg bg-blue-50/5 border border-blue-500/20">
-            <Typography.Text type="secondary" block>Recording payment for:</Typography.Text>
+            <Typography.Text type="secondary" style={{ display: 'block' }}>Recording payment for:</Typography.Text>
             <Typography.Title level={5} style={{ margin: '4px 0' }}>{paymentBill.billNumber}</Typography.Title>
             <Flex justify="space-between" className="mt-2">
               <Typography.Text>Total: {formatCurrency(paymentBill.amount)}</Typography.Text>
