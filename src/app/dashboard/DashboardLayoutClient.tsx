@@ -13,7 +13,9 @@ import {
   FileDoneOutlined,
   FileImageOutlined,
   FileProtectOutlined,
+  FileTextOutlined,
   FolderOpenOutlined,
+  FormOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -32,26 +34,33 @@ const COLLAPSED_WIDTH = 84;
 
 type NavItem = {
   key: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   label: string;
+  children?: NavItem[];
+  allowedRoles?: string[];
 };
 
-const navigationSections: Array<{ title: string; items: NavItem[] }> = [
+const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?: string[] }> = [
   {
     title: 'Workspace',
     items: [
       { key: '/dashboard', icon: <AppstoreOutlined />, label: 'Dashboard' },
-      { key: '/dashboard/projects', icon: <FolderOpenOutlined />, label: 'Projects' },
-      { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors' },
-      { key: '/dashboard/customers', icon: <UserOutlined />, label: 'Customers' },
-      { key: '/dashboard/work-orders', icon: <AuditOutlined />, label: 'Work Orders' },
-      { key: '/dashboard/purchase-orders', icon: <FileProtectOutlined />, label: 'Purchase Orders' },
-      { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports' },
-      { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings' },
+      { key: '/dashboard/projects', icon: <FolderOpenOutlined />, label: 'Projects', allowedRoles: ['admin'] },
+      { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors', allowedRoles: ['admin'] },
+      { key: '/dashboard/subcontractors', icon: <TeamOutlined />, label: 'Subcontractors', allowedRoles: ['admin'] },
+      { key: '/dashboard/site-engineers', icon: <UserOutlined />, label: 'Site Engineers', allowedRoles: ['admin'] },
+      { key: '/dashboard/accounts-managers', icon: <BankOutlined />, label: 'Accounts Managers', allowedRoles: ['admin'] },
+      { key: '/dashboard/subcontract-work-orders', icon: <FileTextOutlined />, label: 'Subcontract WO', allowedRoles: ['admin'] },
+      { key: '/dashboard/purchase-orders', icon: <FileProtectOutlined />, label: 'Purchase Orders', allowedRoles: ['admin'] },
+      { key: '/dashboard/dpw', icon: <CalendarOutlined />, label: 'Attendance (DPW)', allowedRoles: ['site_engineer'] },
+      { key: '/dashboard/new', icon: <FormOutlined />, label: 'Daily Entry List', allowedRoles: ['site_engineer'] },
+      { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports (DPR)', allowedRoles: ['admin'] },
+      { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings', allowedRoles: ['admin'] },
     ],
   },
   {
     title: 'Finance',
+    allowedRoles: ['admin', 'accounts_manager'],
     items: [
       { key: '/dashboard/accounts', icon: <BankOutlined />, label: 'Accounts' },
       { key: '/dashboard/accounts/invoices', icon: <FileProtectOutlined />, label: 'Invoices' },
@@ -62,15 +71,15 @@ const navigationSections: Array<{ title: string; items: NavItem[] }> = [
   },
 ];
 
-const navItems = navigationSections.flatMap((section) => section.items);
-
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window !== 'undefined') {
       document.documentElement.dataset.theme = 'dark';
     }
@@ -78,13 +87,46 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
   const sidebarWidth = collapsed ? COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
+  const filteredNavigationSections = useMemo(() => {
+    const role = user?.role || 'viewer';
+
+    
+    return navigationSections
+      .filter((section) => !section.allowedRoles || section.allowedRoles.includes(role))
+      .map((section) => ({
+        ...section,
+        items: section.items
+          .filter((item) => !item.allowedRoles || item.allowedRoles.includes(role))
+          .map((item) => {
+             // eslint-disable-next-line @typescript-eslint/no-unused-vars
+             const { allowedRoles, children, ...restItem } = item;
+             if (children) {
+               return {
+                 ...restItem,
+                 children: children
+                   .filter((child) => !child.allowedRoles || child.allowedRoles.includes(role))
+                   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                   .map(({ allowedRoles: _childRoles, ...restChild }) => restChild)
+               }
+             }
+             return restItem;
+          })
+      }))
+      .filter(section => section.items.length > 0);
+  }, [user]);
+
+  const navItems = useMemo(() => {
+    return filteredNavigationSections.flatMap((section) => section.items);
+  }, [filteredNavigationSections]);
+
   const selectedKey = useMemo(() => {
     const match = navItems
       .filter((item) => pathname === item.key || pathname.startsWith(`${item.key}/`))
       .sort((a, b) => b.key.length - a.key.length)[0];
 
     return match?.key || '/dashboard';
-  }, [pathname]);
+  }, [pathname, navItems]);
+
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -142,6 +184,14 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     [],
   );
 
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0b1120]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent"></div>
+      </div>
+    );
+  }
+
   return (
     <ConfigProvider theme={themeConfig}>
       <App>
@@ -176,7 +226,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-              {navigationSections.map((section) => (
+              {filteredNavigationSections.map((section) => (
                 <div key={section.title} className="mb-5 last:mb-0">
                   {!collapsed && (
                     <Text className="mb-2 block px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500!">

@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { App, Button, Card, DatePicker, Drawer, Flex, Form, Select, Space, Table, Typography, Modal } from 'antd';
+import { App, Button, Card, DatePicker, Drawer, Flex, Form, Select, Space, Table, Typography, Modal, Input, Popconfirm, Dropdown, MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { FileTextOutlined, PlusOutlined, FilePdfOutlined } from '@ant-design/icons';
-import { Controller, useForm } from 'react-hook-form';
+import { FileTextOutlined, PlusOutlined, FilePdfOutlined, DeleteOutlined, MoreOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-import { createInvoice } from '@/actions/invoices';
-import type { Customer, Project, SalesInvoice } from '@/types/erp';
+import { createInvoice, deleteInvoice, updateInvoiceStatus } from '@/actions/invoices';
+import type { Project, SalesInvoice } from '@/types/erp';
 import { LineItemsEditor } from './LineItemsEditor';
 import { InvoicePdf } from './InvoicePdf';
 import {
@@ -31,8 +31,7 @@ const itemSchema = z.object({
 });
 
 const invoiceSchema = z.object({
-  customerId: z.string().min(1, 'Select a customer'),
-  projectId: z.string().optional(),
+  projectId: z.string().min(1, 'Select a project'),
   dueDate: z.string().optional(),
   items: z.array(itemSchema).min(1, 'Add at least one line item'),
 });
@@ -41,11 +40,10 @@ type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 type InvoicesClientProps = {
   invoices: SalesInvoice[];
-  customers: Customer[];
   projects: Project[];
 };
 
-export function InvoicesClient({ invoices, customers, projects }: InvoicesClientProps) {
+export function InvoicesClient({ invoices, projects }: InvoicesClientProps) {
   const [open, setOpen] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<SalesInvoice | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -64,12 +62,40 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
   } = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
-      customerId: '',
-      projectId: undefined,
+      projectId: '',
       dueDate: undefined,
       items: [{ description: '', quantity: 1, unit: 'nos', rate: 0 }],
     },
   });
+
+  const selectedProjectId = useWatch({ control, name: 'projectId' });
+
+  const selectedProject = useMemo(() => 
+    projects.find(p => p.id === selectedProjectId),
+    [selectedProjectId, projects]
+  );
+
+  const handleStatusUpdate = (id: string, status: string) => {
+    startTransition(async () => {
+      try {
+        await updateInvoiceStatus(id, status);
+        message.success(`Status updated to ${status}`);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Update failed');
+      }
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      try {
+        await deleteInvoice(id);
+        message.success('Invoice deleted');
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Delete failed');
+      }
+    });
+  };
 
   const columns: ColumnsType<SalesInvoice> = [
     {
@@ -85,10 +111,15 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
       render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
     },
     {
-      title: 'Customer',
-      dataIndex: ['customer', 'name'],
-      sorter: (a, b) => (a.customer?.name || '').localeCompare(b.customer?.name || ''),
-      render: (_value, record) => record.customer?.name || '-',
+      title: 'Project',
+      dataIndex: ['project', 'name'],
+      render: (_value, record) => record.project?.name || '-',
+    },
+    {
+      title: 'Client',
+      dataIndex: ['project', 'clientName'],
+      sorter: (a, b) => (a.project?.clientName || '').localeCompare(b.project?.clientName || ''),
+      render: (_value, record) => record.project?.clientName || '-',
     },
     {
       title: 'Status',
@@ -133,7 +164,7 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
       title: 'Actions',
       key: 'actions',
       fixed: 'right',
-      width: 80,
+      width: 120,
       render: (_, record) => (
         <Space>
           {isClient && (
@@ -144,6 +175,46 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
               onClick={() => setPreviewInvoice(record)}
             />
           )}
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: [
+                {
+                  key: 'paid',
+                  label: 'Mark as Paid',
+                  icon: <CheckCircleOutlined className="text-green-500" />,
+                  onClick: () => handleStatusUpdate(record.id, 'paid'),
+                },
+                {
+                  key: 'sent',
+                  label: 'Mark as Sent',
+                  icon: <FileTextOutlined />,
+                  onClick: () => handleStatusUpdate(record.id, 'sent'),
+                },
+                {
+                  type: 'divider',
+                },
+                {
+                  key: 'delete',
+                  danger: true,
+                  label: (
+                    <Popconfirm
+                      title="Delete Invoice"
+                      description="Are you sure you want to delete this invoice?"
+                      onConfirm={() => handleDelete(record.id)}
+                      okText="Yes"
+                      cancelText="No"
+                    >
+                      <span>Delete</span>
+                    </Popconfirm>
+                  ),
+                  icon: <DeleteOutlined />,
+                },
+              ],
+            }}
+          >
+            <Button type="text" icon={<MoreOutlined />} />
+          </Dropdown>
         </Space>
       ),
     },
@@ -206,25 +277,6 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
         <Form layout="vertical" onFinish={handleSubmit(submit)}>
           <Controller
             control={control}
-            name="customerId"
-            render={({ field, fieldState }) => (
-              <Form.Item
-                label="Customer"
-                validateStatus={fieldState.error ? 'error' : undefined}
-                help={fieldState.error?.message}
-              >
-                <Select
-                  {...field}
-                  showSearch
-                  placeholder="Select customer"
-                  optionFilterProp="label"
-                  options={customers.map((customer) => ({ value: customer.id, label: customer.name }))}
-                />
-              </Form.Item>
-            )}
-          />
-          <Controller
-            control={control}
             name="projectId"
             render={({ field, fieldState }) => (
               <Form.Item
@@ -234,15 +286,23 @@ export function InvoicesClient({ invoices, customers, projects }: InvoicesClient
               >
                 <Select
                   {...field}
-                  allowClear
                   showSearch
-                  placeholder="Link to project"
+                  placeholder="Select project"
                   optionFilterProp="label"
                   options={projects.map((project) => ({ value: project.id, label: project.name }))}
                 />
               </Form.Item>
             )}
           />
+
+          <Form.Item label="Client Billing Name">
+            <Input 
+              value={selectedProject?.clientName || 'Select a project to see client name'} 
+              disabled 
+              placeholder="Client name will autofill"
+            />
+          </Form.Item>
+
           <Controller
             control={control}
             name="dueDate"

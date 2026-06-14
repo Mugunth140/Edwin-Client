@@ -18,7 +18,10 @@ export async function createInvoice(data: Record<string, unknown>) {
   const res = await fetch(`${getApiBaseUrl()}/invoices`, {
     method: 'POST', headers, body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create invoice');
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Failed to create invoice' }));
+    throw new Error(error.message || 'Failed to create invoice');
+  }
   revalidatePath('/dashboard/accounts/invoices');
   return res.json();
 }
@@ -41,4 +44,14 @@ export async function createBill(data: Record<string, unknown>) {
   if (!res.ok) throw new Error('Failed to create bill');
   revalidatePath('/dashboard/accounts/bills');
   return res.json();
+}
+
+export async function deleteInvoice(id: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/invoices/${id}`, {
+    method: 'DELETE', headers,
+  });
+  if (!res.ok) throw new Error('Failed to delete invoice');
+  revalidatePath('/dashboard/accounts/invoices');
+  return { success: true };
 }

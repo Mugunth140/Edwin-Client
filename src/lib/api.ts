@@ -1,6 +1,5 @@
 import { cookies } from 'next/headers';
 import type {
-  Customer,
   DashboardData,
   Expense,
   ExpenseSummary,
@@ -8,6 +7,13 @@ import type {
   Project,
   SalesInvoice,
   Vendor,
+  Subcontractor,
+  SubcontractWorkOrder,
+  SiteEngineer,
+  AccountsManager,
+  DailyLabourReport,
+  WorkCategory,
+  Trade,
   WorkOrder,
   Drawing,
   PurchaseOrder,
@@ -49,8 +55,15 @@ export const fetchDashboard = () => apiFetch<DashboardData>('/dashboard/master')
 export const fetchProjects = () => apiFetch<Project[]>('/projects');
 export const fetchProjectDashboard = (id: string) => apiFetch<any>(`/projects/${id}/dashboard`);
 export const fetchWorkOrders = (params?: string) => apiFetch<PagedResponse<WorkOrder>>(`/work-orders${params ? `?${params}` : ''}`);
+export const fetchSubcontractWorkOrders = (subcontractorId?: string) =>
+  apiFetch<SubcontractWorkOrder[]>(`/subcontract-work-orders${subcontractorId ? `?subcontractorId=${subcontractorId}` : ''}`);
 export const fetchVendors = () => apiFetch<Vendor[]>('/vendors');
-export const fetchCustomers = () => apiFetch<Customer[]>('/customers');
+export const fetchSubcontractors = () => apiFetch<Subcontractor[]>('/subcontractors');
+export const fetchSiteEngineers = () => apiFetch<SiteEngineer[]>('/site-engineers');
+export const fetchAccountsManagers = () => apiFetch<AccountsManager[]>('/accounts-managers');
+export const fetchSubcontractor = (id: string) => apiFetch<Subcontractor>(`/subcontractors/${id}`);
+export const fetchWorkCategories = () => apiFetch<WorkCategory[]>('/work-categories');
+export const fetchTrades = () => apiFetch<Trade[]>('/trades');
 export const fetchInvoices = () => apiFetch<SalesInvoice[]>('/invoices');
 export const fetchBills = () => apiFetch<PurchaseBill[]>('/bills');
 export const fetchExpenses = (params?: string) => apiFetch<PagedResponse<Expense>>(`/expenses${params ? `?${params}` : ''}`);
@@ -58,6 +71,8 @@ export const fetchExpenseSummary = () => apiFetch<ExpenseSummary[]>('/expenses/s
 export const fetchPayments = (params?: string) => apiFetch<PagedResponse<any>>(`/payments${params ? `?${params}` : ''}`);
 export const fetchPaymentsSummary = () => apiFetch<any[]>('/payments/summary');
 export const fetchDpr = (params?: string) => apiFetch<any>(`/dpr${params ? `?${params}` : ''}`);
+export const fetchDailyLabourReports = (params?: string) => apiFetch<DailyLabourReport[]>(`/daily-labour${params ? `?${params}` : ''}`);
+export const fetchDailyLabourReport = (id: string) => apiFetch<DailyLabourReport>(`/daily-labour/${id}`);
 export const fetchDrawings = (params?: string) => apiFetch<Drawing[]>(`/drawings${params ? `?${params}` : ''}`);
 export const fetchPurchaseOrders = () => apiFetch<PurchaseOrder[]>('/purchase-orders');
 export const fetchLedger = () => apiFetch<any[]>('/accounts/ledger');

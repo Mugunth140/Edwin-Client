@@ -12,12 +12,29 @@ export type BillStatus = 'unpaid' | 'partial' | 'paid';
 export type PaymentMode = 'cash' | 'upi' | 'rtgs' | 'cheque';
 export type ExpenseCategory = 'staff' | 'office' | 'transport' | 'travel';
 export type PaymentType = 'material' | 'labour' | 'rent' | 'accommodation' | 'office_maintenance';
+export type WorkCategory = {
+  id: string;
+  name: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type Trade = {
+  id: string;
+  name: string;
+  isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 export type Project = {
   id: string;
   name: string;
   description?: string | null;
   location?: string | null;
+  email?: string | null;
+  phone1?: string | null;
+  phone2?: string | null;
   clientName?: string | null;
   status: ProjectStatus;
   completionPct: number | string;
@@ -40,12 +57,68 @@ export type Vendor = {
   updatedAt?: string;
 };
 
-export type Customer = {
+export type Subcontractor = {
   id: string;
   name: string;
-  state?: string | null;
-  contactEmail?: string | null;
-  contactPhone?: string | null;
+  gstNumber?: string | null;
+  address?: string | null;
+  contactPerson?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  notes?: string | null;
+  workCategory: WorkCategory;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type SubcontractWorkOrder = {
+  id: string;
+  woNumber: string;
+  projectId: string;
+  subcontractorId: string;
+  workCategoryId: string;
+  project?: Project;
+  subcontractor?: Subcontractor;
+  workCategory?: WorkCategory;
+  quantity: number | string;
+  unit: string;
+  rate: number | string;
+  amount: number | string;
+  gstPercentage: number | string;
+  gstAmount: number | string;
+  totalAmount: number | string;
+  startDate?: string | null;
+  endDate?: string | null;
+  notes?: string | null;
+  status: WorkOrderStatus;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type SiteEngineer = {
+  id: string;
+  name: string;
+  email: string;
+  username?: string | null;
+  employeeId?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  isActive: boolean;
+  projects?: Project[];
+  createdAt?: string;
+};
+
+export type AccountsManager = {
+  id: string;
+  name: string;
+  email: string;
+  username?: string | null;
+  employeeId?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  isActive: boolean;
+  projects?: Project[];
+  createdAt?: string;
 };
 
 export type LineItem = {
@@ -78,9 +151,7 @@ export type WorkOrder = {
 export type SalesInvoice = {
   id: string;
   invoiceNumber: string;
-  customerId: string;
   projectId?: string | null;
-  customer?: Customer;
   project?: Project;
   status: InvoiceStatus;
   totalAmount: number | string;
@@ -204,4 +275,33 @@ export type Payment = {
   project?: Project;
   notes?: string | null;
   createdAt: string;
+};
+
+export type DailyWorker = {
+  id: string;
+  reportId: string;
+  name: string;
+  phone?: string | null;
+  tradeId?: string | null;
+  trade: string;
+  inTime?: string | null;
+  outTime?: string | null;
+  remarks?: string | null;
+};
+
+export type DailyLabourReport = {
+  id: string;
+  projectId: string;
+  project?: Project;
+  reportDate: string;
+  remarks?: string | null;
+  morningPhoto1Url?: string | null;
+  morningPhoto2Url?: string | null;
+  eveningPhoto1Url?: string | null;
+  eveningPhoto2Url?: string | null;
+  workers: DailyWorker[];
+  createdById: string;
+  createdBy?: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
 };

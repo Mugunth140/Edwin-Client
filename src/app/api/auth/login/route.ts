@@ -15,9 +15,11 @@ function getSecureCookieSetting(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
+  const apiUrl = `${getApiBaseUrl()}/auth/login`;
+  console.log('Logging in to:', apiUrl);
 
   try {
-    const res = await fetch(`${getApiBaseUrl()}/auth/login`, {
+    const res = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -40,7 +42,11 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch {
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ 
+      message: 'Internal server error', 
+      error: err.message,
+      url: apiUrl 
+    }, { status: 500 });
   }
 }

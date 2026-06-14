@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import type { SalesInvoice } from '@/types/erp';
+import type { SubcontractWorkOrder } from '@/types/erp';
 import { formatDate } from './ui';
 
 const TEAL = '#0f766e';
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     gap: 20,
   },
-  customerSection: {
+  subcontractorSection: {
     flex: 1,
     backgroundColor: SLATE_50,
     padding: 12,
@@ -95,14 +95,35 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     letterSpacing: 1,
   },
-  customerName: {
+  subcontractorName: {
     fontSize: 12,
     fontFamily: 'Helvetica-Bold',
     marginBottom: 4,
   },
-  customerText: {
+  subcontractorText: {
     fontSize: 9,
     color: SLATE_600,
+  },
+  detailsTable: {
+    marginBottom: 30,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: SLATE_200,
+    paddingVertical: 8,
+  },
+  detailsLabel: {
+    width: '30%',
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: SLATE_600,
+    textTransform: 'uppercase',
+  },
+  detailsValue: {
+    width: '70%',
+    fontSize: 9,
+    color: SLATE_900,
   },
   table: {
     width: 'auto',
@@ -130,11 +151,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: SLATE_900,
   },
-  colNo: { width: '8%' },
-  colDesc: { width: '52%' },
-  colQty: { width: '12%', textAlign: 'center' },
-  colRate: { width: '14%', textAlign: 'right' },
-  colAmt: { width: '14%', textAlign: 'right' },
+  colDesc: { width: '48%' },
+  colQty: { width: '16%', textAlign: 'center' },
+  colRate: { width: '18%', textAlign: 'right' },
+  colAmt: { width: '18%', textAlign: 'right' },
   totalsContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -174,12 +194,24 @@ const styles = StyleSheet.create({
     borderTopColor: SLATE_200,
     paddingTop: 20,
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
-  bankDetails: {
-    fontSize: 8,
-    color: SLATE_600,
+  sigBlock: {
+    width: 180,
     textAlign: 'center',
+  },
+  sigLine: {
+    borderTopWidth: 1,
+    borderTopColor: SLATE_900,
+    marginTop: 40,
+    paddingTop: 5,
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+  },
+  sigSub: {
+    fontSize: 8,
+    color: SLATE_400,
+    marginTop: 2,
   }
 });
 
@@ -193,14 +225,16 @@ const formatINR = (value: number | string): string => {
 };
 
 interface Props {
-  invoice: SalesInvoice;
+  workOrder: SubcontractWorkOrder;
 }
 
-export function InvoicePdf({ invoice }: Props) {
-  const items = invoice.items || [];
-  const subtotal = Number(invoice.totalAmount) || 0;
-  const gst = Number(invoice.gstAmount) || 0;
-  const total = subtotal + gst;
+export function SubcontractWorkOrderPdf({ workOrder }: Props) {
+  const qty = Number(workOrder.quantity) || 0;
+  const rate = Number(workOrder.rate) || 0;
+  const amt = Number(workOrder.amount) || (qty * rate);
+  const gstPct = Number(workOrder.gstPercentage) || 0;
+  const gst = Number(workOrder.gstAmount) || ((amt * gstPct) / 100);
+  const total = Number(workOrder.totalAmount) || (amt + gst);
 
   return (
     <Document>
@@ -212,77 +246,96 @@ export function InvoicePdf({ invoice }: Props) {
             <View style={styles.companyDetails}>
               <Text>No. 123, Builders Avenue, Chennai, Tamil Nadu — 600001</Text>
               <Text>GSTIN: 33AAAAA0000A1Z5 | PAN: AAAAA0000A</Text>
-              <Text>Phone: +91 44 2345 6789 | Email: accounts@edwinconstructions.in</Text>
+              <Text>Phone: +91 44 2345 6789 | Email: office@edwinconstructions.in</Text>
             </View>
           </View>
           <View style={styles.docTitleBlock}>
-            <Text style={styles.docTitle}>Tax Invoice</Text>
+            <Text style={styles.docTitle}>Subcontract Work Order</Text>
             <View style={styles.docMeta}>
-              <Text><Text style={styles.docMetaLabel}>Inv No: </Text><Text style={styles.docMetaValue}>{invoice.invoiceNumber}</Text></Text>
-              <Text><Text style={styles.docMetaLabel}>Date: </Text><Text style={styles.docMetaValue}>{formatDate(invoice.createdAt || '')}</Text></Text>
-              <Text><Text style={styles.docMetaLabel}>Due Date: </Text><Text style={styles.docMetaValue}>{formatDate(invoice.dueDate || '')}</Text></Text>
+              <Text><Text style={styles.docMetaLabel}>SWO No: </Text><Text style={styles.docMetaValue}>{workOrder.woNumber}</Text></Text>
+              <Text><Text style={styles.docMetaLabel}>Date: </Text><Text style={styles.docMetaValue}>{formatDate(workOrder.createdAt || '')}</Text></Text>
             </View>
           </View>
         </View>
 
+        <View style={{ backgroundColor: TEAL, padding: 10, marginBottom: 20, borderRadius: 4 }}>
+          <Text style={{ fontSize: 8, color: '#ffffff', opacity: 0.8, textTransform: 'uppercase', marginBottom: 2 }}>Project Name</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#ffffff' }}>
+            {workOrder.project?.name || 'N/A'}
+          </Text>
+        </View>
+
         <View style={styles.mainGrid}>
-          <View style={styles.customerSection}>
-            <Text style={styles.sectionLabel}>Bill To</Text>
-            <Text style={styles.customerName}>{invoice.project?.clientName || 'Valued Client'}</Text>
-            {invoice.project?.location && <Text style={styles.customerText}>{invoice.project.location}</Text>}
-            {invoice.project?.email && <Text style={styles.customerText}>Email: {invoice.project.email}</Text>}
-            {invoice.project?.phone1 && <Text style={styles.customerText}>Phone: {invoice.project.phone1}</Text>}
+          <View style={styles.subcontractorSection}>
+            <Text style={styles.sectionLabel}>Subcontractor</Text>
+            <Text style={styles.subcontractorName}>{workOrder.subcontractor?.name || 'N/A'}</Text>
+            <Text style={styles.subcontractorText}>{workOrder.subcontractor?.address || ''}</Text>
+            {workOrder.subcontractor?.gstNumber && (
+              <Text style={[styles.subcontractorText, { marginTop: 4, fontFamily: 'Helvetica-Bold' }]}>
+                GSTIN: {workOrder.subcontractor.gstNumber}
+              </Text>
+            )}
           </View>
           <View style={styles.projectSection}>
-            <Text style={styles.sectionLabel}>Project Reference</Text>
-            <Text style={[styles.customerName, { fontSize: 11 }]}>{invoice.project?.name || 'General Project'}</Text>
-            <Text style={styles.customerText}>Status: <Text style={{ fontFamily: 'Helvetica-Bold', textTransform: 'uppercase' }}>{invoice.status}</Text></Text>
+            <Text style={styles.sectionLabel}>Work Category</Text>
+            <Text style={[styles.subcontractorName, { fontSize: 11 }]}>{workOrder.workCategory?.name || 'N/A'}</Text>
+            <Text style={styles.subcontractorText}>Status: <Text style={{ fontFamily: 'Helvetica-Bold', textTransform: 'uppercase' }}>{workOrder.status}</Text></Text>
+            {workOrder.startDate && (
+              <Text style={[styles.subcontractorText, { marginTop: 4 }]}>
+                Period: {formatDate(workOrder.startDate)} — {workOrder.endDate ? formatDate(workOrder.endDate) : 'Ongoing'}
+              </Text>
+            )}
           </View>
         </View>
 
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.th, styles.colNo]}>S.No</Text>
-            <Text style={[styles.th, styles.colDesc]}>Description of Services</Text>
-            <Text style={[styles.th, styles.colQty]}>Qty</Text>
-            <Text style={[styles.th, styles.colRate]}>Rate</Text>
-            <Text style={[styles.th, styles.colAmt]}>Amount</Text>
+            <Text style={[styles.th, styles.colDesc]}>Description of Work</Text>
+            <Text style={[styles.th, styles.colQty]}>Qty ({workOrder.unit})</Text>
+            <Text style={[styles.th, styles.colRate]}>Rate (₹)</Text>
+            <Text style={[styles.th, styles.colAmt]}>Amount (₹)</Text>
           </View>
 
-          {items.map((item, index) => (
-            <View key={index} style={styles.tableRow} wrap={false}>
-              <Text style={[styles.td, styles.colNo]}>{index + 1}</Text>
-              <Text style={[styles.td, styles.colDesc]}>{item.description}</Text>
-              <Text style={[styles.td, styles.colQty]}>{item.quantity} {item.unit}</Text>
-              <Text style={[styles.td, styles.colRate]}>{formatINR(item.rate)}</Text>
-              <Text style={[styles.td, styles.colAmt, { fontFamily: 'Helvetica-Bold' }]}>{formatINR(item.amount || 0)}</Text>
-            </View>
-          ))}
+          <View style={styles.tableRow} wrap={false}>
+            <Text style={[styles.td, styles.colDesc]}>{workOrder.workCategory?.name || 'Subcontracted Work'}</Text>
+            <Text style={[styles.td, styles.colQty]}>{formatINR(qty)}</Text>
+            <Text style={[styles.td, styles.colRate]}>{formatINR(rate)}</Text>
+            <Text style={[styles.td, styles.colAmt, { fontFamily: 'Helvetica-Bold' }]}>{formatINR(amt)}</Text>
+          </View>
         </View>
 
         <View style={styles.totalsContainer}>
           <View style={styles.totalsBox}>
             <View style={styles.totalRow}>
               <Text style={styles.td}>Subtotal</Text>
-              <Text style={styles.td}>{formatINR(subtotal)}</Text>
+              <Text style={styles.td}>{formatINR(amt)}</Text>
             </View>
             <View style={styles.totalRow}>
-              <Text style={styles.td}>GST (18%)</Text>
+              <Text style={styles.td}>GST ({gstPct}%)</Text>
               <Text style={styles.td}>{formatINR(gst)}</Text>
             </View>
             <View style={styles.grandTotalRow}>
-              <Text style={styles.grandTotalLabel}>Grand Total</Text>
+              <Text style={styles.grandTotalLabel}>Total Amount</Text>
               <Text style={styles.grandTotalValue}>INR {formatINR(total)}</Text>
             </View>
           </View>
         </View>
 
+        {workOrder.notes && (
+          <View style={{ marginBottom: 40 }}>
+            <Text style={styles.sectionLabel}>Notes / Terms</Text>
+            <Text style={[styles.subcontractorText, { lineHeight: 1.6 }]}>{workOrder.notes}</Text>
+          </View>
+        )}
+
         <View style={styles.footer}>
-          <View style={styles.bankDetails}>
-            <Text style={{ fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>BANK DETAILS</Text>
-            <Text>Bank: HDFC Bank | A/c Name: Edwin Constructions</Text>
-            <Text>A/c No: 50200012345678 | IFSC: HDFC0001234</Text>
-            <Text style={{ marginTop: 10, color: SLATE_400 }}>This is a computer generated invoice.</Text>
+          <View style={styles.sigBlock}>
+            <Text style={styles.sigLine}>Subcontractor Signature</Text>
+            <Text style={styles.sigSub}>Seal & Date</Text>
+          </View>
+          <View style={styles.sigBlock}>
+            <Text style={styles.sigLine}>Authorized Signatory</Text>
+            <Text style={styles.sigSub}>For Edwin Constructions</Text>
           </View>
         </View>
       </Page>

@@ -23,8 +23,11 @@ import {
 
 const projectSchema = z.object({
   name: z.string().min(3, 'Project name is required'),
-  clientName: z.string().optional(),
+  clientName: z.string().min(1, 'Client name is required'),
   location: z.string().optional(),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  phone1: z.string().optional(),
+  phone2: z.string().optional(),
   description: z.string().optional(),
   status: z.enum(['planning', 'in_progress', 'on_hold', 'completed']),
   estimatedBudget: z.number().nonnegative().optional(),
@@ -56,6 +59,9 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       name: '',
       clientName: '',
       location: '',
+      email: '',
+      phone1: '',
+      phone2: '',
       description: '',
       status: 'planning',
       estimatedBudget: 0,
@@ -68,6 +74,9 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       setValue('name', editingProject.name);
       setValue('clientName', editingProject.clientName || '');
       setValue('location', editingProject.location || '');
+      setValue('email', editingProject.email || '');
+      setValue('phone1', editingProject.phone1 || '');
+      setValue('phone2', editingProject.phone2 || '');
       setValue('description', editingProject.description || '');
       setValue('status', editingProject.status);
       setValue('estimatedBudget', Number(editingProject.estimatedBudget) || 0);
@@ -79,6 +88,9 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
         name: '',
         clientName: '',
         location: '',
+        email: '',
+        phone1: '',
+        phone2: '',
         description: '',
         status: 'planning',
         estimatedBudget: 0,
@@ -285,8 +297,14 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
             <Controller
               control={control}
               name="clientName"
-              render={({ field }) => (
-                <Form.Item label="Client Name" className="flex-1">
+              render={({ field, fieldState }) => (
+                <Form.Item 
+                  label="Client Name" 
+                  className="flex-1"
+                  required
+                  validateStatus={fieldState.error ? 'error' : undefined}
+                  help={fieldState.error?.message}
+                >
                   <Input {...field} placeholder="Organization or person" />
                 </Form.Item>
               )}
@@ -311,6 +329,45 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
               </Form.Item>
             )}
           />
+
+          <Flex gap={16}>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field, fieldState }) => (
+                <Form.Item
+                  label="Email Address"
+                  className="flex-1"
+                  validateStatus={fieldState.error ? 'error' : undefined}
+                  help={fieldState.error?.message}
+                >
+                  <Input {...field} placeholder="contact@project.com" />
+                </Form.Item>
+              )}
+            />
+            <Controller
+              control={control}
+              name="phone1"
+              render={({ field }) => (
+                <Form.Item label="Phone Number 1" className="flex-1">
+                  <Input {...field} placeholder="+91..." />
+                </Form.Item>
+              )}
+            />
+          </Flex>
+
+          <Flex gap={16}>
+            <Controller
+              control={control}
+              name="phone2"
+              render={({ field }) => (
+                <Form.Item label="Phone Number 2" className="flex-1">
+                  <Input {...field} placeholder="+91..." />
+                </Form.Item>
+              )}
+            />
+            <div className="flex-1" />
+          </Flex>
 
           <Flex gap={16}>
             <Controller
