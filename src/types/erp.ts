@@ -306,6 +306,8 @@ export type Payment = {
   purchaseBill?: PurchaseBill;
   salesInvoiceId?: string | null;
   salesInvoice?: SalesInvoice;
+  expenseId?: string | null;
+  expense?: Expense;
   vendorId?: string | null;
   vendor?: Vendor;
   payeeName?: string | null;

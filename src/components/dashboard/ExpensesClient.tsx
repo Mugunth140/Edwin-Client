@@ -10,6 +10,7 @@ import { ExpenseForm } from './ExpenseForm';
 import { clientApiFetch } from '@/lib/client-api';
 import { getApiOrigin } from '@/lib/api-url';
 import {
+  StatusTag,
   cardClassName,
   formatCurrency,
   formatDate,
