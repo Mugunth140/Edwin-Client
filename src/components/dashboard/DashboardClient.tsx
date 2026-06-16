@@ -288,7 +288,7 @@ export function DashboardClient() {
                       {expenseChartData.map((entry, index) => (
                         <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
                       ))}
-                      <LabelList dataKey="name" position="outside" fontSize={11} formatter={(val: string) => val} />
+                      <LabelList dataKey="name" position="outside" fontSize={11} />
                     </Pie>
                     <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                   </PieChart>
