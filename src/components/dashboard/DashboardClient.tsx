@@ -16,6 +16,7 @@ import {
   Bar,
   BarChart,
   Cell,
+  LabelList,
   Pie,
   PieChart,
   Tooltip,
@@ -34,7 +35,7 @@ type DashboardQueryData = {
 const emptyDashboard: DashboardData = {
   totalProjects: 0,
   projects: [],
-  revenueVsCost: { totalRevenue: 0, totalCost: 0 },
+  revenueVsCost: { totalRevenue: 0, totalCost: 0, totalInflow: 0 },
   weeklyLabour: [],
   criticalActions: [],
 };
@@ -136,15 +137,16 @@ export function DashboardClient() {
   const expenseSummary = dashboardResult?.expenseSummary || [];
   const totalRevenue = Number(data.revenueVsCost.totalRevenue || 0);
   const totalCost = Number(data.revenueVsCost.totalCost || 0);
-  const margin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0;
+  const totalInflow = Number(data.revenueVsCost.totalInflow || 0);
+  const profit = totalInflow - totalCost;
   const maxRevenueCost = Math.max(totalRevenue, totalCost);
 
   const revenueCostData = [
-    { name: 'Revenue', amount: totalRevenue },
-    { name: 'Cost', amount: totalCost },
+    { name: 'Inflow', amount: totalInflow },
+    { name: 'Outflow', amount: totalCost },
   ];
   const expenseChartData = expenseSummary.map((item) => ({
-    name: titleCase(item.category),
+    name: item.category ? titleCase(item.category) : 'Expense',
     value: Number(item.total || 0),
   }));
 
@@ -213,8 +215,8 @@ export function DashboardClient() {
         <Col xs={24} sm={12} lg={6}>
           <Card className={kpiCardClassNames.green}>
             <Statistic
-              title={<Typography.Text className={secondaryTextClassName}>Total Revenue</Typography.Text>}
-              value={formatCurrency(totalRevenue)}
+              title={<Typography.Text className={secondaryTextClassName}>Total Inflow</Typography.Text>}
+              value={formatCurrency(totalInflow)}
               prefix={<DollarOutlined className="text-emerald-500" />}
               classNames={statisticClassNames}
             />
@@ -223,7 +225,7 @@ export function DashboardClient() {
         <Col xs={24} sm={12} lg={6}>
           <Card className={kpiCardClassNames.amber}>
             <Statistic
-              title={<Typography.Text className={secondaryTextClassName}>Total Cost</Typography.Text>}
+              title={<Typography.Text className={secondaryTextClassName}>Total Outflow</Typography.Text>}
               value={formatCurrency(totalCost)}
               prefix={<RiseOutlined className="text-amber-500" />}
               classNames={statisticClassNames}
@@ -233,10 +235,8 @@ export function DashboardClient() {
         <Col xs={24} sm={12} lg={6}>
           <Card className={kpiCardClassNames.violet}>
             <Statistic
-              title={<Typography.Text className={secondaryTextClassName}>Profit Margin</Typography.Text>}
-              value={margin}
-              precision={1}
-              suffix="%"
+              title={<Typography.Text className={secondaryTextClassName}>Profit</Typography.Text>}
+              value={formatCurrency(profit)}
               prefix={<TeamOutlined className="text-violet-500" />}
               classNames={statisticClassNames}
             />
@@ -246,7 +246,7 @@ export function DashboardClient() {
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={14}>
-          <Card title={<Typography.Text strong>Revenue vs Cost</Typography.Text>} className={cardClassName}>
+          <Card title={<Typography.Text strong>Inflow vs Outflow</Typography.Text>} className={cardClassName}>
             <ChartFrame>
               {(width, height) => (
                 <BarChart width={width} height={height} data={revenueCostData}>
@@ -288,6 +288,7 @@ export function DashboardClient() {
                       {expenseChartData.map((entry, index) => (
                         <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
                       ))}
+                      <LabelList dataKey="name" position="outside" fontSize={11} formatter={(val: string) => val} />
                     </Pie>
                     <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                   </PieChart>

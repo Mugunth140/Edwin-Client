@@ -74,7 +74,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                   >
                     <InputNumber
                       min={0}
-                      precision={3}
+                      precision={0}
                       className="w-full"
                       value={inputField.value}
                       onChange={inputField.onChange}

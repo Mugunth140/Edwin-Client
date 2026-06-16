@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Button, Card, Col, DatePicker, Divider, Flex, Form, Input, Row, Select, Space, Typography, App, Upload } from 'antd';
 import { PlusOutlined, UploadOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -11,6 +11,7 @@ import { cardClassName } from './ui';
 import { useAuthStore } from '@/store/auth';
 
 import { useRouter } from 'next/navigation';
+import { getApiOrigin } from '@/lib/api-url';
 
 type Props = {
   projects: Project[];
@@ -35,7 +36,7 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
   const [eveningPhotos, setEveningPhotos] = useState<any[]>([]);
 
   // Pre-fill form if editing
-  useState(() => {
+  useEffect(() => {
     if (initialValues) {
       form.setFieldsValue({
         projectId: initialValues.projectId,
@@ -47,8 +48,47 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
           outTime: w.outTime ? dayjs(w.outTime, 'HH:mm:ss') : undefined,
         }))
       });
+
+      // Populate existing photos
+      const mPhotos = [];
+      if (initialValues.morningPhoto1Url) {
+        mPhotos.push({
+          uid: '-1',
+          name: 'morning1.jpg',
+          status: 'done',
+          url: `${getApiOrigin()}${initialValues.morningPhoto1Url}`,
+        });
+      }
+      if (initialValues.morningPhoto2Url) {
+        mPhotos.push({
+          uid: '-2',
+          name: 'morning2.jpg',
+          status: 'done',
+          url: `${getApiOrigin()}${initialValues.morningPhoto2Url}`,
+        });
+      }
+      setMorningPhotos(mPhotos);
+
+      const ePhotos = [];
+      if (initialValues.eveningPhoto1Url) {
+        ePhotos.push({
+          uid: '-3',
+          name: 'evening1.jpg',
+          status: 'done',
+          url: `${getApiOrigin()}${initialValues.eveningPhoto1Url}`,
+        });
+      }
+      if (initialValues.eveningPhoto2Url) {
+        ePhotos.push({
+          uid: '-4',
+          name: 'evening2.jpg',
+          status: 'done',
+          url: `${getApiOrigin()}${initialValues.eveningPhoto2Url}`,
+        });
+      }
+      setEveningPhotos(ePhotos);
     }
-  });
+  }, [initialValues, form]);
 
   const handleDeleteReport = async () => {
     if (!initialValues?.id) return;
@@ -175,38 +215,43 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
                 <Card size="small" key={key} className="mb-4 border-white/10 bg-white/5" 
                   extra={<Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />}
                 >
-                  <Row gutter={12}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item {...restField} name={[name, 'name']} label="Name" rules={[{ required: true }]}>
-                        <Input placeholder="Worker name" />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item {...restField} name={[name, 'tradeId']} label="Trade" rules={[{ required: true }]}>
-                        <Select
-                          showSearch
-                          placeholder="Select trade"
-                          options={localTrades.map(t => ({ label: t.name, value: t.id }))}
-                          dropdownRender={(menu) => (
-                            <>
-                              {menu}
-                              <Divider style={{ margin: '8px 0' }} />
-                              <Space style={{ padding: '0 8px 4px' }}>
-                                <Input
-                                  placeholder="New trade"
-                                  value={newTradeName}
-                                  onChange={(e) => setNewTradeName(e.target.value)}
-                                  onKeyDown={(e) => e.stopPropagation()}
-                                />
-                                <Button type="text" icon={<PlusOutlined />} onClick={handleAddTrade} loading={isAddingTrade}>
-                                  Add
-                                </Button>
-                              </Space>
-                            </>
-                          )}
-                        />
-                      </Form.Item>
-                    </Col>
+                    <Row gutter={12}>
+                      <Col xs={24} sm={8}>
+                        <Form.Item {...restField} name={[name, 'name']} label="Name" rules={[{ required: true }]}>
+                          <Input placeholder="Worker name" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={8}>
+                        <Form.Item {...restField} name={[name, 'phone']} label="Phone">
+                          <Input placeholder="Phone number" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={8}>
+                        <Form.Item {...restField} name={[name, 'tradeId']} label="Trade" rules={[{ required: true }]}>
+                          <Select
+                            showSearch
+                            placeholder="Select trade"
+                            options={localTrades.map(t => ({ label: t.name, value: t.id }))}
+                            dropdownRender={(menu) => (
+                              <>
+                                {menu}
+                                <Divider style={{ margin: '8px 0' }} />
+                                <Space style={{ padding: '0 8px 4px' }}>
+                                  <Input
+                                    placeholder="New trade"
+                                    value={newTradeName}
+                                    onChange={(e) => setNewTradeName(e.target.value)}
+                                    onKeyDown={(e) => e.stopPropagation()}
+                                  />
+                                  <Button type="text" icon={<PlusOutlined />} onClick={handleAddTrade} loading={isAddingTrade}>
+                                    Add
+                                  </Button>
+                                </Space>
+                              </>
+                            )}
+                          />
+                        </Form.Item>
+                      </Col>
                     <Col xs={12}>
                       <Form.Item {...restField} name={[name, 'inTime']} label="In">
                         <DatePicker picker="time" format="hh:mm A" style={{ width: '100%' }} />

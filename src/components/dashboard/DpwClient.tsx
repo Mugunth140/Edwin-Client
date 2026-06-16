@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { deleteDailyLabourReport } from '@/actions/daily-labour';
 import { DpwForm } from './DpwForm';
 import type { DailyLabourReport, Project, Trade } from '@/types/erp';
@@ -31,6 +32,7 @@ export function DpwClient({
   title = 'Daily Entry List',
   showActions = true
 }: Props) {
+  const router = useRouter();
   const { message, modal } = App.useApp();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [open, setOpen] = useState(defaultOpen);
@@ -50,8 +52,7 @@ export function DpwClient({
   };
 
   const handleView = (report: DailyLabourReport) => {
-    setViewingReport(report);
-    setViewOpen(true);
+    router.push(`/dashboard/daily-labour/${report.id}`);
   };
 
   const handleAdd = () => {
@@ -110,6 +111,12 @@ export function DpwClient({
 
   const columns: ColumnsType<DailyLabourReport> = [
     {
+      title: '#',
+      key: 'sno',
+      width: 60,
+      render: (_, __, index) => <Typography.Text>{index + 1}</Typography.Text>,
+    },
+    {
       title: 'Date',
       dataIndex: 'reportDate',
       key: 'reportDate',
@@ -141,30 +148,6 @@ export function DpwClient({
               ))}
             </Space>
           </Space>
-        );
-      },
-    },
-    {
-      title: 'Photos',
-      key: 'photos',
-      width: 150,
-      render: (_, record) => {
-        const photos = getPhotoUrls(record);
-        if (photos.length === 0) return <Typography.Text type="secondary">No photos</Typography.Text>;
-        return (
-          <Image.PreviewGroup>
-            <Space size={4}>
-              {photos.map((url, i) => (
-                <Image
-                  key={i}
-                  src={url}
-                  width={48}
-                  height={48}
-                  className="rounded object-cover border border-white/10"
-                />
-              ))}
-            </Space>
-          </Image.PreviewGroup>
         );
       },
     },
@@ -220,7 +203,7 @@ export function DpwClient({
         )}
       </Flex>
 
-      <Card className={cardClassName} styles={{ body: { padding: 0 } }}>
+      <Card className={cardClassName} style={{marginTop:"14px"}}>
         <Table
           dataSource={reports}
           columns={columns}

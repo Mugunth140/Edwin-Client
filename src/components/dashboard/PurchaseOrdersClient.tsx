@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, App } from 'antd';
+import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, App, Progress } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
 import { createPurchaseOrder, updatePurchaseOrderStatus, updatePurchaseOrder, deletePurchaseOrder } from '@/actions/purchase-orders';
-import type { Project, Vendor, PurchaseOrder, WorkOrder } from '@/types/erp';
+import type { Project, Vendor, PurchaseOrder } from '@/types/erp';
 import { LineItemsEditor } from './LineItemsEditor';
 import { PurchaseOrderPdf } from './PurchaseOrderPdf';
 import {
@@ -43,18 +43,15 @@ type PurchaseOrdersClientProps = {
   purchaseOrders: PurchaseOrder[];
   projects: Project[];
   vendors: Vendor[];
-  workOrders: WorkOrder[];
 };
 
 const STATUS_OPTIONS = [
   { label: 'Draft', value: 'draft' },
-  { label: 'Issued', value: 'issued' },
-  { label: 'Partially Received', value: 'partially_received' },
-  { label: 'Completed', value: 'completed' },
-  { label: 'Cancelled', value: 'cancelled' },
+  { label: 'Sent', value: 'sent' },
+  { label: 'Approved', value: 'approved' },
 ];
 
-export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, workOrders }: PurchaseOrdersClientProps) {
+export function PurchaseOrdersClient({ purchaseOrders, projects, vendors }: PurchaseOrdersClientProps) {
   const [open, setOpen] = useState(false);
   const [editingPo, setEditingPo] = useState<PurchaseOrder | null>(null);
   const [previewPo, setPreviewPo] = useState<PurchaseOrder | null>(null);
@@ -112,27 +109,6 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, workOr
         message.error(error instanceof Error ? error.message : 'Delete failed');
       }
     });
-  };
-
-  const handleWoSelect = (woId: string) => {
-    const wo = workOrders.find((w) => w.id === woId);
-    if (!wo) return;
-
-    setValue('vendorId', wo.vendorId);
-    setValue('projectId', wo.projectId);
-    setValue('paymentTerms', wo.terms || '');
-
-    if (wo.items && wo.items.length > 0) {
-      const items = wo.items.map((item) => ({
-        description: item.description,
-        quantity: Number(item.quantity),
-        unit: item.unit || 'nos',
-        rate: Number(item.rate),
-      }));
-      setValue('items', items);
-    }
-
-    message.info(`Autofilled from Work Order ${wo.woNumber}`);
   };
 
   const handleStatusChange = (id: string, status: string) => {
@@ -197,6 +173,29 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, workOr
       align: 'right',
       sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount),
       render: (value: number | string) => formatCurrency(value),
+    },
+    {
+      title: 'Fulfillment',
+      key: 'fulfillment',
+      width: 150,
+      render: (_, record) => {
+        const totalQty = record.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0;
+        const totalBilled = record.items?.reduce((sum, item) => sum + Number(item.billedQuantity || 0), 0) || 0;
+        const percent = totalQty > 0 ? Math.round((totalBilled / totalQty) * 100) : 0;
+        
+        let status: "success" | "active" | "normal" | "exception" = "normal";
+        if (percent === 100) status = "success";
+        else if (percent > 0) status = "active";
+        
+        return (
+          <Flex vertical gap={4}>
+            <Progress percent={percent} size="small" status={status} strokeColor={percent === 100 ? '#52c41a' : '#1890ff'} />
+            <Typography.Text className="text-[10px]" type="secondary">
+              {totalBilled} / {totalQty} items billed
+            </Typography.Text>
+          </Flex>
+        );
+      },
     },
     {
       title: 'Created',
@@ -325,24 +324,6 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, workOr
         }
       >
         <Form layout="vertical" onFinish={handleSubmit(submit)}>
-          {!editingPo && (
-            <Form.Item
-              label="Import from Work Order"
-              className="mb-6 rounded-lg border border-white/10 bg-slate-50/5 p-4"
-            >
-              <Select
-                showSearch
-                placeholder="Search Work Order number to autofill..."
-                optionFilterProp="label"
-                onChange={handleWoSelect}
-                options={workOrders.map((wo) => ({
-                  value: wo.id,
-                  label: `${wo.woNumber} - ${wo.vendor?.name || 'Unknown Vendor'}`,
-                }))}
-              />
-            </Form.Item>
-          )}
-
           <Controller
             control={control}
             name="vendorId"

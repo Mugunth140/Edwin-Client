@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { App, Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Modal, Select, Space, Table, Typography } from 'antd';
+import { App, Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Modal, Select, Space, Table, Typography, Upload, Divider, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { FileDoneOutlined, PlusOutlined, HistoryOutlined } from '@ant-design/icons';
-import { Controller, useForm } from 'react-hook-form';
+import { FileDoneOutlined, PlusOutlined, HistoryOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Controller, useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import dayjs from 'dayjs';
 import { createBill } from '@/actions/invoices';
 import { createPayment } from '@/actions/payments';
+import { getApiBaseUrl } from '@/lib/api-url';
 import type { Vendor, Project, PurchaseBill, PurchaseOrder } from '@/types/erp';
 import { PaymentMode, BillStatus } from '@/types/erp';
 import {
@@ -23,12 +24,26 @@ import {
   titleIconClassName,
 } from './ui';
 
+const billItemSchema = z.object({
+  poItemId: z.string(),
+  description: z.string(),
+  quantity: z.number().min(0, 'Quantity cannot be negative'),
+  unit: z.string(),
+  rate: z.number(),
+  orderedQty: z.number(),
+  billedQty: z.number(),
+});
+
 const billSchema = z.object({
   vendorId: z.string().min(1, 'Select a vendor'),
+  purchaseOrderId: z.string().optional(),
   amount: z.number().positive('Amount must be positive'),
   dueDate: z.string().optional(),
   billDate: z.string().min(1, 'Select bill date'),
   projectId: z.string().optional(),
+  billFileUrl: z.string().optional(),
+  billFileKey: z.string().optional(),
+  items: z.array(billItemSchema).optional(),
 });
 
 const paymentSchema = z.object({
@@ -55,21 +70,35 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
   const [historyBill, setHistoryBill] = useState<PurchaseBill | null>(null);
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
+  const [fileList, setFileList] = useState<any[]>([]);
 
   const {
     control,
     handleSubmit,
     reset,
     setValue,
+    watch,
   } = useForm<BillFormValues>({
     resolver: zodResolver(billSchema),
     defaultValues: {
       vendorId: '',
+      purchaseOrderId: '',
       amount: 0,
       dueDate: undefined,
-      billDate: '',
+      billDate: new Date().toISOString().split('T')[0],
       projectId: undefined,
+      items: [],
     },
+  });
+
+  const { fields } = useFieldArray({
+    control,
+    name: 'items',
+  });
+
+  const watchedItems = useWatch({
+    control,
+    name: 'items',
   });
 
   const paymentForm = useForm<PaymentFormValues>({
@@ -83,16 +112,89 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
     },
   });
 
+  // Update total amount based on items
+  useEffect(() => {
+    if (watchedItems && watchedItems.length > 0) {
+      const total = watchedItems.reduce((sum: number, item: any) => 
+        sum + (Number(item?.quantity || 0) * Number(item?.rate || 0)), 0);
+      setValue('amount', total);
+    }
+  }, [watchedItems, setValue]);
+
   const handlePoSelect = (poId: string) => {
     const po = purchaseOrders.find(p => p.id === poId);
     if (po) {
-      setValue('vendorId', po.vendorId);
-      setValue('amount', Number(po.totalAmount));
-      if (po.projectId) {
-        setValue('projectId', po.projectId);
-      }
-      message.info(`Autofilled from PO ${po.poNumber}`);
+      reset({
+        vendorId: po.vendorId,
+        purchaseOrderId: poId,
+        projectId: po.projectId || undefined,
+        billDate: new Date().toISOString().split('T')[0],
+        amount: 0,
+        items: po.items?.map(item => ({
+          poItemId: item.id!,
+          description: item.description,
+          orderedQty: Number(item.quantity),
+          billedQty: Number(item.billedQuantity || 0),
+          quantity: Math.max(0, Number(item.quantity) - Number(item.billedQuantity || 0)),
+          unit: item.unit,
+          rate: Number(item.rate),
+        })) || [],
+      });
+      message.info(`Loaded ${po.items?.length || 0} items from PO ${po.poNumber}`);
     }
+  };
+
+  const uploadProps = {
+    onRemove: () => setFileList([]),
+    beforeUpload: (file: any) => {
+      setFileList([file]);
+      return false;
+    },
+    fileList,
+  };
+
+  const submit = async (values: BillFormValues) => {
+    startTransition(async () => {
+      try {
+        let billFileUrl = '';
+        let billFileKey = '';
+
+        if (fileList.length > 0) {
+          const formData = new FormData();
+          formData.append('file', fileList[0]);
+          
+          const uploadRes = await fetch('/api/backend/bills/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!uploadRes.ok) {
+            const error = await uploadRes.json().catch(() => ({ message: 'File upload failed' }));
+            throw new Error(error.message || 'File upload failed');
+          }
+          const uploadData = await uploadRes.json();
+          billFileUrl = uploadData.fileUrl;
+          billFileKey = uploadData.fileKey;
+        }
+
+        await createBill({
+          ...values,
+          billFileUrl,
+          billFileKey,
+          items: values.items?.map(item => ({
+            poItemId: item.poItemId,
+            quantity: item.quantity,
+          }))
+        });
+
+        message.success('Bill recorded successfully');
+        reset();
+        setFileList([]);
+        setOpen(false);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed to record bill');
+      }
+    });
   };
 
   const submitPayment = (values: PaymentFormValues) => {
@@ -103,7 +205,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
         await createPayment({
           ...values,
           purchaseBillId: paymentBill.id,
-          paymentType: 'material', // Default for purchase bills
+          paymentType: 'material',
         });
         message.success('Payment recorded successfully');
         paymentForm.reset();
@@ -124,7 +226,16 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
     {
       title: 'Bill Number',
       dataIndex: 'billNumber',
-      render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
+      render: (value: string, record) => (
+        <Space direction="vertical" size={0}>
+          <Typography.Text strong>{value}</Typography.Text>
+          {record.purchaseOrder && (
+            <Typography.Text type="secondary" className="text-xs">
+              PO: {record.purchaseOrder.poNumber}
+            </Typography.Text>
+          )}
+        </Space>
+      ),
     },
     {
       title: 'Vendor',
@@ -136,6 +247,38 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
       dataIndex: 'amount',
       align: 'right',
       render: (value) => formatCurrency(value),
+    },
+    {
+      title: 'Shortage',
+      key: 'shortage',
+      width: 120,
+      render: (_, record) => {
+        if (!record.purchaseOrder) return '-';
+        const totalOrdered = record.purchaseOrder.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0;
+        const totalBilled = record.purchaseOrder.items?.reduce((sum, item) => sum + Number(item.billedQuantity || 0), 0) || 0;
+        const diff = totalOrdered - totalBilled;
+
+        if (diff > 0) {
+          return (
+            <Tag color="orange" title={`${diff} items remaining to be billed from PO`}>
+              Shortage: {diff}
+            </Tag>
+          );
+        }
+        return <Tag color="green">Fulfilled</Tag>;
+      },
+    },
+    {
+      title: 'Doc',
+      dataIndex: 'billFileUrl',
+      width: 60,
+      render: (url) => url ? (
+        <Button 
+          type="text" 
+          icon={<FileTextOutlined className="text-blue-500" />} 
+          onClick={() => window.open(`${getApiBaseUrl().replace('/api/v1', '')}${url}`, '_blank')}
+        />
+      ) : '-',
     },
     {
       title: 'Paid',
@@ -170,7 +313,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
           <Button 
             size="small" 
             type="primary" 
-            disabled={record.status === 'paid'}
+            disabled={record.status === 'approved'}
             onClick={() => {
               setPaymentBill(record);
               paymentForm.setValue('amount', Number(record.amount) - Number(record.paidAmount));
@@ -188,24 +331,6 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
       ),
     },
   ];
-
-  const submit = (values: BillFormValues) => {
-// ... rest of submit and return
-    startTransition(async () => {
-      try {
-        await createBill({
-          ...values,
-          projectId: values.projectId || undefined,
-          dueDate: values.dueDate || undefined,
-        });
-        message.success('Bill recorded successfully');
-        reset();
-        setOpen(false);
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to record bill');
-      }
-    });
-  };
 
   return (
     <div>
@@ -231,10 +356,10 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
 
       <Drawer
         title="Record Purchase Bill"
-        size="default"
+        size="large"
         open={open}
         onClose={() => setOpen(false)}
-        destroyOnHidden
+        destroyOnClose
         extra={
           <Space>
             <Button onClick={() => setOpen(false)}>Cancel</Button>
@@ -258,76 +383,94 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
             />
           </Form.Item>
 
-          <Controller
-            control={control}
-            name="vendorId"
-            render={({ field, fieldState }) => (
-              <Form.Item
-                label="Vendor"
-                validateStatus={fieldState.error ? 'error' : undefined}
-                help={fieldState.error?.message}
-              >
-                <Select
-                  {...field}
-                  showSearch
-                  placeholder="Select vendor"
-                  optionFilterProp="label"
-                  options={vendors.map((v) => ({ value: v.id, label: v.name }))}
-                />
-              </Form.Item>
-            )}
-          />
-          <Controller
-            control={control}
-            name="amount"
-            render={({ field, fieldState }) => (
-              <Form.Item
-                label="Amount"
-                validateStatus={fieldState.error ? 'error' : undefined}
-                help={fieldState.error?.message}
-              >
-                <InputNumber
-                  min={0}
-                  className="w-full"
-                  prefix="₹"
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              </Form.Item>
-            )}
-          />
-          <Controller
-            control={control}
-            name="billDate"
-            render={({ field, fieldState }) => (
-              <Form.Item
-                label="Bill Date"
-                validateStatus={fieldState.error ? 'error' : undefined}
-                help={fieldState.error?.message}
-              >
-                <DatePicker
-                  className="w-full"
-                  onChange={(_, dateString) => field.onChange(Array.isArray(dateString) ? dateString[0] : dateString)}
-                />
-              </Form.Item>
-            )}
-          />
-          <Controller
-            control={control}
-            name="dueDate"
-            render={({ field, fieldState }) => (
-              <Form.Item
-                label="Due Date"
-                validateStatus={fieldState.error ? 'error' : undefined}
-                help={fieldState.error?.message}
-              >
-                <DatePicker
-                  className="w-full"
-                  onChange={(_, dateString) => field.onChange(Array.isArray(dateString) ? dateString[0] : dateString)}
-                />
-              </Form.Item>
-            )}
-          />
+          <Flex gap={16}>
+            <Controller
+              control={control}
+              name="vendorId"
+              render={({ field, fieldState }) => (
+                <Form.Item
+                  label="Vendor"
+                  className="flex-1"
+                  validateStatus={fieldState.error ? 'error' : undefined}
+                  help={fieldState.error?.message}
+                >
+                  <Select
+                    {...field}
+                    showSearch
+                    placeholder="Select vendor"
+                    optionFilterProp="label"
+                    options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+                  />
+                </Form.Item>
+              )}
+            />
+            <Controller
+              control={control}
+              name="amount"
+              render={({ field, fieldState }) => (
+                <Form.Item
+                  label="Total Bill Amount"
+                  className="flex-1"
+                  validateStatus={fieldState.error ? 'error' : undefined}
+                  help={fields.length > 0 ? "Auto-calculated from items below" : fieldState.error?.message}
+                >
+                  <InputNumber
+                    min={0}
+                    className="w-full"
+                    prefix="₹"
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={fields.length > 0}
+                    style={{ 
+                      width: '100%',
+                      backgroundColor: fields.length > 0 ? 'rgba(0, 145, 255, 0.05)' : undefined,
+                      fontWeight: fields.length > 0 ? 'bold' : 'normal',
+                      color: fields.length > 0 ? '#10b981' : 'inherit'
+                    }}
+                  />
+                </Form.Item>
+              )}
+            />
+          </Flex>
+
+          <Flex gap={16}>
+            <Controller
+              control={control}
+              name="billDate"
+              render={({ field, fieldState }) => (
+                <Form.Item
+                  label="Bill Date"
+                  className="flex-1"
+                  validateStatus={fieldState.error ? 'error' : undefined}
+                  help={fieldState.error?.message}
+                >
+                  <DatePicker
+                    className="w-full"
+                    defaultValue={dayjs(field.value)}
+                    onChange={(_, dateString) => field.onChange(Array.isArray(dateString) ? dateString[0] : dateString)}
+                  />
+                </Form.Item>
+              )}
+            />
+            <Controller
+              control={control}
+              name="dueDate"
+              render={({ field, fieldState }) => (
+                <Form.Item
+                  label="Due Date"
+                  className="flex-1"
+                  validateStatus={fieldState.error ? 'error' : undefined}
+                  help={fieldState.error?.message}
+                >
+                  <DatePicker
+                    className="w-full"
+                    onChange={(_, dateString) => field.onChange(Array.isArray(dateString) ? dateString[0] : dateString)}
+                  />
+                </Form.Item>
+              )}
+            />
+          </Flex>
+
           <Controller
             control={control}
             name="projectId"
@@ -343,6 +486,69 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
               </Form.Item>
             )}
           />
+
+          <Divider titlePlacement="left">Bill Document</Divider>
+          <Form.Item label="Upload Vendor Bill (PDF/Image)">
+            <Upload {...uploadProps} maxCount={1}>
+              <Button icon={<UploadOutlined />}>Select File</Button>
+            </Upload>
+          </Form.Item>
+
+          {fields.length > 0 && (
+            <>
+              <Divider titlePlacement="left">Item Fulfillment</Divider>
+              <div className="mb-4 rounded-lg border border-orange-500/20 bg-orange-500/5 p-4">
+                <Typography.Text strong className="text-orange-400 block mb-1">
+                  Step 2: Enter Received Quantities
+                </Typography.Text>
+                <Typography.Text type="secondary" className="mb-4 block text-xs">
+                  Enter the actual quantities received from the vendor bill below to update the total amount.
+                </Typography.Text>
+                {fields.map((field, index) => (
+                  <div key={field.id} className="mb-4 last:mb-0 border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                    <Flex justify="space-between" align="start" className="mb-2">
+                      <Typography.Text strong>{watch(`items.${index}.description`)}</Typography.Text>
+                      <Typography.Text type="secondary">Rate: {formatCurrency(watch(`items.${index}.rate`))}</Typography.Text>
+                    </Flex>
+                    <Flex gap={16} align="center">
+                      <div className="flex-1">
+                        <Typography.Text className="text-xs" type="secondary">Ordered: {watch(`items.${index}.orderedQty`)} {watch(`items.${index}.unit`)}</Typography.Text>
+                        <br />
+                        <Typography.Text className="text-xs" type="secondary">Already Billed: {watch(`items.${index}.billedQty`)}</Typography.Text>
+                      </div>
+                      <Form.Item label="This Bill Qty" className="mb-0 w-32" required>
+                        <Controller
+                          control={control}
+                          name={`items.${index}.quantity`}
+                          render={({ field: qtyField }) => (
+                            <InputNumber
+                              {...qtyField}
+                              min={0}
+                              max={Number(watch(`items.${index}.orderedQty`)) - Number(watch(`items.${index}.billedQty`))}
+                              className="w-full"
+                              status={qtyField.value === 0 ? 'warning' : undefined}
+                              onChange={(val) => qtyField.onChange(val || 0)}
+                            />
+                          )}
+                        />
+                      </Form.Item>
+                    </Flex>
+                  </div>
+                ))}
+
+                <div className="mt-6 flex justify-between items-end p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <div>
+                    <Typography.Text type="secondary" className="text-[10px] block">Comparison</Typography.Text>
+                    <Typography.Text type="secondary" className="line-through text-xs block">PO Total: {formatCurrency((watchedItems || []).reduce((s, i) => s + (Number(i.orderedQty) * Number(i.rate)), 0))}</Typography.Text>
+                    <Typography.Text strong className="text-blue-400">Current Bill Total</Typography.Text>
+                  </div>
+                  <Typography.Title level={3} style={{ margin: 0, color: '#10b981' }}>
+                    {formatCurrency(watch('amount'))}
+                  </Typography.Title>
+                </div>
+              </div>
+            </>
+          )}
         </Form>
       </Drawer>
 
@@ -360,7 +566,6 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
           </Space>
         }
       >
-        {/* ... payment drawer content */}
         {paymentBill && (
           <div className="mb-6 p-4 rounded-lg bg-blue-50/5 border border-blue-500/20">
             <Typography.Text type="secondary" style={{ display: 'block' }}>Recording payment for:</Typography.Text>

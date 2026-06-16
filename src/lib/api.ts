@@ -11,6 +11,7 @@ import type {
   SubcontractWorkOrder,
   SiteEngineer,
   AccountsManager,
+  PurchaseTeamMember,
   DailyLabourReport,
   WorkCategory,
   Trade,
@@ -52,6 +53,7 @@ export async function apiFetch<T>(
 
 // Convenience helpers
 export const fetchDashboard = () => apiFetch<DashboardData>('/dashboard/master');
+export const fetchPurchaseDashboard = () => apiFetch<any>('/dashboard/purchase');
 export const fetchProjects = () => apiFetch<Project[]>('/projects');
 export const fetchProjectDashboard = (id: string) => apiFetch<any>(`/projects/${id}/dashboard`);
 export const fetchWorkOrders = (params?: string) => apiFetch<PagedResponse<WorkOrder>>(`/work-orders${params ? `?${params}` : ''}`);
@@ -61,10 +63,12 @@ export const fetchVendors = () => apiFetch<Vendor[]>('/vendors');
 export const fetchSubcontractors = () => apiFetch<Subcontractor[]>('/subcontractors');
 export const fetchSiteEngineers = () => apiFetch<SiteEngineer[]>('/site-engineers');
 export const fetchAccountsManagers = () => apiFetch<AccountsManager[]>('/accounts-managers');
+export const fetchPurchaseTeam = () => apiFetch<PurchaseTeamMember[]>('/purchase-team');
 export const fetchSubcontractor = (id: string) => apiFetch<Subcontractor>(`/subcontractors/${id}`);
 export const fetchWorkCategories = () => apiFetch<WorkCategory[]>('/work-categories');
 export const fetchTrades = () => apiFetch<Trade[]>('/trades');
 export const fetchInvoices = () => apiFetch<SalesInvoice[]>('/invoices');
+export const fetchInvoice = (id: string) => apiFetch<SalesInvoice>(`/invoices/${id}`);
 export const fetchBills = () => apiFetch<PurchaseBill[]>('/bills');
 export const fetchExpenses = (params?: string) => apiFetch<PagedResponse<Expense>>(`/expenses${params ? `?${params}` : ''}`);
 export const fetchExpenseSummary = () => apiFetch<ExpenseSummary[]>('/expenses/summary');

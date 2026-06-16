@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { Card, Table, Typography, Tag, Space, Flex, Button, Drawer, Form, Input, InputNumber, Select, DatePicker, Row, Col, Statistic } from 'antd';
-import { CreditCardOutlined, PlusOutlined, ArrowDownOutlined, BankOutlined, UserOutlined, ShopOutlined } from '@ant-design/icons';
+import { CreditCardOutlined, PlusOutlined, ArrowDownOutlined, ArrowUpOutlined, BankOutlined, UserOutlined, ShopOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -79,6 +79,12 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
 
   const columns: ColumnsType<Payment> = [
     {
+      title: '#',
+      key: 'sno',
+      width: 50,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: 'Date',
       dataIndex: 'paymentDate',
       render: formatDate,
@@ -92,18 +98,40 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
     {
       title: 'Payee / Vendor',
       key: 'payee',
-      render: (_, record) => (
-        <Flex vertical gap={0}>
-          <Text strong>{record.vendor?.name || record.payeeName || '-'}</Text>
-          <Text type="secondary" className="text-xs">{record.project?.name || 'General Office'}</Text>
-        </Flex>
-      ),
+      render: (_, record) => {
+        const payee = record.salesInvoice?.project?.clientName || record.vendor?.name || record.payeeName || '-';
+        const project = record.project?.name || record.salesInvoice?.project?.name || 'General Office';
+        return (
+          <Flex vertical gap={0}>
+            <Text strong>{payee}</Text>
+            <Text type="secondary" className="text-xs">{project}</Text>
+          </Flex>
+        );
+      },
     },
     {
       title: 'Amount',
       dataIndex: 'amount',
       align: 'right',
       render: (amount) => <Text strong type="danger">{formatCurrency(amount)}</Text>,
+    },
+    {
+      title: 'Total Amount',
+      key: 'totalAmount',
+      align: 'right',
+      render: (_, record) => {
+        if (record.purchaseBill?.amount) return formatCurrency(record.purchaseBill.amount);
+        if (record.salesInvoice?.totalAmount) return formatCurrency(Number(record.salesInvoice.totalAmount) + Number(record.salesInvoice.gstAmount || 0));
+        return '-';
+      },
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_, record) => {
+        const status = record.expense?.status || record.salesInvoice?.status || 'completed';
+        return <StatusTag value={status} />;
+      },
     },
     {
       title: 'Mode',
@@ -117,7 +145,10 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
     },
   ];
 
-  const totalOutflow = summary.reduce((sum, item) => sum + Number(item.total), 0);
+  const totalOutflow = summary
+    .filter((item) => item.paymentType !== 'revenue')
+    .reduce((sum, item) => sum + Number(item.total), 0);
+  const totalInflow = summary.find((item) => item.paymentType === 'revenue')?.total || 0;
 
   return (
     <div>

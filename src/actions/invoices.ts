@@ -41,8 +41,22 @@ export async function createBill(data: Record<string, unknown>) {
   const res = await fetch(`${getApiBaseUrl()}/bills`, {
     method: 'POST', headers, body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create bill');
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Failed to create bill' }));
+    throw new Error(error.message || 'Failed to create bill');
+  }
   revalidatePath('/dashboard/accounts/bills');
+  return res.json();
+}
+
+export async function updateBillStatus(id: string, status: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/bills/${id}/status`, {
+    method: 'PATCH', headers, body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error('Failed to update bill status');
+  revalidatePath('/dashboard/accounts/bills');
+  revalidatePath('/dashboard/approvals');
   return res.json();
 }
 

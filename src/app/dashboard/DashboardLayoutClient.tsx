@@ -19,6 +19,7 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  NodeIndexOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
   UserOutlined,
@@ -44,29 +45,33 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
   {
     title: 'Workspace',
     items: [
-      { key: '/dashboard', icon: <AppstoreOutlined />, label: 'Dashboard' },
+      { key: '/dashboard', icon: <AppstoreOutlined />, label: 'Dashboard', allowedRoles: ['admin', 'accounts_manager', 'site_engineer', 'purchase_team'] },
+      { key: '/dashboard/new', icon: <FormOutlined />, label: 'Daily Entry List', allowedRoles: ['site_engineer'] },
+      { key: '/dashboard/dpw', icon: <CalendarOutlined />, label: 'Attendance (DPW)', allowedRoles: ['site_engineer'] },
+      { key: '/dashboard/expenses/new', icon: <WalletOutlined />, label: 'Expense', allowedRoles: ['site_engineer'] },
       { key: '/dashboard/projects', icon: <FolderOpenOutlined />, label: 'Projects', allowedRoles: ['admin'] },
-      { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors', allowedRoles: ['admin'] },
+      { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors', allowedRoles: ['admin', 'purchase_team'] },
       { key: '/dashboard/subcontractors', icon: <TeamOutlined />, label: 'Subcontractors', allowedRoles: ['admin'] },
       { key: '/dashboard/site-engineers', icon: <UserOutlined />, label: 'Site Engineers', allowedRoles: ['admin'] },
       { key: '/dashboard/accounts-managers', icon: <BankOutlined />, label: 'Accounts Managers', allowedRoles: ['admin'] },
+      { key: '/dashboard/purchase-team', icon: <TeamOutlined />, label: 'Purchase Team', allowedRoles: ['admin'] },
       { key: '/dashboard/subcontract-work-orders', icon: <FileTextOutlined />, label: 'Subcontract WO', allowedRoles: ['admin'] },
-      { key: '/dashboard/purchase-orders', icon: <FileProtectOutlined />, label: 'Purchase Orders', allowedRoles: ['admin'] },
-      { key: '/dashboard/dpw', icon: <CalendarOutlined />, label: 'Attendance (DPW)', allowedRoles: ['site_engineer'] },
-      { key: '/dashboard/new', icon: <FormOutlined />, label: 'Daily Entry List', allowedRoles: ['site_engineer'] },
+      { key: '/dashboard/purchase-orders', icon: <FileProtectOutlined />, label: 'Purchase Orders', allowedRoles: ['admin', 'purchase_team'] },
       { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports (DPR)', allowedRoles: ['admin'] },
       { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings', allowedRoles: ['admin'] },
+      { key: '/dashboard/architecture', icon: <NodeIndexOutlined />, label: 'System Architecture', allowedRoles: ['admin'] },
     ],
   },
   {
     title: 'Finance',
-    allowedRoles: ['admin', 'accounts_manager'],
+    allowedRoles: ['admin', 'accounts_manager', 'purchase_team'],
     items: [
-      { key: '/dashboard/accounts', icon: <BankOutlined />, label: 'Accounts' },
-      { key: '/dashboard/accounts/invoices', icon: <FileProtectOutlined />, label: 'Invoices' },
-      { key: '/dashboard/accounts/bills', icon: <FileDoneOutlined />, label: 'Purchase Bills' },
-      { key: '/dashboard/expenses', icon: <WalletOutlined />, label: 'Expenses' },
-      { key: '/dashboard/payments', icon: <CreditCardOutlined />, label: 'Payments' },
+      { key: '/dashboard/accounts', icon: <BankOutlined />, label: 'Accounts', allowedRoles: ['admin', 'accounts_manager'] },
+      { key: '/dashboard/accounts/invoices', icon: <FileProtectOutlined />, label: 'Invoices', allowedRoles: ['admin', 'accounts_manager'] },
+      { key: '/dashboard/accounts/bills', icon: <FileDoneOutlined />, label: 'Purchase Bills', allowedRoles: ['admin', 'accounts_manager', 'purchase_team'] },
+      { key: '/dashboard/approvals', icon: <SafetyCertificateOutlined />, label: 'Approvals', allowedRoles: ['admin', 'accounts_manager'] },
+      { key: '/dashboard/expenses', icon: <WalletOutlined />, label: 'Expenses', allowedRoles: ['admin', 'accounts_manager'] },
+      { key: '/dashboard/payments', icon: <CreditCardOutlined />, label: 'Payments', allowedRoles: ['admin', 'accounts_manager'] },
     ],
   },
 ];
@@ -120,6 +125,12 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   }, [filteredNavigationSections]);
 
   const selectedKey = useMemo(() => {
+    // Daily labour entry form (/dashboard/new) and detail (/dashboard/daily-labour/:id)
+    // should both highlight "Daily Entry List" in the sidebar
+    if (pathname.startsWith('/dashboard/daily-labour/')) {
+      return '/dashboard/new';
+    }
+
     const match = navItems
       .filter((item) => pathname === item.key || pathname.startsWith(`${item.key}/`))
       .sort((a, b) => b.key.length - a.key.length)[0];

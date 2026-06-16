@@ -17,6 +17,8 @@ const statusColors: Record<string, string> = {
   partial: 'warning',
   overdue: 'error',
   cancelled: 'default',
+  pending: 'warning',
+  rejected: 'error',
   staff: 'geekblue',
   office: 'purple',
   transport: 'cyan',

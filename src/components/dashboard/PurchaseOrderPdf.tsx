@@ -255,7 +255,7 @@ export function PurchaseOrderPdf({ purchaseOrder }: Props) {
           <View style={styles.tableHeader}>
             <Text style={[styles.th, styles.colNo]}>S.No</Text>
             <Text style={[styles.th, styles.colDesc]}>Description</Text>
-            <Text style={[styles.th, styles.colQty]}>Qty</Text>
+            <Text style={[styles.th, styles.colQty]}>Ordered</Text>
             <Text style={[styles.th, styles.colRate]}>Rate</Text>
             <Text style={[styles.th, styles.colAmt]}>Amount</Text>
           </View>
@@ -264,7 +264,7 @@ export function PurchaseOrderPdf({ purchaseOrder }: Props) {
             <View key={index} style={styles.tableRow} wrap={false}>
               <Text style={[styles.td, styles.colNo]}>{index + 1}</Text>
               <Text style={[styles.td, styles.colDesc]}>{item.description}</Text>
-              <Text style={[styles.td, styles.colQty]}>{item.quantity} {item.unit}</Text>
+              <Text style={[styles.td, styles.colQty]}>{Number(item.quantity).toFixed(0)} {item.unit}</Text>
               <Text style={[styles.td, styles.colRate]}>{formatINR(item.rate)}</Text>
               <Text style={[styles.td, styles.colAmt, { fontFamily: 'Helvetica-Bold' }]}>{formatINR(item.amount || 0)}</Text>
             </View>

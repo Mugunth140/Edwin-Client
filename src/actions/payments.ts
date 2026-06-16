@@ -22,6 +22,7 @@ export async function createPayment(data: Record<string, unknown>) {
   });
   if (!res.ok) throw new Error('Failed to record payment');
   revalidatePath('/dashboard/accounts/bills');
+  revalidatePath('/dashboard/accounts/invoices');
   revalidatePath('/dashboard/payments');
   return res.json();
 }
