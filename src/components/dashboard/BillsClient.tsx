@@ -788,7 +788,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
         open={!!historyBill}
         onCancel={() => setHistoryBill(null)}
         footer={[<Button key="close" onClick={() => setHistoryBill(null)}>Close</Button>]}
-        width={700}
+        size={700}
       >
         {historyBill?.payments && historyBill.payments.length > 0 ? (
           <Table

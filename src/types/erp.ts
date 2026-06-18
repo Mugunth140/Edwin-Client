@@ -277,6 +277,25 @@ export type DashboardData = {
   criticalActions: unknown[];
 };
 
+export type AccountsDashboardData = {
+  kpis: {
+    totalReceivable: number;
+    pendingInvoiceCount: number;
+    totalPayable: number;
+    pendingBillCount: number;
+    monthInflow: number;
+    monthOutflow: number;
+  };
+  recentPayments: Array<{
+    id: string;
+    amount: number | string;
+    date: string;
+    mode: string;
+    type: string;
+    party: string;
+  }>;
+};
+
 export type ExpenseSummary = {
   category: ExpenseCategory;
   total: number | string;

@@ -346,7 +346,7 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
 
       <Drawer
         title="Record Direct Payment"
-        width={450}
+        size={450}
         onClose={() => setOpen(false)}
         open={open}
         extra={
