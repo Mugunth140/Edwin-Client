@@ -3,6 +3,7 @@ import type {
   DashboardData,
   Expense,
   ExpenseSummary,
+  ItemDescription,
   PagedResponse,
   Project,
   SalesInvoice,
@@ -19,6 +20,8 @@ import type {
   Drawing,
   PurchaseOrder,
   PurchaseBill,
+  PurchaseEnquiry,
+  ProjectDetails,
 } from '@/types/erp';
 import { getApiBaseUrl } from './api-url';
 
@@ -56,6 +59,7 @@ export const fetchDashboard = () => apiFetch<DashboardData>('/dashboard/master')
 export const fetchPurchaseDashboard = () => apiFetch<any>('/dashboard/purchase');
 export const fetchProjects = () => apiFetch<Project[]>('/projects');
 export const fetchProjectDashboard = (id: string) => apiFetch<any>(`/projects/${id}/dashboard`);
+export const fetchProjectDetails = (id: string) => apiFetch<ProjectDetails>(`/projects/${id}/details`);
 export const fetchWorkOrders = (params?: string) => apiFetch<PagedResponse<WorkOrder>>(`/work-orders${params ? `?${params}` : ''}`);
 export const fetchSubcontractWorkOrders = (subcontractorId?: string) =>
   apiFetch<SubcontractWorkOrder[]>(`/subcontract-work-orders${subcontractorId ? `?subcontractorId=${subcontractorId}` : ''}`);
@@ -65,11 +69,13 @@ export const fetchSiteEngineers = () => apiFetch<SiteEngineer[]>('/site-engineer
 export const fetchAccountsManagers = () => apiFetch<AccountsManager[]>('/accounts-managers');
 export const fetchPurchaseTeam = () => apiFetch<PurchaseTeamMember[]>('/purchase-team');
 export const fetchSubcontractor = (id: string) => apiFetch<Subcontractor>(`/subcontractors/${id}`);
+export const fetchItemDescriptions = () => apiFetch<ItemDescription[]>('/item-descriptions');
 export const fetchWorkCategories = () => apiFetch<WorkCategory[]>('/work-categories');
 export const fetchTrades = () => apiFetch<Trade[]>('/trades');
 export const fetchInvoices = () => apiFetch<SalesInvoice[]>('/invoices');
 export const fetchInvoice = (id: string) => apiFetch<SalesInvoice>(`/invoices/${id}`);
 export const fetchBills = () => apiFetch<PurchaseBill[]>('/bills');
+export const fetchBill = (id: string) => apiFetch<PurchaseBill>(`/bills/${id}`);
 export const fetchExpenses = (params?: string) => apiFetch<PagedResponse<Expense>>(`/expenses${params ? `?${params}` : ''}`);
 export const fetchExpenseSummary = () => apiFetch<ExpenseSummary[]>('/expenses/summary');
 export const fetchPayments = (params?: string) => apiFetch<PagedResponse<any>>(`/payments${params ? `?${params}` : ''}`);
@@ -79,6 +85,7 @@ export const fetchDailyLabourReports = (params?: string) => apiFetch<DailyLabour
 export const fetchDailyLabourReport = (id: string) => apiFetch<DailyLabourReport>(`/daily-labour/${id}`);
 export const fetchDrawings = (params?: string) => apiFetch<Drawing[]>(`/drawings${params ? `?${params}` : ''}`);
 export const fetchPurchaseOrders = () => apiFetch<PurchaseOrder[]>('/purchase-orders');
+export const fetchPurchaseEnquiries = () => apiFetch<PurchaseEnquiry[]>('/purchase-enquiries');
 export const fetchLedger = () => apiFetch<any[]>('/accounts/ledger');
 export const fetchBalance = () => apiFetch<{ totalRevenue: number; totalCost: number }>('/accounts/balance');
 export const fetchPayables = () => apiFetch<PurchaseBill[]>('/accounts/payables');

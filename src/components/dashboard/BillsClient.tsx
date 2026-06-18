@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { App, Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Modal, Select, Space, Table, Typography, Upload, Divider, Tag } from 'antd';
+import { App, Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography, Upload, Divider, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { FileDoneOutlined, PlusOutlined, HistoryOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, FileDoneOutlined, PlusOutlined, HistoryOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons';
 import { Controller, useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import dayjs from 'dayjs';
-import { createBill } from '@/actions/invoices';
+import { createBill, updateBill, deleteBill, uploadBillFile } from '@/actions/invoices';
 import { createPayment } from '@/actions/payments';
 import { getApiBaseUrl } from '@/lib/api-url';
 import type { Vendor, Project, PurchaseBill, PurchaseOrder } from '@/types/erp';
@@ -43,6 +44,7 @@ const billSchema = z.object({
   projectId: z.string().optional(),
   billFileUrl: z.string().optional(),
   billFileKey: z.string().optional(),
+  notes: z.string().optional(),
   items: z.array(billItemSchema).optional(),
 });
 
@@ -62,10 +64,14 @@ type BillsClientProps = {
   vendors: Vendor[];
   projects: Project[];
   purchaseOrders: PurchaseOrder[];
+  userRole: string;
 };
 
-export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsClientProps) {
+export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole }: BillsClientProps) {
+  const canManagePayments = userRole === 'admin' || userRole === 'accounts_manager';
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [editingBill, setEditingBill] = useState<PurchaseBill | null>(null);
   const [paymentBill, setPaymentBill] = useState<PurchaseBill | null>(null);
   const [historyBill, setHistoryBill] = useState<PurchaseBill | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -121,6 +127,45 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
     }
   }, [watchedItems, setValue]);
 
+  const handleEdit = (bill: PurchaseBill) => {
+    setEditingBill(bill);
+    reset({
+      vendorId: bill.vendorId,
+      purchaseOrderId: bill.purchaseOrderId || undefined,
+      projectId: bill.projectId || undefined,
+      amount: Number(bill.amount),
+      billDate: bill.billDate,
+      dueDate: bill.dueDate || undefined,
+      notes: bill.notes || '',
+      items: bill.billItems?.map((item: any) => ({
+        poItemId: item.poItemId,
+        description: item.description || '',
+        quantity: Number(item.quantity),
+        unit: item.unit || 'nos',
+        rate: Number(item.rate),
+        orderedQty: Number(item.orderedQty),
+        billedQty: Number(item.billedQty),
+      })) || [],
+    });
+    if (bill.billFileUrl) {
+      setFileList([{ uid: '-1', name: bill.billFileUrl.split('/').pop() || 'Bill File', status: 'done', url: bill.billFileUrl }]);
+    } else {
+      setFileList([]);
+    }
+    setOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      try {
+        await deleteBill(id);
+        message.success('Bill deleted');
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed to delete bill');
+      }
+    });
+  };
+
   const handlePoSelect = (poId: string) => {
     const po = purchaseOrders.find(p => p.id === poId);
     if (po) {
@@ -160,37 +205,46 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
         let billFileKey = '';
 
         if (fileList.length > 0) {
-          const formData = new FormData();
-          formData.append('file', fileList[0]);
-          
-          const uploadRes = await fetch('/api/backend/bills/upload', {
-            method: 'POST',
-            body: formData,
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              resolve(result.split(',')[1]);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(fileList[0]);
           });
-
-          if (!uploadRes.ok) {
-            const error = await uploadRes.json().catch(() => ({ message: 'File upload failed' }));
-            throw new Error(error.message || 'File upload failed');
-          }
-          const uploadData = await uploadRes.json();
-          billFileUrl = uploadData.fileUrl;
-          billFileKey = uploadData.fileKey;
+          const { fileUrl, fileKey } = await uploadBillFile({ name: fileList[0].name, base64 });
+          billFileUrl = fileUrl;
+          billFileKey = fileKey;
         }
 
-        await createBill({
+        const payload = {
           ...values,
           billFileUrl,
           billFileKey,
           items: values.items?.map(item => ({
             poItemId: item.poItemId,
+            description: item.description,
             quantity: item.quantity,
+            unit: item.unit,
+            rate: item.rate,
+            orderedQty: item.orderedQty,
+            billedQty: item.billedQty,
           }))
-        });
+        };
 
-        message.success('Bill recorded successfully');
+        if (editingBill) {
+          await updateBill(editingBill.id, payload);
+          message.success('Bill updated successfully');
+        } else {
+          await createBill(payload);
+          message.success('Bill recorded successfully');
+        }
         reset();
         setFileList([]);
         setOpen(false);
+        setEditingBill(null);
       } catch (error) {
         message.error(error instanceof Error ? error.message : 'Failed to record bill');
       }
@@ -310,23 +364,59 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Button 
-            size="small" 
-            type="primary" 
-            disabled={record.status === 'approved'}
-            onClick={() => {
-              setPaymentBill(record);
-              paymentForm.setValue('amount', Number(record.amount) - Number(record.paidAmount));
-            }}
-          >
-            Pay
-          </Button>
           <Button
             size="small"
-            icon={<HistoryOutlined />}
-            onClick={() => setHistoryBill(record)}
-            title="Payment History"
+            icon={<EyeOutlined />}
+            onClick={() => router.push(`/dashboard/accounts/bills/${record.id}`)}
+            title="View Details"
           />
+          {record.status === 'pending' && (
+            <>
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+                title="Edit"
+              />
+              <Popconfirm
+                title="Delete Bill?"
+                description="This will permanently delete this bill."
+                onConfirm={() => handleDelete(record.id)}
+                okText="Yes"
+                cancelText="No"
+                okButtonProps={{ danger: true }}
+              >
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<DeleteOutlined className="text-red-500" />}
+                  title="Delete"
+                  loading={isPending}
+                />
+              </Popconfirm>
+            </>
+          )}
+          {canManagePayments && (
+            <Button 
+              size="small" 
+              type="primary" 
+              disabled={record.status === 'approved'}
+              onClick={() => {
+                setPaymentBill(record);
+                paymentForm.setValue('amount', Number(record.amount) - Number(record.paidAmount));
+              }}
+            >
+              Cash Outflow
+            </Button>
+          )}
+          {canManagePayments && (
+            <Button
+              size="small"
+              icon={<HistoryOutlined />}
+              onClick={() => setHistoryBill(record)}
+              title="Payment History"
+            />
+          )}
         </Space>
       ),
     },
@@ -355,16 +445,16 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
       </Card>
 
       <Drawer
-        title="Record Purchase Bill"
+        title={editingBill ? `Edit Bill — ${editingBill.billNumber}` : 'Record Purchase Bill'}
         size="large"
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => { setOpen(false); setEditingBill(null); }}
         destroyOnClose
         extra={
           <Space>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setOpen(false); setEditingBill(null); }}>Cancel</Button>
             <Button type="primary" loading={isPending} onClick={handleSubmit(submit)}>
-              Save
+              {editingBill ? 'Update' : 'Save'}
             </Button>
           </Space>
         }
@@ -376,10 +466,12 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
               placeholder="Search PO number to autofill..."
               optionFilterProp="label"
               onChange={handlePoSelect}
-              options={purchaseOrders.map((po) => ({
-                value: po.id,
-                label: `${po.poNumber} - ${po.vendor?.name || 'Unknown Vendor'}`,
-              }))}
+              options={purchaseOrders
+                .filter((po) => po.status === 'approved')
+                .map((po) => ({
+                  value: po.id,
+                  label: `${po.poNumber} - ${po.vendor?.name || 'Unknown Vendor'}`,
+                }))}
             />
           </Form.Item>
 
@@ -490,9 +582,24 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
           <Divider titlePlacement="left">Bill Document</Divider>
           <Form.Item label="Upload Vendor Bill (PDF/Image)">
             <Upload {...uploadProps} maxCount={1}>
-              <Button icon={<UploadOutlined />}>Select File</Button>
+              <Button icon={<UploadOutlined />}>{editingBill?.billFileUrl ? 'Replace File' : 'Select File'}</Button>
             </Upload>
+            {editingBill?.billFileUrl && fileList.length === 0 && (
+              <Button type="link" size="small" icon={<FileTextOutlined />} href={`${getApiBaseUrl().replace('/api/v1', '')}${editingBill.billFileUrl}`} target="_blank" className="mt-2">
+                View uploaded bill
+              </Button>
+            )}
           </Form.Item>
+
+          <Controller
+            control={control}
+            name="notes"
+            render={({ field }) => (
+              <Form.Item label="Notes">
+                <Input.TextArea {...field} rows={3} placeholder="Additional notes..." />
+              </Form.Item>
+            )}
+          />
 
           {fields.length > 0 && (
             <>
@@ -507,8 +614,32 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders }: BillsC
                 {fields.map((field, index) => (
                   <div key={field.id} className="mb-4 last:mb-0 border-b border-white/5 pb-4 last:border-0 last:pb-0">
                     <Flex justify="space-between" align="start" className="mb-2">
-                      <Typography.Text strong>{watch(`items.${index}.description`)}</Typography.Text>
-                      <Typography.Text type="secondary">Rate: {formatCurrency(watch(`items.${index}.rate`))}</Typography.Text>
+                      <Controller
+                        control={control}
+                        name={`items.${index}.description`}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            size="small"
+                            className="max-w-60"
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        )}
+                      />
+                      <Controller
+                        control={control}
+                        name={`items.${index}.rate`}
+                        render={({ field }) => (
+                          <InputNumber
+                            {...field}
+                            min={0}
+                            size="small"
+                            className="w-28"
+                            prefix="₹"
+                            onChange={(val) => field.onChange(val || 0)}
+                          />
+                        )}
+                      />
                     </Flex>
                     <Flex gap={16} align="center">
                       <div className="flex-1">

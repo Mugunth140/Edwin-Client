@@ -297,7 +297,9 @@ export function SubcontractWorkOrderPdf({ workOrder }: Props) {
           </View>
 
           <View style={styles.tableRow} wrap={false}>
-            <Text style={[styles.td, styles.colDesc]}>{workOrder.workCategory?.name || 'Subcontracted Work'}</Text>
+            <Text style={[styles.td, styles.colDesc]}>
+              {workOrder.description || workOrder.workCategory?.name || 'Subcontracted Work'}
+            </Text>
             <Text style={[styles.td, styles.colQty]}>{formatINR(qty)}</Text>
             <Text style={[styles.td, styles.colRate]}>{formatINR(rate)}</Text>
             <Text style={[styles.td, styles.colAmt, { fontFamily: 'Helvetica-Bold' }]}>{formatINR(amt)}</Text>

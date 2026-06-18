@@ -46,9 +46,10 @@ type WorkOrdersClientProps = {
 };
 
 const STATUS_OPTIONS = [
-  { label: 'Draft', value: 'draft' },
-  { label: 'Sent', value: 'sent' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Admin Approved', value: 'admin_approved' },
   { label: 'Approved', value: 'approved' },
+  { label: 'Rejected', value: 'rejected' },
 ];
 
 export function WorkOrdersClient({ workOrders, projects, vendors }: WorkOrdersClientProps) {

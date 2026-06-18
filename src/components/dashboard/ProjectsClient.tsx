@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Progress, Select, Space, Table, Typography, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, PlusOutlined, ProjectOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ProjectOutlined } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import dayjs from 'dayjs';
@@ -47,6 +48,7 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
+  const router = useRouter();
 
   const {
     control,
@@ -188,6 +190,11 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       width: 100,
       render: (_, record) => (
         <Space>
+          <Button
+            type="text"
+            icon={<EyeOutlined className="text-emerald-500" />}
+            onClick={() => router.push(`/dashboard/projects/${record.id}`)}
+          />
           <Button
             type="text"
             icon={<EditOutlined className="text-sky-500" />}

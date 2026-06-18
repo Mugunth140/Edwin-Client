@@ -13,6 +13,7 @@ import {
   FileDoneOutlined,
   FileImageOutlined,
   FileProtectOutlined,
+  FileSearchOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
   FormOutlined,
@@ -50,15 +51,16 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
       { key: '/dashboard/dpw', icon: <CalendarOutlined />, label: 'Attendance (DPW)', allowedRoles: ['site_engineer'] },
       { key: '/dashboard/expenses/new', icon: <WalletOutlined />, label: 'Expense', allowedRoles: ['site_engineer'] },
       { key: '/dashboard/projects', icon: <FolderOpenOutlined />, label: 'Projects', allowedRoles: ['admin'] },
-      { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors', allowedRoles: ['admin', 'purchase_team'] },
-      { key: '/dashboard/subcontractors', icon: <TeamOutlined />, label: 'Subcontractors', allowedRoles: ['admin'] },
+      { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors', allowedRoles: ['purchase_team'] },
+      { key: '/dashboard/subcontractors', icon: <TeamOutlined />, label: 'Subcontractors', allowedRoles: ['purchase_team'] },
       { key: '/dashboard/site-engineers', icon: <UserOutlined />, label: 'Site Engineers', allowedRoles: ['admin'] },
       { key: '/dashboard/accounts-managers', icon: <BankOutlined />, label: 'Accounts Managers', allowedRoles: ['admin'] },
       { key: '/dashboard/purchase-team', icon: <TeamOutlined />, label: 'Purchase Team', allowedRoles: ['admin'] },
-      { key: '/dashboard/subcontract-work-orders', icon: <FileTextOutlined />, label: 'Subcontract WO', allowedRoles: ['admin'] },
-      { key: '/dashboard/purchase-orders', icon: <FileProtectOutlined />, label: 'Purchase Orders', allowedRoles: ['admin', 'purchase_team'] },
-      { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports (DPR)', allowedRoles: ['admin'] },
-      { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings', allowedRoles: ['admin'] },
+      { key: '/dashboard/subcontract-work-orders', icon: <FileTextOutlined />, label: 'Subcontract WO', allowedRoles: ['purchase_team'] },
+      { key: '/dashboard/purchase-enquiry', icon: <FileSearchOutlined />, label: 'Purchase Enquiry', allowedRoles: ['purchase_team'] },
+      { key: '/dashboard/purchase-orders', icon: <FileProtectOutlined />, label: 'Purchase Orders', allowedRoles: ['purchase_team'] },
+      // { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports (DPR)', allowedRoles: ['admin'] },
+      // { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings', allowedRoles: ['admin'] },
       { key: '/dashboard/architecture', icon: <NodeIndexOutlined />, label: 'System Architecture', allowedRoles: ['admin'] },
     ],
   },
@@ -298,8 +300,8 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
             </Dropdown>
           </Header>
 
-          <Content className="min-h-[calc(100vh-64px)] bg-[#0b1120] px-6 py-6">
-            <div className="mx-auto w-full max-w-[1600px]">
+          <Content className="min-h-[calc(100vh-64px)] bg-[#0b1120] px-6 pt-6">
+            <div className="mx-auto w-full max-w-[1600px]" style={{ marginBottom: 80 }}>
               {children}
             </div>
           </Content>

@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button, Card, Flex, Typography, App, Image, Tag, Table, Space, Drawer, Row, Col } from 'antd';
+import { useState, useEffect, useTransition } from 'react';
+import { App, Button, Card, Flex, Select, Tag, Typography, Table, Space, Drawer } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { deleteDailyLabourReport } from '@/actions/daily-labour';
+import { deleteDailyLabourReport, updateDailyLabourReportStatus } from '@/actions/daily-labour';
 import { DpwForm } from './DpwForm';
-import type { DailyLabourReport, Project, Trade } from '@/types/erp';
+import type { DailyLabourReport, Project, Trade, DailyWorker } from '@/types/erp';
 import { cardClassName, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import { getApiOrigin } from '@/lib/api-url';
 
@@ -23,6 +23,13 @@ type Props = {
   showActions?: boolean;
 };
 
+const STATUS_OPTIONS = [
+  { label: 'Pending', value: 'pending' },
+  { label: 'Admin Approved', value: 'admin_approved' },
+  { label: 'Approved', value: 'approved' },
+  { label: 'Rejected', value: 'rejected' },
+];
+
 export function DpwClient({ 
   reports, 
   projects, 
@@ -34,6 +41,7 @@ export function DpwClient({
 }: Props) {
   const router = useRouter();
   const { message, modal } = App.useApp();
+  const [isPending, startTransition] = useTransition();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [open, setOpen] = useState(defaultOpen);
   const [viewOpen, setViewOpen] = useState(false);
@@ -92,21 +100,16 @@ export function DpwClient({
     });
   };
 
-  const getTradeSummary = (workers: any[]) => {
+  const getTradeSummary = (workers: DailyWorker[]) => {
     const summary: Record<string, number> = {};
     workers.forEach(w => {
-      summary[w.trade] = (summary[w.trade] || 0) + 1;
+      summary[w.trade] = (summary[w.trade] || 0) + (Number(w.count) || 1);
     });
     return summary;
   };
 
-  const getPhotoUrls = (report: DailyLabourReport) => {
-    const urls: string[] = [];
-    if (report.morningPhoto1Url) urls.push(`${getApiOrigin()}${report.morningPhoto1Url}`);
-    if (report.morningPhoto2Url) urls.push(`${getApiOrigin()}${report.morningPhoto2Url}`);
-    if (report.eveningPhoto1Url) urls.push(`${getApiOrigin()}${report.eveningPhoto1Url}`);
-    if (report.eveningPhoto2Url) urls.push(`${getApiOrigin()}${report.eveningPhoto2Url}`);
-    return urls;
+  const getTotalCount = (workers: DailyWorker[]) => {
+    return workers.reduce((acc, w) => acc + (Number(w.count) || 1), 0);
   };
 
   const columns: ColumnsType<DailyLabourReport> = [
@@ -131,14 +134,15 @@ export function DpwClient({
       render: (name) => name || 'N/A',
     },
     {
-      title: 'Workers',
+      title: 'Headcount',
       key: 'workers',
       render: (_, record) => {
         const tradeSummary = getTradeSummary(record.workers);
+        const total = getTotalCount(record.workers);
         return (
           <Space direction="vertical" size={0}>
             <Typography.Text strong className="text-sky-400">
-              Total: {record.workers.length}
+              Total: {total}
             </Typography.Text>
             <Space wrap size={[4, 4]}>
               {Object.entries(tradeSummary).map(([trade, count]) => (
@@ -157,6 +161,33 @@ export function DpwClient({
       key: 'remarks',
       ellipsis: true,
       render: (remarks) => remarks || '-',
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      width: 140,
+      render: (_, record) => (
+        <Select
+          defaultValue={record.status || 'pending'}
+          size="small"
+          variant="borderless"
+          className="w-full"
+          onChange={(newStatus) => {
+            startTransition(async () => {
+              try {
+                await updateDailyLabourReportStatus(record.id, newStatus);
+                message.success('Status updated');
+                if (onRefresh) onRefresh();
+              } catch (error) {
+                message.error(error instanceof Error ? error.message : 'Failed to update status');
+              }
+            });
+          }}
+          options={STATUS_OPTIONS}
+          popupMatchSelectWidth={false}
+          disabled={isPending}
+        />
+      ),
     },
   ];
 
@@ -264,28 +295,7 @@ export function DpwClient({
             </div>
 
             <div>
-              <Typography.Title level={5} className="text-sky-400 mb-3">Site Photos</Typography.Title>
-              <Image.PreviewGroup>
-                <Row gutter={[12, 12]}>
-                  {getPhotoUrls(viewingReport).map((url, i) => (
-                    <Col span={6} key={i}>
-                      <Image
-                        src={url}
-                        className="rounded-lg object-cover w-full aspect-square border border-white/10"
-                      />
-                    </Col>
-                  ))}
-                  {getPhotoUrls(viewingReport).length === 0 && (
-                    <Col span={24}>
-                      <Typography.Text type="secondary" italic>No photos uploaded</Typography.Text>
-                    </Col>
-                  )}
-                </Row>
-              </Image.PreviewGroup>
-            </div>
-
-            <div>
-              <Typography.Title level={5} className="text-sky-400 mb-3">Worker Details ({viewingReport.workers.length})</Typography.Title>
+              <Typography.Title level={5} className="text-sky-400 mb-3">Attendance Breakdown</Typography.Title>
               <Table
                 dataSource={viewingReport.workers}
                 pagination={false}
@@ -293,11 +303,11 @@ export function DpwClient({
                 rowKey="id"
                 className="border border-white/10 rounded-lg overflow-hidden"
                 columns={[
-                  { title: 'Name', dataIndex: 'name', key: 'name', render: (t) => <Typography.Text strong>{t}</Typography.Text> },
                   { title: 'Trade', dataIndex: 'trade', key: 'trade', render: (t) => <Tag color="blue">{t}</Tag> },
+                  { title: 'Count', dataIndex: 'count', key: 'count', render: (c) => <Typography.Text strong>{c}</Typography.Text> },
+                  { title: 'Shift', dataIndex: 'shift', key: 'shift' },
                   { title: 'In Time', dataIndex: 'inTime', key: 'inTime' },
                   { title: 'Out Time', dataIndex: 'outTime', key: 'outTime' },
-                  { title: 'Remarks', dataIndex: 'remarks', key: 'remarks', ellipsis: true },
                 ]}
               />
             </div>

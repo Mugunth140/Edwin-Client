@@ -180,13 +180,13 @@ export function InvoicesClient({ invoices, projects }: InvoicesClientProps) {
       },
     },
     {
-      title: 'Paid',
+      title: 'Received',
       dataIndex: 'paidAmount',
       align: 'right',
       render: (value) => <Typography.Text type="success">{formatCurrency(value)}</Typography.Text>,
     },
     {
-      title: 'Balance',
+      title: 'Receivable',
       key: 'balance',
       align: 'right',
       render: (_, record) => {
@@ -209,7 +209,7 @@ export function InvoicesClient({ invoices, projects }: InvoicesClientProps) {
       title: 'Actions',
       key: 'actions',
       fixed: 'right',
-      width: 180,
+      width: 280,
       render: (_, record) => (
         <Space>
           <Button
@@ -227,7 +227,7 @@ export function InvoicesClient({ invoices, projects }: InvoicesClientProps) {
               paymentForm.setValue('amount', 0);
             }}
           >
-            Pay
+            Cash Inflow
           </Button>
           <Button
             size="small"
@@ -322,7 +322,7 @@ export function InvoicesClient({ invoices, projects }: InvoicesClientProps) {
           columns={columns}
           rowKey="id"
           size="middle"
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1100 }}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} invoices` }}
         />
       </Card>
@@ -416,7 +416,7 @@ export function InvoicesClient({ invoices, projects }: InvoicesClientProps) {
             <Typography.Title level={5} style={{ margin: '4px 0' }}>{paymentInvoice.invoiceNumber}</Typography.Title>
             <Flex justify="space-between" className="mt-2">
               <Typography.Text>Expected: {formatCurrency(Number(paymentInvoice.totalAmount) + Number(paymentInvoice.gstAmount))}</Typography.Text>
-              <Typography.Text>Balance: {formatCurrency((Number(paymentInvoice.totalAmount) + Number(paymentInvoice.gstAmount)) - Number(paymentInvoice.paidAmount || 0))}</Typography.Text>
+              <Typography.Text>Receivable: {formatCurrency((Number(paymentInvoice.totalAmount) + Number(paymentInvoice.gstAmount)) - Number(paymentInvoice.paidAmount || 0))}</Typography.Text>
             </Flex>
           </div>
         )}

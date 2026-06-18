@@ -44,6 +44,7 @@ export function ExpenseForm({ projects, trades, expenseTypes, initialValues, onS
   const { message } = App.useApp();
   const { user } = useAuthStore();
   const [fileList, setFileList] = useState<any[]>([]);
+  const [sitePhotos, setSitePhotos] = useState<any[]>([]);
 
   const { control, handleSubmit, reset, setValue } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -117,6 +118,13 @@ export function ExpenseForm({ projects, trades, expenseTypes, initialValues, onS
           }
         });
 
+        // Add site photos
+        sitePhotos.forEach((file) => {
+          if (file.originFileObj) {
+            formData.append('sitePhotos', file.originFileObj);
+          }
+        });
+
         if (initialValues?.id) {
           await updateExpense(initialValues.id, formData);
           message.success('Expense updated successfully');
@@ -127,6 +135,7 @@ export function ExpenseForm({ projects, trades, expenseTypes, initialValues, onS
         
         reset();
         setFileList([]);
+        setSitePhotos([]);
         if (onSuccess) onSuccess();
       } catch (error) {
         message.error(error instanceof Error ? error.message : 'Failed to submit expense');
@@ -309,6 +318,23 @@ export function ExpenseForm({ projects, trades, expenseTypes, initialValues, onS
           </Upload>
           <Typography.Text type="secondary" className="text-xs mt-1 block">
             Please upload clear photos of bills or receipts.
+          </Typography.Text>
+        </Form.Item>
+
+        <Form.Item label="Site Photographs (Optional, Max 5)">
+          <Upload
+            beforeUpload={() => false}
+            listType="picture"
+            fileList={sitePhotos}
+            onChange={({ fileList }) => setSitePhotos(fileList)}
+            multiple
+            maxCount={5}
+            accept="image/*"
+          >
+            <Button icon={<UploadOutlined />}>Select Photos</Button>
+          </Upload>
+          <Typography.Text type="secondary" className="text-xs mt-1 block">
+            Upload any relevant site photos for this expense.
           </Typography.Text>
         </Form.Item>
 

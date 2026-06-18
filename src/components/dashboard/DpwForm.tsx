@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
-import { Button, Card, Col, DatePicker, Divider, Flex, Form, Input, Row, Select, Space, Typography, App, Upload } from 'antd';
+import { Button, Card, Col, DatePicker, Divider, Flex, Form, Input, Row, Select, Space, Typography, App, Upload, InputNumber } from 'antd';
 import { PlusOutlined, UploadOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { createDailyLabourReport, updateDailyLabourReport, deleteDailyLabourReport } from '@/actions/daily-labour';
@@ -32,8 +32,8 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
   const { user } = useAuthStore();
   const [form] = Form.useForm();
 
-  const [morningPhotos, setMorningPhotos] = useState<any[]>([]);
-  const [eveningPhotos, setEveningPhotos] = useState<any[]>([]);
+  // Keep track of photo file lists per worker index
+  const [workerPhotos, setWorkerPhotos] = useState<Record<number, { morning: any[], evening: any[] }>>({});
 
   // Pre-fill form if editing
   useEffect(() => {
@@ -49,44 +49,28 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
         }))
       });
 
-      // Populate existing photos
-      const mPhotos = [];
-      if (initialValues.morningPhoto1Url) {
-        mPhotos.push({
-          uid: '-1',
-          name: 'morning1.jpg',
-          status: 'done',
-          url: `${getApiOrigin()}${initialValues.morningPhoto1Url}`,
-        });
-      }
-      if (initialValues.morningPhoto2Url) {
-        mPhotos.push({
-          uid: '-2',
-          name: 'morning2.jpg',
-          status: 'done',
-          url: `${getApiOrigin()}${initialValues.morningPhoto2Url}`,
-        });
-      }
-      setMorningPhotos(mPhotos);
+      // Populate existing photos per worker
+      const photos: Record<number, { morning: any[], evening: any[] }> = {};
+      initialValues.workers.forEach((w, index) => {
+        const morning = [];
+        if (w.morningPhoto1Url) {
+          morning.push({ uid: `-m1-${index}`, name: 'morning1.jpg', status: 'done', url: `${getApiOrigin()}${w.morningPhoto1Url}` });
+        }
+        if (w.morningPhoto2Url) {
+          morning.push({ uid: `-m2-${index}`, name: 'morning2.jpg', status: 'done', url: `${getApiOrigin()}${w.morningPhoto2Url}` });
+        }
 
-      const ePhotos = [];
-      if (initialValues.eveningPhoto1Url) {
-        ePhotos.push({
-          uid: '-3',
-          name: 'evening1.jpg',
-          status: 'done',
-          url: `${getApiOrigin()}${initialValues.eveningPhoto1Url}`,
-        });
-      }
-      if (initialValues.eveningPhoto2Url) {
-        ePhotos.push({
-          uid: '-4',
-          name: 'evening2.jpg',
-          status: 'done',
-          url: `${getApiOrigin()}${initialValues.eveningPhoto2Url}`,
-        });
-      }
-      setEveningPhotos(ePhotos);
+        const evening = [];
+        if (w.eveningPhoto1Url) {
+          evening.push({ uid: `-e1-${index}`, name: 'evening1.jpg', status: 'done', url: `${getApiOrigin()}${w.eveningPhoto1Url}` });
+        }
+        if (w.eveningPhoto2Url) {
+          evening.push({ uid: `-e2-${index}`, name: 'evening2.jpg', status: 'done', url: `${getApiOrigin()}${w.eveningPhoto2Url}` });
+        }
+
+        photos[index] = { morning, evening };
+      });
+      setWorkerPhotos(photos);
     }
   }, [initialValues, form]);
 
@@ -114,11 +98,6 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
     });
   };
 
-  // Only show projects assigned to the current site engineer if they are a site engineer
-  const availableProjects = user?.role === 'site_engineer' && user.projects 
-    ? projects.filter(p => user.projects?.some(up => up.id === p.id))
-    : projects;
-
   const handleAddTrade = async (e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault();
     if (!newTradeName.trim()) return;
@@ -136,6 +115,16 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
     }
   };
 
+  const handlePhotoChange = (index: number, type: 'morning' | 'evening', fileList: any[]) => {
+    setWorkerPhotos(prev => ({
+      ...prev,
+      [index]: {
+        ...prev[index],
+        [type]: fileList
+      }
+    }));
+  };
+
   const handleSubmit = (values: any) => {
     startTransition(async () => {
       try {
@@ -144,26 +133,35 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
         formData.append('reportDate', values.reportDate.format('YYYY-MM-DD'));
         formData.append('remarks', values.remarks || '');
         
-        const workers = values.workers?.map((w: any) => {
+        const workers = values.workers?.map((w: any, index: number) => {
           const selectedTrade = localTrades.find(t => t.id === w.tradeId);
+          
+          // Add photos to formData with special field names
+          const photos = workerPhotos[index];
+          if (photos) {
+            if (photos.morning?.[0]?.originFileObj) formData.append(`worker_${index}_morningPhoto1`, photos.morning[0].originFileObj);
+            if (photos.morning?.[1]?.originFileObj) formData.append(`worker_${index}_morningPhoto2`, photos.morning[1].originFileObj);
+            if (photos.evening?.[0]?.originFileObj) formData.append(`worker_${index}_eveningPhoto1`, photos.evening[0].originFileObj);
+            if (photos.evening?.[1]?.originFileObj) formData.append(`worker_${index}_eveningPhoto2`, photos.evening[1].originFileObj);
+          }
+
           return {
-            name: w.name,
-            phone: w.phone || '',
             tradeId: w.tradeId,
             trade: selectedTrade?.name || w.tradeId,
+            count: w.count || 1,
+            shift: w.shift || '1',
             inTime: w.inTime ? w.inTime.format('HH:mm:ss') : undefined,
             outTime: w.outTime ? w.outTime.format('HH:mm:ss') : undefined,
-            remarks: w.remarks || ''
+            remarks: w.remarks || '',
+            // Keep existing photo URLs if not replaced
+            morningPhoto1Url: photos?.morning?.[0]?.url?.replace(getApiOrigin(), '') || undefined,
+            morningPhoto2Url: photos?.morning?.[1]?.url?.replace(getApiOrigin(), '') || undefined,
+            eveningPhoto1Url: photos?.evening?.[0]?.url?.replace(getApiOrigin(), '') || undefined,
+            eveningPhoto2Url: photos?.evening?.[1]?.url?.replace(getApiOrigin(), '') || undefined,
           };
         }) || [];
         
         formData.append('workers', JSON.stringify(workers));
-
-        // Add photos
-        if (morningPhotos[0]?.originFileObj) formData.append('morningPhoto1', morningPhotos[0].originFileObj);
-        if (morningPhotos[1]?.originFileObj) formData.append('morningPhoto2', morningPhotos[1].originFileObj);
-        if (eveningPhotos[0]?.originFileObj) formData.append('eveningPhoto1', eveningPhotos[0].originFileObj);
-        if (eveningPhotos[1]?.originFileObj) formData.append('eveningPhoto2', eveningPhotos[1].originFileObj);
 
         if (initialValues?.id) {
           await updateDailyLabourReport(initialValues.id, formData);
@@ -174,8 +172,7 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
         }
         
         form.resetFields();
-        setMorningPhotos([]);
-        setEveningPhotos([]);
+        setWorkerPhotos({});
         if (onSuccess) {
           onSuccess();
         } else {
@@ -187,11 +184,15 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
     });
   };
 
+  const availableProjects = user?.role === 'site_engineer' && user.projects 
+    ? projects.filter(p => user.projects?.some(up => up.id === p.id))
+    : projects;
+
   return (
     <Card className={cardClassName} bordered={false}>
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Row gutter={16}>
-          <Col xs={24}>
+          <Col xs={24} sm={12}>
             <Form.Item name="projectId" label="Project" rules={[{ required: true }]}>
               <Select
                 options={availableProjects.map((p) => ({ label: p.name, value: p.id }))}
@@ -199,34 +200,25 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
               />
             </Form.Item>
           </Col>
-          <Col xs={24}>
+          <Col xs={24} sm={12}>
             <Form.Item name="reportDate" label="Date" rules={[{ required: true }]} initialValue={dayjs()}>
               <DatePicker style={{ width: '100%' }} format="DD-MM-YYYY" />
             </Form.Item>
           </Col>
         </Row>
 
-        <Divider className="border-white/10 text-slate-400">Workers Present</Divider>
+        <Divider className="border-white/10 text-slate-400">Trade Wise Attendance</Divider>
         
         <Form.List name="workers">
           {(fields, { add, remove }) => (
             <>
               {fields.map(({ key, name, ...restField }) => (
-                <Card size="small" key={key} className="mb-4 border-white/10 bg-white/5" 
+                <Card size="small" key={key} className="mb-6 border-white/10 bg-white/5 shadow-md" 
+                  title={<Typography.Text strong className="text-sky-400">Trade Entry #{name + 1}</Typography.Text>}
                   extra={<Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />}
                 >
                     <Row gutter={12}>
-                      <Col xs={24} sm={8}>
-                        <Form.Item {...restField} name={[name, 'name']} label="Name" rules={[{ required: true }]}>
-                          <Input placeholder="Worker name" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item {...restField} name={[name, 'phone']} label="Phone">
-                          <Input placeholder="Phone number" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
+                      <Col xs={24} sm={10}>
                         <Form.Item {...restField} name={[name, 'tradeId']} label="Trade" rules={[{ required: true }]}>
                           <Select
                             showSearch
@@ -252,19 +244,59 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
                           />
                         </Form.Item>
                       </Col>
+                      <Col xs={12} sm={7}>
+                        <Form.Item {...restField} name={[name, 'count']} label="Worker Count" rules={[{ required: true }]}>
+                          <InputNumber min={1} style={{ width: '100%' }} placeholder="Count" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={12} sm={7}>
+                        <Form.Item {...restField} name={[name, 'shift']} label="Shift" initialValue="1">
+                          <Select options={[{label: '0.5', value: '0.5'}, {label: '1', value: '1'}, {label: '1.5', value: '1.5'}, {label: '2', value: '2'}]} />
+                        </Form.Item>
+                      </Col>
                     <Col xs={12}>
-                      <Form.Item {...restField} name={[name, 'inTime']} label="In">
+                      <Form.Item {...restField} name={[name, 'inTime']} label="In Time">
                         <DatePicker picker="time" format="hh:mm A" style={{ width: '100%' }} />
                       </Form.Item>
                     </Col>
                     <Col xs={12}>
-                      <Form.Item {...restField} name={[name, 'outTime']} label="Out">
+                      <Form.Item {...restField} name={[name, 'outTime']} label="Out Time">
                         <DatePicker picker="time" format="hh:mm A" style={{ width: '100%' }} />
                       </Form.Item>
                     </Col>
+                    
+                    <Col xs={24} md={12}>
+                      <Form.Item label="Morning Photos (Max 2)">
+                        <Upload
+                          beforeUpload={() => false}
+                          listType="picture"
+                          maxCount={2}
+                          fileList={workerPhotos[name]?.morning || []}
+                          onChange={({ fileList }) => handlePhotoChange(name, 'morning', fileList)}
+                          accept="image/*"
+                        >
+                          <Button icon={<UploadOutlined />} block>Photos</Button>
+                        </Upload>
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item label="Evening Photos (Max 2)">
+                        <Upload
+                          beforeUpload={() => false}
+                          listType="picture"
+                          maxCount={2}
+                          fileList={workerPhotos[name]?.evening || []}
+                          onChange={({ fileList }) => handlePhotoChange(name, 'evening', fileList)}
+                          accept="image/*"
+                        >
+                          <Button icon={<UploadOutlined />} block>Photos</Button>
+                        </Upload>
+                      </Form.Item>
+                    </Col>
+
                     <Col xs={24}>
                       <Form.Item {...restField} name={[name, 'remarks']} label="Remarks">
-                        <Input placeholder="Task details..." />
+                        <Input.TextArea autoSize placeholder="Task details..." />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -272,50 +304,17 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
               ))}
               <Form.Item>
                 <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                  Add Worker
+                  Add Trade Entry
                 </Button>
               </Form.Item>
             </>
           )}
         </Form.List>
 
-        <Divider className="border-white/10 text-slate-400">Site Photos</Divider>
-        
-        <Row gutter={16}>
-          <Col xs={24}>
-            <Form.Item label="Morning Photos (Max 2)">
-              <Upload
-                beforeUpload={() => false}
-                listType="picture"
-                maxCount={2}
-                fileList={morningPhotos}
-                onChange={({ fileList }) => setMorningPhotos(fileList)}
-                accept="image/*"
-              >
-                <Button icon={<UploadOutlined />} block>Select Photos</Button>
-              </Upload>
-            </Form.Item>
-          </Col>
-          <Col xs={24}>
-            <Form.Item label="Evening Photos (Max 2)">
-              <Upload
-                beforeUpload={() => false}
-                listType="picture"
-                maxCount={2}
-                fileList={eveningPhotos}
-                onChange={({ fileList }) => setEveningPhotos(fileList)}
-                accept="image/*"
-              >
-                <Button icon={<UploadOutlined />} block>Select Photos</Button>
-              </Upload>
-            </Form.Item>
-          </Col>
-        </Row>
-
         <Divider className="border-white/10 text-slate-400">Summary</Divider>
         
         <Form.Item name="remarks" label="Overall Remarks">
-          <Input.TextArea rows={3} placeholder="E.g., First floor column work completed." />
+          <Input.TextArea rows={3} placeholder="E.g., Site activities completed as planned." />
         </Form.Item>
 
         <Flex justify="space-between" className="mt-6">

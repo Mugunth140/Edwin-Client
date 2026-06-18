@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
-import { Card, Table, Typography, Tag, Space, Flex, Button, Drawer, Form, Input, InputNumber, Select, DatePicker, Row, Col, Statistic } from 'antd';
-import { CreditCardOutlined, PlusOutlined, ArrowDownOutlined, ArrowUpOutlined, BankOutlined, UserOutlined, ShopOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState, useTransition } from 'react';
+import { Card, Table, Typography, Tag, Space, Flex, Button, Drawer, Form, Input, InputNumber, Select, DatePicker, Row, Col, Statistic, Tabs } from 'antd';
+import { CreditCardOutlined, PlusOutlined, ArrowDownOutlined, ArrowUpOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -77,6 +77,53 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
     });
   };
 
+  const [activeTab, setActiveTab] = useState('inflow');
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
+
+  const inflowPayments = useMemo(() => {
+    const from = dateRange[0]?.format('YYYY-MM-DD');
+    const to = dateRange[1]?.format('YYYY-MM-DD');
+    return payments.filter((p) => {
+      if (!p.salesInvoice) return false;
+      if (statusFilter && p.salesInvoice?.status !== statusFilter) return false;
+      if (from && to) {
+        const pd = typeof p.paymentDate === 'string' ? p.paymentDate.split('T')[0] : '';
+        if (pd < from || pd > to) return false;
+      }
+      if (searchText) {
+        const q = searchText.toLowerCase();
+        const payee = p.salesInvoice?.project?.clientName || p.vendor?.name || p.payeeName || '';
+        const ref = p.referenceNumber || '';
+        if (!payee.toLowerCase().includes(q) && !ref.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [payments, dateRange, searchText, statusFilter]);
+
+  const outflowPayments = useMemo(() => {
+    const from = dateRange[0]?.format('YYYY-MM-DD');
+    const to = dateRange[1]?.format('YYYY-MM-DD');
+    return payments.filter((p) => {
+      if (p.salesInvoice) return false;
+      const srcStatus = p.expense?.status || p.purchaseBill?.status;
+      if (srcStatus !== 'admin_approved') return false;
+      if (statusFilter && srcStatus !== statusFilter) return false;
+      if (from && to) {
+        const pd = typeof p.paymentDate === 'string' ? p.paymentDate.split('T')[0] : '';
+        if (pd < from || pd > to) return false;
+      }
+      if (searchText) {
+        const q = searchText.toLowerCase();
+        const payee = p.vendor?.name || p.payeeName || '';
+        const ref = p.referenceNumber || '';
+        if (!payee.toLowerCase().includes(q) && !ref.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [payments, dateRange, searchText, statusFilter]);
+
   const columns: ColumnsType<Payment> = [
     {
       title: '#',
@@ -129,7 +176,7 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
       title: 'Status',
       key: 'status',
       render: (_, record) => {
-        const status = record.expense?.status || record.salesInvoice?.status || 'completed';
+        const status = record.expense?.status || record.salesInvoice?.status || record.purchaseBill?.status || 'completed';
         return <StatusTag value={status} />;
       },
     },
@@ -145,10 +192,119 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
     },
   ];
 
+  const totalInflow = summary.find((item) => item.paymentType === 'revenue')?.total || 0;
   const totalOutflow = summary
     .filter((item) => item.paymentType !== 'revenue')
     .reduce((sum, item) => sum + Number(item.total), 0);
-  const totalInflow = summary.find((item) => item.paymentType === 'revenue')?.total || 0;
+
+  const inflowSum = inflowPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const outflowSum = outflowPayments.reduce((s, p) => s + Number(p.amount), 0);
+
+  const filterRow = (
+    <Row gutter={16} className="mb-4">
+      <Col xs={24} sm={12} md={8}>
+        <Input.Search
+          placeholder="Search payee or reference..."
+          allowClear
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          prefix={<SearchOutlined className="text-slate-400" />}
+        />
+      </Col>
+      <Col xs={24} sm={12} md={6}>
+        <Select
+          allowClear
+          placeholder="Filter by status"
+          className="w-full"
+          value={statusFilter || undefined}
+          onChange={(val) => setStatusFilter(val || '')}
+          options={[
+            { label: 'Admin Approved', value: 'admin_approved' },
+            { label: 'Approved', value: 'approved' },
+            { label: 'Pending', value: 'pending' },
+            { label: 'Rejected', value: 'rejected' },
+            { label: 'Completed', value: 'completed' },
+          ]}
+        />
+      </Col>
+      <Col xs={24} sm={12} md={6}>
+        <DatePicker.RangePicker
+          className="w-full"
+          value={dateRange[0] || dateRange[1] ? dateRange : [null, null]}
+          onChange={(dates) => setDateRange(dates ? [dates[0], dates[1]] : [null, null])}
+          allowClear
+          placeholder={['From date', 'To date']}
+        />
+      </Col>
+    </Row>
+  );
+
+  const tabItems = [
+    {
+      key: 'inflow',
+      label: (
+        <span>
+          <ArrowUpOutlined className="text-green-500 mr-1" /> Inflow
+        </span>
+      ),
+      children: (
+        <div>
+          <Row gutter={[16, 16]} className="mb-4">
+            <Col xs={24} sm={12} md={6}>
+              <Card className={cardClassName}>
+                <Statistic
+                  title="Total Inflow"
+                  value={inflowSum}
+                  prefix={<ArrowUpOutlined className="text-green-500" />}
+                  formatter={(val) => formatCurrency(val as number)}
+                />
+              </Card>
+            </Col>
+          </Row>
+          {filterRow}
+          <Table
+            dataSource={inflowPayments}
+            columns={columns}
+            rowKey="id"
+            pagination={{ pageSize: 15 }}
+            scroll={{ x: 900 }}
+          />
+        </div>
+      ),
+    },
+    {
+      key: 'outflow',
+      label: (
+        <span>
+          <ArrowDownOutlined className="text-red-500 mr-1" /> Outflow
+        </span>
+      ),
+      children: (
+        <div>
+          <Row gutter={[16, 16]} className="mb-4">
+            <Col xs={24} sm={12} md={6}>
+              <Card className={cardClassName}>
+                <Statistic
+                  title="Total Outflow"
+                  value={outflowSum}
+                  prefix={<ArrowDownOutlined className="text-red-500" />}
+                  formatter={(val) => formatCurrency(val as number)}
+                />
+              </Card>
+            </Col>
+          </Row>
+          {filterRow}
+          <Table
+            dataSource={outflowPayments}
+            columns={columns}
+            rowKey="id"
+            pagination={{ pageSize: 15 }}
+            scroll={{ x: 900 }}
+          />
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div>
@@ -164,35 +320,28 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} md={6}>
           <Card className={cardClassName}>
-            <Statistic 
-              title="Total Outflow" 
-              value={totalOutflow} 
-              prefix={<ArrowDownOutlined className="text-red-500" />} 
+            <Statistic
+              title="Total Inflow"
+              value={totalInflow}
+              prefix={<ArrowUpOutlined className="text-green-500" />}
               formatter={(val) => formatCurrency(val as number)}
             />
           </Card>
         </Col>
-        {summary.map((item) => (
-          <Col xs={24} sm={12} md={6} key={item.paymentType}>
-            <Card className={cardClassName}>
-              <Statistic 
-                title={titleCase(item.paymentType)} 
-                value={Number(item.total)} 
-                formatter={(val) => formatCurrency(val as number)}
-              />
-            </Card>
-          </Col>
-        ))}
+        <Col xs={24} sm={12} md={6}>
+          <Card className={cardClassName}>
+            <Statistic
+              title="Total Outflow"
+              value={totalOutflow}
+              prefix={<ArrowDownOutlined className="text-red-500" />}
+              formatter={(val) => formatCurrency(val as number)}
+            />
+          </Card>
+        </Col>
       </Row>
 
-      <Card className={cardClassName} title="Transaction History">
-        <Table
-          dataSource={payments}
-          columns={columns}
-          rowKey="id"
-          pagination={{ pageSize: 15 }}
-          scroll={{ x: 900 }}
-        />
+      <Card className={cardClassName}>
+        <Tabs activeKey={activeTab} onChange={(key) => { setActiveTab(key); setSearchText(''); setStatusFilter(''); setDateRange([null, null]); }} items={tabItems} />
       </Card>
 
       <Drawer

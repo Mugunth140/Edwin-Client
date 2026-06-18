@@ -7,11 +7,12 @@ export type PagedResponse<T> = {
 
 export type ProjectStatus = 'planning' | 'in_progress' | 'on_hold' | 'completed';
 export type WorkOrderStatus = 'draft' | 'sent' | 'approved';
+export type SubcontractWorkOrderStatus = 'pending' | 'admin_approved' | 'approved' | 'rejected';
 export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'cancelled';
-export type BillStatus = 'pending' | 'approved' | 'rejected';
+export type BillStatus = 'pending' | 'admin_approved' | 'approved' | 'rejected';
 export type PaymentMode = 'cash' | 'upi' | 'rtgs' | 'cheque';
 export type ExpenseCategory = 'staff' | 'office' | 'transport' | 'travel';
-export type ExpenseStatus = 'pending' | 'approved' | 'rejected';
+export type ExpenseStatus = 'pending' | 'admin_approved' | 'approved' | 'rejected';
 
 export type ExpenseType = {
   id: string;
@@ -22,6 +23,14 @@ export type ExpenseType = {
 };
 
 export type PaymentType = 'material' | 'labour' | 'rent' | 'accommodation' | 'office_maintenance' | 'transport' | 'travel' | 'staff_expense' | 'office_maintenance';
+export type ItemDescription = {
+  id: string;
+  name: string;
+  isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type WorkCategory = {
   id: string;
   name: string;
@@ -90,6 +99,7 @@ export type SubcontractWorkOrder = {
   project?: Project;
   subcontractor?: Subcontractor;
   workCategory?: WorkCategory;
+  description?: string | null;
   quantity: number | string;
   unit: string;
   rate: number | string;
@@ -100,7 +110,7 @@ export type SubcontractWorkOrder = {
   startDate?: string | null;
   endDate?: string | null;
   notes?: string | null;
-  status: WorkOrderStatus;
+  status: SubcontractWorkOrderStatus;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -188,7 +198,25 @@ export type SalesInvoice = {
   createdAt?: string;
 };
 
-export type PurchaseOrderStatus = 'draft' | 'sent' | 'approved';
+export type PurchaseOrderStatus = 'draft' | 'sent' | 'pending' | 'admin_approved' | 'approved' | 'rejected';
+
+export type EnquiryItem = {
+  description: string;
+  quantity: number;
+};
+
+export type PurchaseEnquiry = {
+  id: string;
+  enquiryNo: string;
+  vendorId: string;
+  projectId: string;
+  vendor?: Vendor;
+  project?: Project;
+  notes?: string | null;
+  items: EnquiryItem[];
+  status: string;
+  createdAt?: string;
+};
 
 export type PurchaseOrder = {
   id: string;
@@ -201,6 +229,8 @@ export type PurchaseOrder = {
   status: PurchaseOrderStatus;
   totalAmount: number | string;
   items?: LineItem[];
+  billFileUrl?: string | null;
+  billFileKey?: string | null;
   createdAt?: string;
 };
 
@@ -219,6 +249,7 @@ export type Expense = {
   trade?: Trade;
   remarks?: string | null;
   receiptUrls?: string[] | null;
+  sitePhotoUrls?: string[] | null;
   status?: ExpenseStatus;
   createdBy?: string | null;
   creator?: { id: string; name: string; role: string };
@@ -278,6 +309,18 @@ export type DprReport = {
   createdAt: string;
 };
 
+export type BillItem = {
+  id: string;
+  billId: string;
+  poItemId: string;
+  description: string;
+  quantity: number | string;
+  unit: string;
+  rate: number | string;
+  orderedQty: number | string;
+  billedQty: number | string;
+};
+
 export type PurchaseBill = {
   id: string;
   billNumber: string;
@@ -294,6 +337,8 @@ export type PurchaseBill = {
   dueDate?: string | null;
   billFileUrl?: string | null;
   billFileKey?: string | null;
+  notes?: string | null;
+  billItems?: BillItem[];
   payments?: Payment[];
   createdAt: string;
   updatedAt: string;
@@ -324,13 +369,17 @@ export type Payment = {
 export type DailyWorker = {
   id: string;
   reportId: string;
-  name: string;
-  phone?: string | null;
   tradeId?: string | null;
   trade: string;
+  count: number;
+  shift: string;
   inTime?: string | null;
   outTime?: string | null;
   remarks?: string | null;
+  morningPhoto1Url?: string | null;
+  morningPhoto2Url?: string | null;
+  eveningPhoto1Url?: string | null;
+  eveningPhoto2Url?: string | null;
 };
 
 export type DailyLabourReport = {
@@ -339,13 +388,19 @@ export type DailyLabourReport = {
   project?: Project;
   reportDate: string;
   remarks?: string | null;
-  morningPhoto1Url?: string | null;
-  morningPhoto2Url?: string | null;
-  eveningPhoto1Url?: string | null;
-  eveningPhoto2Url?: string | null;
   workers: DailyWorker[];
+  status: string;
   createdById: string;
   createdBy?: { id: string; name: string };
   createdAt: string;
   updatedAt: string;
+};
+
+export type ProjectDetails = {
+  project: Project;
+  expenses: Expense[];
+  subcontractWorkOrders: SubcontractWorkOrder[];
+  purchaseBills: PurchaseBill[];
+  invoices: SalesInvoice[];
+  payments: Payment[];
 };

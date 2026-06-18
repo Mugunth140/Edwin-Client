@@ -1,37 +1,52 @@
 import { Alert } from 'antd';
 import { ApprovalsClient } from '@/components/dashboard/ApprovalsClient';
-import { fetchBills, fetchExpenses } from '@/lib/api';
-import type { PurchaseBill, Expense } from '@/types/erp';
+import { fetchBills, fetchExpenses, fetchPurchaseOrders, fetchSubcontractWorkOrders, fetchDailyLabourReports } from '@/lib/api';
+import type { PurchaseBill, Expense, PurchaseOrder, SubcontractWorkOrder, DailyLabourReport } from '@/types/erp';
 
 type PageData = {
   bills: PurchaseBill[];
   expenses: Expense[];
+  purchaseOrders: PurchaseOrder[];
+  subcontractWorkOrders: SubcontractWorkOrder[];
+  dailyReports: DailyLabourReport[];
   error?: string;
 };
 
 async function loadPageData(): Promise<PageData> {
   try {
-    const [bills, expensesResult] = await Promise.all([
+    const [bills, expensesResult, purchaseOrders, subcontractWorkOrders, dailyReports] = await Promise.all([
       fetchBills(),
       fetchExpenses(),
+      fetchPurchaseOrders(),
+      fetchSubcontractWorkOrders(),
+      fetchDailyLabourReports(),
     ]);
-    return { bills, expenses: expensesResult.data };
+    return { bills, expenses: expensesResult.data, purchaseOrders, subcontractWorkOrders, dailyReports };
   } catch (error) {
     return {
       bills: [],
       expenses: [],
+      purchaseOrders: [],
+      subcontractWorkOrders: [],
+      dailyReports: [],
       error: error instanceof Error ? error.message : 'Failed to load data',
     };
   }
 }
 
 export default async function ApprovalsPage() {
-  const { bills, expenses, error } = await loadPageData();
+  const { bills, expenses, purchaseOrders, subcontractWorkOrders, dailyReports, error } = await loadPageData();
 
   return (
     <>
       {error && <Alert type="warning" showIcon title={error} className="mb-4" />}
-      <ApprovalsClient bills={bills} expenses={expenses} />
+      <ApprovalsClient
+        bills={bills}
+        expenses={expenses}
+        purchaseOrders={purchaseOrders}
+        subcontractWorkOrders={subcontractWorkOrders}
+        dailyReports={dailyReports}
+      />
     </>
   );
 }

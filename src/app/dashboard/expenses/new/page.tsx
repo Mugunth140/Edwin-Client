@@ -3,13 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { clientApiFetch } from '@/lib/client-api';
 import { ExpenseForm } from '@/components/dashboard/ExpenseForm';
-import { Alert, Spin, Typography, Button, Drawer, Card, Table, Tag, Space } from 'antd';
+import { Alert, Spin, Typography, Button, Drawer, Card, Table, Tag, Space, Image } from 'antd';
 import type { Project, Trade, Expense, ExpenseType } from '@/types/erp';
 import { DollarOutlined, PlusOutlined, FileTextOutlined } from '@ant-design/icons';
 import { cardClassName, formatCurrency, formatDate, StatusTag } from '@/components/dashboard/ui';
 import type { ColumnsType } from 'antd/es/table';
 import { getApiOrigin } from '@/lib/api-url';
-import { render } from '@react-pdf/renderer';
 
 export default function NewExpensePage() {
   const [data, setData] = useState<{ projects: Project[], trades: Trade[], expenseTypes: ExpenseType[], expenses: Expense[] } | null>(null);
@@ -109,6 +108,25 @@ export default function NewExpensePage() {
             />
           ))}
         </Space>
+      ) : '-',
+    },
+    {
+      title: 'Site Photos',
+      dataIndex: 'sitePhotoUrls',
+      render: (urls: string[]) => urls?.length ? (
+        <Image.PreviewGroup>
+          <Space>
+            {urls.map((url, i) => (
+              <Image
+                key={i}
+                src={`${getApiOrigin()}${url}`}
+                width={30}
+                height={30}
+                className="rounded object-cover border border-white/10"
+              />
+            ))}
+          </Space>
+        </Image.PreviewGroup>
       ) : '-',
     },
   ];

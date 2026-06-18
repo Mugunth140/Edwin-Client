@@ -55,6 +55,7 @@ export async function updatePurchaseOrderStatus(id: string, status: string) {
     throw new Error(errorMessage);
   }
   revalidatePath('/dashboard/purchase-orders');
+  revalidatePath('/dashboard/approvals');
   return res.json();
 }
 
@@ -68,6 +69,24 @@ export async function updatePurchaseOrder(id: string, data: Record<string, unkno
   if (!res.ok) throw new Error('Failed to update purchase order');
   revalidatePath('/dashboard/purchase-orders');
   return res.json();
+}
+
+export async function uploadBillFile(data: { name: string; base64: string }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value;
+  const buf = Buffer.from(data.base64, 'base64');
+  const blob = new Blob([buf], { type: 'application/octet-stream' });
+  const formData = new FormData();
+  formData.append('file', blob, data.name);
+  const res = await fetch(`${getApiBaseUrl()}/purchase-orders/upload`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  if (!res.ok) throw new Error('File upload failed');
+  return res.json() as Promise<{ fileUrl: string; fileKey: string }>;
 }
 
 export async function deletePurchaseOrder(id: string) {

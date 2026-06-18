@@ -25,7 +25,6 @@ const accountsManagerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').optional().or(z.literal('')),
   password: z.string().min(4, 'Password must be at least 4 characters').optional().or(z.literal('')),
   isActive: z.boolean(),
-  projectIds: z.array(z.string()).optional(),
 });
 
 type AccountsManagerFormValues = z.infer<typeof accountsManagerSchema>;
@@ -41,12 +40,7 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setValue,
-  } = useForm<AccountsManagerFormValues>({
+  const form = useForm<AccountsManagerFormValues>({
     resolver: zodResolver(accountsManagerSchema),
     defaultValues: {
       name: '',
@@ -56,10 +50,10 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
       address: '',
       username: '',
       password: '',
-      isActive: true,
-      projectIds: [],
-    },
+      isActive: true
+    }
   });
+  const { control, handleSubmit, reset, setValue } = form;
 
   useEffect(() => {
     if (editingManager) {
@@ -70,7 +64,6 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
       setValue('address', editingManager.address || '');
       setValue('username', editingManager.username || '');
       setValue('isActive', editingManager.isActive);
-      setValue('projectIds', editingManager.projects?.map(p => p.id) || []);
       setValue('password', '');
     } else {
       reset({
@@ -82,7 +75,6 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
         username: '',
         password: '',
         isActive: true,
-        projectIds: [],
       });
     }
   }, [editingManager, setValue, reset]);
@@ -133,21 +125,6 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
       render: (text) => text || '-',
     },
     {
-      title: 'Assigned Projects',
-      key: 'projects',
-      render: (_, record) => (
-        <Space size={[0, 4]} wrap>
-          {record.projects && record.projects.length > 0 ? (
-            record.projects.map((p) => (
-              <Tag key={p.id} color="blue">{p.name}</Tag>
-            ))
-          ) : (
-            <Typography.Text type="secondary">None</Typography.Text>
-          )}
-        </Space>
-      ),
-    },
-    {
       title: 'Status',
       dataIndex: 'isActive',
       key: 'isActive',
@@ -194,7 +171,7 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
         if (editingManager) {
           const updateData = { ...values };
           if (!updateData.password) delete updateData.password;
-          
+
           await updateAccountsManager(editingManager.id, updateData);
           message.success('Accounts manager updated successfully');
         } else {
@@ -316,7 +293,7 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
           />
 
           <Typography.Title level={5} className="mt-4 mb-2 border-b border-white/10 pb-2">Login Credentials</Typography.Title>
-          
+
           <Flex gap={16}>
             <Controller
               control={control}
@@ -348,24 +325,6 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
               )}
             />
           </Flex>
-
-          <Typography.Title level={5} className="mt-4 mb-2 border-b border-white/10 pb-2">Assignments</Typography.Title>
-
-          <Controller
-            control={control}
-            name="projectIds"
-            render={({ field }) => (
-              <Form.Item label="Assigned Projects">
-                <Select
-                  {...field}
-                  mode="multiple"
-                  placeholder="Select projects"
-                  options={projects.map(p => ({ label: p.name, value: p.id }))}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            )}
-          />
 
           <Controller
             control={control}

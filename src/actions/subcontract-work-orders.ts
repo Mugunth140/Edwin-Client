@@ -61,6 +61,7 @@ export async function updateSubcontractWorkOrderStatus(id: string, status: strin
   }
 
   revalidatePath('/dashboard/subcontract-work-orders');
+  revalidatePath('/dashboard/approvals');
   return res.json();
 }
 

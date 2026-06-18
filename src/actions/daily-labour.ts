@@ -61,6 +61,33 @@ export async function updateDailyLabourReport(id: string, formData: FormData) {
   }
 }
 
+export async function updateDailyLabourReportStatus(id: string, status: string) {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await fetch(`${getApiBaseUrl()}/daily-labour/${id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to update status' }));
+      throw new Error(error.message || 'Failed to update status');
+    }
+
+    revalidatePath('/dashboard/dpw');
+    revalidatePath('/dashboard/new');
+    return res.json();
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error('Failed to update status');
+  }
+}
+
 export async function deleteDailyLabourReport(id: string) {
   try {
     const headers = await getAuthHeaders();

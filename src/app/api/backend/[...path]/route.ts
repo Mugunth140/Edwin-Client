@@ -30,7 +30,7 @@ async function proxyToApi(request: NextRequest, context: RouteContext) {
     const response = await fetch(targetUrl, {
       method: request.method,
       headers,
-      body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text(),
+      body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.arrayBuffer(),
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     });

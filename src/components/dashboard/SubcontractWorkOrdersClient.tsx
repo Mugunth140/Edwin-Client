@@ -36,7 +36,6 @@ import {
   createSubcontractWorkOrder,
   deleteSubcontractWorkOrder,
   updateSubcontractWorkOrder,
-  updateSubcontractWorkOrderStatus,
 } from '@/actions/subcontract-work-orders';
 import type { SubcontractWorkOrder, Project, Subcontractor, WorkCategory } from '@/types/erp';
 import { SubcontractWorkOrderPdf } from './SubcontractWorkOrderPdf';
@@ -53,6 +52,7 @@ const swoSchema = z.object({
   projectId: z.string().min(1, 'Project is required'),
   subcontractorId: z.string().min(1, 'Subcontractor is required'),
   workCategoryId: z.string().min(1, 'Work category is required'),
+  description: z.string().optional(),
   quantity: z.number().min(0.01, 'Quantity must be greater than 0'),
   unit: z.string().min(1, 'Unit is required'),
   rate: z.number().min(0.01, 'Rate must be greater than 0'),
@@ -72,9 +72,10 @@ type SubcontractWorkOrdersClientProps = {
 };
 
 const STATUS_OPTIONS = [
-  { label: 'Draft', value: 'draft' },
-  { label: 'Sent', value: 'sent' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Admin Approved', value: 'admin_approved' },
   { label: 'Approved', value: 'approved' },
+  { label: 'Rejected', value: 'rejected' },
 ];
 
 export function SubcontractWorkOrdersClient({
@@ -107,6 +108,7 @@ export function SubcontractWorkOrdersClient({
       projectId: '',
       subcontractorId: '',
       workCategoryId: '',
+      description: '',
       quantity: 0,
       unit: 'sqft',
       rate: 0,
@@ -140,6 +142,7 @@ export function SubcontractWorkOrdersClient({
       setValue('projectId', editingSwo.projectId);
       setValue('subcontractorId', editingSwo.subcontractorId);
       setValue('workCategoryId', editingSwo.workCategoryId);
+      setValue('description', editingSwo.description || '');
       setValue('quantity', Number(editingSwo.quantity));
       setValue('unit', editingSwo.unit);
       setValue('rate', Number(editingSwo.rate));
@@ -153,6 +156,7 @@ export function SubcontractWorkOrdersClient({
         projectId: '',
         subcontractorId: '',
         workCategoryId: '',
+        description: '',
         quantity: 0,
         unit: 'sqft',
         rate: 0,
@@ -165,17 +169,6 @@ export function SubcontractWorkOrdersClient({
   const handleEdit = (swo: SubcontractWorkOrder) => {
     setEditingSwo(swo);
     setOpen(true);
-  };
-
-  const handleStatusChange = (id: string, status: string) => {
-    startTransition(async () => {
-      try {
-        await updateSubcontractWorkOrderStatus(id, status);
-        message.success('Status updated');
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to update status');
-      }
-    });
   };
 
   const handleDelete = (id: string) => {
@@ -212,6 +205,13 @@ export function SubcontractWorkOrdersClient({
       key: 'category',
     },
     {
+      title: 'Description',
+      dataIndex: 'description',
+      key: 'description',
+      ellipsis: true,
+      render: (val) => val || '-',
+    },
+    {
       title: 'Total Amount',
       dataIndex: 'totalAmount',
       key: 'totalAmount',
@@ -225,18 +225,8 @@ export function SubcontractWorkOrdersClient({
       width: 140,
       filters: STATUS_OPTIONS.map(opt => ({ text: opt.label, value: opt.value })),
       onFilter: (value, record) => record.status === value,
-      render: (value: string, record) => (
-        <Select
-          defaultValue={value}
-          size="small"
-          variant="borderless"
-          className="w-full"
-          onChange={(newStatus) => handleStatusChange(record.id, newStatus)}
-          options={STATUS_OPTIONS}
-          popupMatchSelectWidth={false}
-          styles={{ popup: { root: { minWidth: 120 } } }}
-          disabled={isPending}
-        />
+      render: (value: string) => (
+        <Typography.Text>{value ? value.charAt(0).toUpperCase() + value.slice(1) : '-'}</Typography.Text>
       ),
     },
     {
@@ -423,6 +413,16 @@ export function SubcontractWorkOrdersClient({
               )}
             />
           </Flex>
+
+          <Controller
+            control={control}
+            name="description"
+            render={({ field }) => (
+              <Form.Item label="Description of Work">
+                <Input.TextArea {...field} rows={2} placeholder="Briefly describe the scope of work" />
+              </Form.Item>
+            )}
+          />
 
           <Flex gap={16}>
             <Controller

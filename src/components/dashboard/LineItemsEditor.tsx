@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Flex, Form, Input, InputNumber, Typography } from 'antd';
+import { Button, Flex, Form, Input, InputNumber, Select, Typography } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   Controller,
@@ -15,11 +15,13 @@ import {
 type LineItemsEditorProps<TFormValues extends FieldValues> = {
   control: Control<TFormValues>;
   name: FieldArrayPath<TFormValues>;
+  descriptionOptions?: { label: string; value: string }[];
 };
 
 export function LineItemsEditor<TFormValues extends FieldValues>({
   control,
   name,
+  descriptionOptions,
 }: LineItemsEditorProps<TFormValues>) {
   const { fields, append, remove } = useFieldArray({ control, name });
   const emptyItem = {
@@ -58,7 +60,17 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
                     help={fieldState.error?.message}
                     className="mb-2 min-w-60 flex-1"
                   >
-                    <Input {...inputField} placeholder="Civil works, material, labour..." />
+                    {descriptionOptions ? (
+                    <Select
+                      {...inputField}
+                      showSearch
+                      allowClear
+                      placeholder="Select or type an item"
+                      options={descriptionOptions}
+                    />
+                  ) : (
+                    <Input {...inputField} placeholder="Enter item description" />
+                  )}
                   </Form.Item>
                 )}
               />

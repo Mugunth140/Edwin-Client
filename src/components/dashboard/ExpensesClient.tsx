@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
-import { App, Button, Card, Drawer, Flex, Select, Space, Table, Typography, Popconfirm, Tooltip } from 'antd';
+import { App, Button, Card, Drawer, Flex, Select, Space, Table, Typography, Popconfirm, Tooltip, Image } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DollarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from '@ant-design/icons';
+import { DollarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, FileTextOutlined, PictureOutlined } from '@ant-design/icons';
 import { deleteExpense, updateExpenseStatus } from '@/actions/expenses';
 import type { Expense, Trade, Project, ExpenseType } from '@/types/erp';
 import { ExpenseForm } from './ExpenseForm';
@@ -20,6 +20,7 @@ import {
 } from './ui';
 const STATUS_OPTIONS = [
   { label: 'Pending', value: 'pending' },
+  { label: 'Admin Approved', value: 'admin_approved' },
   { label: 'Approved', value: 'approved' },
   { label: 'Rejected', value: 'rejected' },
 ];
@@ -197,6 +198,25 @@ export function ExpensesClient({ expenses: initialExpenses, projects }: Expenses
             />
           ))}
         </Space>
+      ) : '-',
+    },
+    {
+      title: 'Site Photos',
+      dataIndex: 'sitePhotoUrls',
+      render: (urls: string[]) => urls?.length ? (
+        <Image.PreviewGroup>
+          <Space>
+            {urls.map((url, i) => (
+              <Image
+                key={i}
+                src={`${getApiOrigin()}${url}`}
+                width={30}
+                height={30}
+                className="rounded object-cover border border-white/10"
+              />
+            ))}
+          </Space>
+        </Image.PreviewGroup>
       ) : '-',
     },
     {
