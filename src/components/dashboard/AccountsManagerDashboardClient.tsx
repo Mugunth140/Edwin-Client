@@ -142,7 +142,7 @@ export function AccountsManagerDashboardClient() {
               <div>
                 <Typography.Text className={secondaryTextClassName}>Total Receivables</Typography.Text>
                 <div className="text-2xl font-bold text-slate-200">{formatCurrency(kpis?.totalReceivable || 0)}</div>
-                <Typography.Text type="secondary" size="small">{kpis?.pendingInvoiceCount} pending invoices</Typography.Text>
+                <Typography.Text type="secondary" className="text-xs">{kpis?.pendingInvoiceCount} pending invoices</Typography.Text>
               </div>
             </div>
           </Card>
@@ -156,7 +156,7 @@ export function AccountsManagerDashboardClient() {
               <div>
                 <Typography.Text className={secondaryTextClassName}>Total Payables</Typography.Text>
                 <div className="text-2xl font-bold text-slate-200">{formatCurrency(kpis?.totalPayable || 0)}</div>
-                <Typography.Text type="secondary" size="small">{kpis?.pendingBillCount} pending bills</Typography.Text>
+                <Typography.Text type="secondary" className="text-xs">{kpis?.pendingBillCount} pending bills</Typography.Text>
               </div>
             </div>
           </Card>
@@ -170,7 +170,7 @@ export function AccountsManagerDashboardClient() {
               <div>
                 <Typography.Text className={secondaryTextClassName}>Month Inflow</Typography.Text>
                 <div className="text-2xl font-bold text-slate-200">{formatCurrency(kpis?.monthInflow || 0)}</div>
-                <Typography.Text type="secondary" size="small">Current month collections</Typography.Text>
+                <Typography.Text type="secondary" className="text-xs">Current month collections</Typography.Text>
               </div>
             </div>
           </Card>
@@ -184,7 +184,7 @@ export function AccountsManagerDashboardClient() {
               <div>
                 <Typography.Text className={secondaryTextClassName}>Month Outflow</Typography.Text>
                 <div className="text-2xl font-bold text-slate-200">{formatCurrency(kpis?.monthOutflow || 0)}</div>
-                <Typography.Text type="secondary" size="small">Current month payments</Typography.Text>
+                <Typography.Text type="secondary" className="text-xs">Current month payments</Typography.Text>
               </div>
             </div>
           </Card>
