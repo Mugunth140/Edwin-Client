@@ -22,7 +22,8 @@ export type ExpenseType = {
   updatedAt?: string;
 };
 
-export type PaymentType = 'material' | 'labour' | 'rent' | 'accommodation' | 'office_maintenance' | 'transport' | 'travel' | 'staff_expense' | 'office_maintenance';
+export type PaymentType = 'material' | 'labour' | 'rent' | 'accommodation' | 'office_maintenance' | 'transport' | 'travel' | 'staff_expense';
+export type TimesheetStatus = 'pending' | 'verified' | 'approved' | 'rejected';
 export type ItemDescription = {
   id: string;
   name: string;
@@ -124,6 +125,8 @@ export type SiteEngineer = {
   phone?: string | null;
   address?: string | null;
   isActive: boolean;
+  salaryGradeId?: string | null;
+  salaryGrade?: Salary | null;
   projects?: Project[];
   createdAt?: string;
 };
@@ -137,6 +140,8 @@ export type AccountsManager = {
   phone?: string | null;
   address?: string | null;
   isActive: boolean;
+  salaryGradeId?: string | null;
+  salaryGrade?: Salary | null;
   projects?: Project[];
   createdAt?: string;
 };
@@ -382,6 +387,7 @@ export type Payment = {
   projectId?: string | null;
   project?: Project;
   notes?: string | null;
+  timesheetId?: string | null;
   createdAt: string;
 };
 
@@ -413,6 +419,46 @@ export type DailyLabourReport = {
   createdBy?: { id: string; name: string };
   createdAt: string;
   updatedAt: string;
+};
+
+export type TimesheetRow = {
+  id?: string;
+  projectId?: string | null;
+  entryType: string;
+  monHours: number;
+  tueHours: number;
+  wedHours: number;
+  thuHours: number;
+  friHours: number;
+  satHours: number;
+  sunHours: number;
+  amount?: number;
+};
+
+export type WeeklyTimesheet = {
+  id: string;
+  siteEngineerId: string;
+  weekStart: string;
+  weekEnd: string;
+  totalHours: number;
+  status: TimesheetStatus;
+  approvedById?: string | null;
+  approvedAt?: string | null;
+  rows: TimesheetRow[];
+  createdAt?: string;
+  updatedAt?: string;
+  siteEngineer?: { id: string; name: string; email: string };
+};
+
+export type Salary = {
+  id: string;
+  grades: string;
+  expInYears: string;
+  monthlySalary: number;
+  avgCostPerHr: number;
+  bookingCost: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ProjectDetails = {

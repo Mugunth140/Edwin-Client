@@ -22,6 +22,8 @@ import type {
   PurchaseBill,
   PurchaseEnquiry,
   ProjectDetails,
+  Salary,
+  WeeklyTimesheet,
 } from '@/types/erp';
 import { getApiBaseUrl } from './api-url';
 
@@ -90,3 +92,8 @@ export const fetchLedger = () => apiFetch<any[]>('/accounts/ledger');
 export const fetchBalance = () => apiFetch<{ totalRevenue: number; totalCost: number }>('/accounts/balance');
 export const fetchPayables = () => apiFetch<PurchaseBill[]>('/accounts/payables');
 export const fetchReceivables = () => apiFetch<SalesInvoice[]>('/accounts/receivables');
+export const fetchSalaries = () => apiFetch<Salary[]>('/salaries');
+export const fetchTimesheetByWeek = (weekStart: string) =>
+  apiFetch<WeeklyTimesheet | null>(`/timesheet-attendance/current?weekStart=${weekStart}`);
+export const fetchTimesheets = (params?: string) =>
+  apiFetch<PagedResponse<WeeklyTimesheet>>(`/timesheet-attendance/all${params ? `?${params}` : ''}`);

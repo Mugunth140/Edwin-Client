@@ -107,6 +107,7 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
     const to = dateRange[1]?.format('YYYY-MM-DD');
     return payments.filter((p) => {
       if (p.salesInvoice) return false;
+      if (p.timesheetId) return true;
       const srcStatus = p.expense?.status || p.purchaseBill?.status;
       if (srcStatus !== 'admin_approved') return false;
       if (statusFilter && srcStatus !== statusFilter) return false;

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { App, Button, Card, Col, DatePicker, Flex, Input, Row, Select, Statistic, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { CalendarOutlined, CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, EyeOutlined, FileDoneOutlined, FilePdfOutlined, FilterOutlined, SearchOutlined, WalletOutlined } from '@ant-design/icons';
+import { CalendarOutlined, CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, EyeOutlined, FileDoneOutlined, FilePdfOutlined, FilterOutlined, SearchOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { SubcontractWorkOrderPdf } from './SubcontractWorkOrderPdf';
@@ -14,7 +14,8 @@ import { updateExpenseStatus } from '@/actions/expenses';
 import { updateSubcontractWorkOrderStatus } from '@/actions/subcontract-work-orders';
 import { updatePurchaseOrderStatus } from '@/actions/purchase-orders';
 import { updateDailyLabourReportStatus } from '@/actions/daily-labour';
-import type { PurchaseBill, Expense, PurchaseOrder, SubcontractWorkOrder, DailyLabourReport } from '@/types/erp';
+import { verifyTimesheet, approveTimesheet, rejectTimesheet } from '@/actions/timesheet-approval';
+import type { PurchaseBill, Expense, PurchaseOrder, SubcontractWorkOrder, DailyLabourReport, WeeklyTimesheet, TimesheetStatus } from '@/types/erp';
 import {
   StatusTag,
   cardClassName,
@@ -27,23 +28,16 @@ import {
 
 const { Title } = Typography;
 
-const EXPENSE_STATUS_OPTIONS = [
+const APPROVAL_STATUS_OPTIONS = [
   { label: 'Pending', value: 'pending' },
   { label: 'Admin Approved', value: 'admin_approved' },
   { label: 'Approved', value: 'approved' },
   { label: 'Rejected', value: 'rejected' },
 ];
 
-const BILL_STATUS_OPTIONS = [
+const TIMESHEET_STATUS_OPTIONS = [
   { label: 'Pending', value: 'pending' },
-  { label: 'Admin Approved', value: 'admin_approved' },
-  { label: 'Approved', value: 'approved' },
-  { label: 'Rejected', value: 'rejected' },
-];
-
-const PURCHASE_ORDER_STATUS_OPTIONS = [
-  { label: 'Pending', value: 'pending' },
-  { label: 'Admin Approved', value: 'admin_approved' },
+  { label: 'Verified', value: 'verified' },
   { label: 'Approved', value: 'approved' },
   { label: 'Rejected', value: 'rejected' },
 ];
@@ -54,9 +48,10 @@ type Props = {
   purchaseOrders: PurchaseOrder[];
   subcontractWorkOrders: SubcontractWorkOrder[];
   dailyReports: DailyLabourReport[];
+  timesheets: WeeklyTimesheet[];
 };
 
-export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWorkOrders, dailyReports }: Props) {
+export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWorkOrders, dailyReports, timesheets }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
@@ -93,50 +88,6 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
     });
   }, [bills, dateRange, searchText, statusFilter]);
 
-  const handleExpenseStatusChange = (id: string, status: string) => {
-    startTransition(async () => {
-      try {
-        await updateExpenseStatus(id, status);
-        message.success('Expense status updated');
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to update status');
-      }
-    });
-  };
-
-  const handleBillStatusChange = (id: string, status: string) => {
-    startTransition(async () => {
-      try {
-        await updateBillStatus(id, status);
-        message.success('Bill status updated');
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to update status');
-      }
-    });
-  };
-
-  const handleSwoStatusChange = (id: string, status: string) => {
-    startTransition(async () => {
-      try {
-        await updateSubcontractWorkOrderStatus(id, status);
-        message.success('Subcontract WO status updated');
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to update status');
-      }
-    });
-  };
-
-  const handlePoStatusChange = (id: string, status: string) => {
-    startTransition(async () => {
-      try {
-        await updatePurchaseOrderStatus(id, status);
-        message.success('Purchase Order status updated');
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to update status');
-      }
-    });
-  };
-
   const filteredPurchaseOrders = useMemo(() => {
     const from = dateRange[0]?.format('YYYY-MM-DD');
     const to = dateRange[1]?.format('YYYY-MM-DD');
@@ -150,295 +101,6 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
       return true;
     });
   }, [purchaseOrders, dateRange, searchText, statusFilter]);
-
-  const poCounts = useMemo(() => ({
-    pending: filteredPurchaseOrders.filter((po) => po.status === 'pending').length,
-    admin_approved: filteredPurchaseOrders.filter((po) => po.status === 'admin_approved').length,
-    approved: filteredPurchaseOrders.filter((po) => po.status === 'approved').length,
-    rejected: filteredPurchaseOrders.filter((po) => po.status === 'rejected').length,
-  }), [filteredPurchaseOrders]);
-
-  const handleDailyStatusChange = (id: string, status: string) => {
-    startTransition(async () => {
-      try {
-        await updateDailyLabourReportStatus(id, status);
-        message.success('Daily report status updated');
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to update status');
-      }
-    });
-  };
-
-  const filteredDaily = useMemo(() => {
-    const from = dateRange[0]?.format('YYYY-MM-DD');
-    const to = dateRange[1]?.format('YYYY-MM-DD');
-    return dailyReports.filter((r) => {
-      if (from && to) {
-        const d = typeof r.reportDate === 'string' ? r.reportDate.split('T')[0] : '';
-        if (d < from || d > to) return false;
-      }
-      if (statusFilter && r.status !== statusFilter) return false;
-      if (searchText && !r.project?.name?.toLowerCase().includes(searchText.toLowerCase())) return false;
-      return true;
-    });
-  }, [dailyReports, dateRange, searchText, statusFilter]);
-
-  const dailyCounts = useMemo(() => ({
-    pending: filteredDaily.filter((r) => r.status === 'pending').length,
-    admin_approved: filteredDaily.filter((r) => r.status === 'admin_approved').length,
-    approved: filteredDaily.filter((r) => r.status === 'approved').length,
-    rejected: filteredDaily.filter((r) => r.status === 'rejected').length,
-  }), [filteredDaily]);
-
-  const dailyColumns: ColumnsType<DailyLabourReport> = [
-    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
-    { title: 'Date', dataIndex: 'reportDate', render: formatDate },
-    {
-      title: 'Project',
-      key: 'project',
-      render: (_, record) => record.project?.name || '-',
-    },
-    {
-      title: 'Headcount',
-      key: 'headcount',
-      render: (_, record) => record.workers?.reduce((s, w) => s + Number(w.count || 1), 0) || 0,
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 80,
-      render: (_, record) => (
-        <Button
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => router.push(`/dashboard/daily-labour/${record.id}`)}
-          title="View Details"
-        />
-      ),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 140,
-      render: (_, record) => (
-        <Select
-          defaultValue={record.status || 'pending'}
-          size="small"
-          variant="borderless"
-          className="w-full"
-          onChange={(newStatus) => handleDailyStatusChange(record.id, newStatus)}
-          options={EXPENSE_STATUS_OPTIONS}
-          popupMatchSelectWidth={false}
-          disabled={isPending}
-        />
-      ),
-    },
-  ];
-
-  const poColumns: ColumnsType<PurchaseOrder> = [
-    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
-    {
-      title: 'PO Number',
-      dataIndex: 'poNumber',
-    },
-    {
-      title: 'Vendor',
-      key: 'vendor',
-      render: (_, record) => record.vendor?.name || '-',
-    },
-    {
-      title: 'Project',
-      key: 'project',
-      render: (_, record) => record.project?.name || '-',
-    },
-    {
-      title: 'Amount',
-      dataIndex: 'totalAmount',
-      align: 'right',
-      render: (value) => `₹${Number(value).toLocaleString()}`,
-    },
-    {
-      title: 'Quotation Bill',
-      key: 'billFile',
-      width: 120,
-      render: (_, record) =>
-        record.billFileUrl ? (
-          <Button type="link" size="small" icon={<FilePdfOutlined />} href={record.billFileUrl} target="_blank">
-            View Bill
-          </Button>
-        ) : (
-          <Typography.Text type="secondary">—</Typography.Text>
-        ),
-    },
-    {
-      title: 'Created At',
-      dataIndex: 'createdAt',
-      render: formatDate,
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 140,
-      render: (_, record) => (
-        <Select
-          defaultValue={record.status || 'pending'}
-          size="small"
-          variant="borderless"
-          className="w-full"
-          onChange={(newStatus) => handlePoStatusChange(record.id, newStatus)}
-          options={PURCHASE_ORDER_STATUS_OPTIONS}
-          popupMatchSelectWidth={false}
-          disabled={isPending}
-        />
-      ),
-    },
-  ];
-
-  const expenseColumns: ColumnsType<Expense> = [
-    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
-    {
-      title: 'Date',
-      dataIndex: 'expenseDate',
-      render: formatDate,
-    },
-    {
-      title: 'Expense Type',
-      key: 'expenseType',
-      render: (_, record) => record.expenseType?.name || record.category || '-',
-    },
-    {
-      title: 'Project',
-      key: 'project',
-      render: (_, record) => record.project?.name || '-',
-    },
-    {
-      title: 'Trade',
-      key: 'trade',
-      render: (_, record) => record.trade?.name || '-',
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      ellipsis: true,
-    },
-    {
-      title: 'Amount',
-      dataIndex: 'amount',
-      align: 'right',
-      render: formatCurrency,
-    },
-    {
-      title: 'Receipts',
-      key: 'receipts',
-      width: 90,
-      render: (_, record) =>
-        record.receiptUrls?.length ? (
-          <Flex gap={4} wrap="wrap">
-            {record.receiptUrls.map((url, i) => (
-              <Button key={i} type="link" size="small" icon={<FilePdfOutlined />} href={`${getApiBaseUrl().replace('/api/v1', '')}${url}`} target="_blank" />
-            ))}
-          </Flex>
-        ) : '-',
-    },
-    {
-      title: 'Site Photos',
-      key: 'photos',
-      width: 110,
-      render: (_, record) =>
-        record.sitePhotoUrls?.length ? (
-          <Flex gap={4} wrap="wrap">
-            {record.sitePhotoUrls.map((url, i) => (
-              <Button key={i} type="link" size="small" icon={<CameraOutlined />} href={`${getApiBaseUrl().replace('/api/v1', '')}${url}`} target="_blank" />
-            ))}
-          </Flex>
-        ) : '-',
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 140,
-      render: (_, record) => (
-        <Select
-          defaultValue={record.status || 'pending'}
-          size="small"
-          variant="borderless"
-          className="w-full"
-          onChange={(newStatus) => handleExpenseStatusChange(record.id, newStatus)}
-          options={EXPENSE_STATUS_OPTIONS}
-          popupMatchSelectWidth={false}
-          disabled={isPending}
-        />
-      ),
-    },
-  ];
-
-  const billColumns: ColumnsType<PurchaseBill> = [
-    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
-    {
-      title: 'Date',
-      dataIndex: 'billDate',
-      render: formatDate,
-    },
-    {
-      title: 'Bill No',
-      dataIndex: 'billNumber',
-    },
-    {
-      title: 'Vendor',
-      key: 'vendor',
-      render: (_, record) => record.vendor?.name || '-',
-    },
-    {
-      title: 'Amount',
-      dataIndex: 'amount',
-      align: 'right',
-      render: formatCurrency,
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 80,
-      render: (_, record) => (
-        <Button
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => router.push(`/dashboard/accounts/bills/${record.id}`)}
-          title="View Details"
-        />
-      ),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 140,
-      render: (_, record) => (
-        <Select
-          defaultValue={record.status || 'pending'}
-          size="small"
-          variant="borderless"
-          className="w-full"
-          onChange={(newStatus) => handleBillStatusChange(record.id, newStatus)}
-          options={BILL_STATUS_OPTIONS}
-          popupMatchSelectWidth={false}
-          disabled={isPending}
-        />
-      ),
-    },
-  ];
-
-  const expenseCounts = useMemo(() => ({
-    pending: filteredExpenses.filter((e) => e.status === 'pending').length,
-    admin_approved: filteredExpenses.filter((e) => e.status === 'admin_approved').length,
-    approved: filteredExpenses.filter((e) => e.status === 'approved').length,
-    rejected: filteredExpenses.filter((e) => e.status === 'rejected').length,
-  }), [filteredExpenses]);
-
-  const billCounts = useMemo(() => ({
-    pending: filteredBills.filter((b) => b.status === 'pending').length,
-    admin_approved: filteredBills.filter((b) => b.status === 'admin_approved').length,
-    approved: filteredBills.filter((b) => b.status === 'approved').length,
-    rejected: filteredBills.filter((b) => b.status === 'rejected').length,
-  }), [filteredBills]);
 
   const filteredSwo = useMemo(() => {
     const from = dateRange[0]?.format('YYYY-MM-DD');
@@ -454,6 +116,108 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
     });
   }, [subcontractWorkOrders, dateRange, searchText, statusFilter]);
 
+  const filteredDaily = useMemo(() => {
+    const from = dateRange[0]?.format('YYYY-MM-DD');
+    const to = dateRange[1]?.format('YYYY-MM-DD');
+    return dailyReports.filter((r) => {
+      if (from && to) {
+        const d = typeof r.reportDate === 'string' ? r.reportDate.split('T')[0] : '';
+        if (d < from || d > to) return false;
+      }
+      if (statusFilter && r.status !== statusFilter) return false;
+      if (searchText && !r.project?.name?.toLowerCase().includes(searchText.toLowerCase())) return false;
+      return true;
+    });
+  }, [dailyReports, dateRange, searchText, statusFilter]);
+
+  const filteredTimesheets = useMemo(() => {
+    const from = dateRange[0]?.format('YYYY-MM-DD');
+    const to = dateRange[1]?.format('YYYY-MM-DD');
+    return timesheets.filter((ts) => {
+      if (from && to) {
+        const d = typeof ts.weekStart === 'string' ? ts.weekStart.split('T')[0] : '';
+        if (d < from || d > to) return false;
+      }
+      if (statusFilter && ts.status !== statusFilter) return false;
+      return true;
+    });
+  }, [timesheets, dateRange, searchText, statusFilter]);
+
+  const handleExpenseStatusChange = (id: string, status: string) => {
+    startTransition(async () => {
+      try { await updateExpenseStatus(id, status); message.success('Expense status updated'); }
+      catch (error) { message.error(error instanceof Error ? error.message : 'Failed'); }
+    });
+  };
+
+  const handleBillStatusChange = (id: string, status: string) => {
+    startTransition(async () => {
+      try { await updateBillStatus(id, status); message.success('Bill status updated'); }
+      catch (error) { message.error(error instanceof Error ? error.message : 'Failed'); }
+    });
+  };
+
+  const handleSwoStatusChange = (id: string, status: string) => {
+    startTransition(async () => {
+      try { await updateSubcontractWorkOrderStatus(id, status); message.success('SWO status updated'); }
+      catch (error) { message.error(error instanceof Error ? error.message : 'Failed'); }
+    });
+  };
+
+  const handlePoStatusChange = (id: string, status: string) => {
+    startTransition(async () => {
+      try { await updatePurchaseOrderStatus(id, status); message.success('PO status updated'); }
+      catch (error) { message.error(error instanceof Error ? error.message : 'Failed'); }
+    });
+  };
+
+  const handleDailyStatusChange = (id: string, status: string) => {
+    startTransition(async () => {
+      try { await updateDailyLabourReportStatus(id, status); message.success('Daily report status updated'); }
+      catch (error) { message.error(error instanceof Error ? error.message : 'Failed'); }
+    });
+  };
+
+  const handleTimesheetAction = (id: string, action: 'verify' | 'approve' | 'reject') => {
+    startTransition(async () => {
+      try {
+        if (action === 'verify') { await verifyTimesheet(id); message.success('Timesheet verified'); }
+        else if (action === 'approve') { await approveTimesheet(id); message.success('Timesheet approved & payment created'); }
+        else { await rejectTimesheet(id); message.success('Timesheet rejected'); }
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed');
+      }
+    });
+  };
+
+  const tsCounts = useMemo(() => ({
+    pending: filteredTimesheets.filter((ts) => ts.status === 'pending').length,
+    verified: filteredTimesheets.filter((ts) => ts.status === 'verified').length,
+    approved: filteredTimesheets.filter((ts) => ts.status === 'approved').length,
+    rejected: filteredTimesheets.filter((ts) => ts.status === 'rejected').length,
+  }), [filteredTimesheets]);
+
+  const expenseCounts = useMemo(() => ({
+    pending: filteredExpenses.filter((e) => e.status === 'pending').length,
+    admin_approved: filteredExpenses.filter((e) => e.status === 'admin_approved').length,
+    approved: filteredExpenses.filter((e) => e.status === 'approved').length,
+    rejected: filteredExpenses.filter((e) => e.status === 'rejected').length,
+  }), [filteredExpenses]);
+
+  const billCounts = useMemo(() => ({
+    pending: filteredBills.filter((b) => b.status === 'pending').length,
+    admin_approved: filteredBills.filter((b) => b.status === 'admin_approved').length,
+    approved: filteredBills.filter((b) => b.status === 'approved').length,
+    rejected: filteredBills.filter((b) => b.status === 'rejected').length,
+  }), [filteredBills]);
+
+  const poCounts = useMemo(() => ({
+    pending: filteredPurchaseOrders.filter((po) => po.status === 'pending').length,
+    admin_approved: filteredPurchaseOrders.filter((po) => po.status === 'admin_approved').length,
+    approved: filteredPurchaseOrders.filter((po) => po.status === 'approved').length,
+    rejected: filteredPurchaseOrders.filter((po) => po.status === 'rejected').length,
+  }), [filteredPurchaseOrders]);
+
   const swoCounts = useMemo(() => ({
     pending: filteredSwo.filter((s) => s.status === 'pending').length,
     admin_approved: filteredSwo.filter((s) => s.status === 'admin_approved').length,
@@ -461,156 +225,311 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
     rejected: filteredSwo.filter((s) => s.status === 'rejected').length,
   }), [filteredSwo]);
 
-  const swoColumns: ColumnsType<SubcontractWorkOrder> = [
+  const dailyCounts = useMemo(() => ({
+    pending: filteredDaily.filter((r) => r.status === 'pending').length,
+    admin_approved: filteredDaily.filter((r) => r.status === 'admin_approved').length,
+    approved: filteredDaily.filter((r) => r.status === 'approved').length,
+    rejected: filteredDaily.filter((r) => r.status === 'rejected').length,
+  }), [filteredDaily]);
+
+  const calcCost = (ts: WeeklyTimesheet) =>
+    ts.rows?.reduce((s, r) => s + Number(r.amount || 0), 0) || 0;
+
+  const tsColumns: ColumnsType<WeeklyTimesheet> = [
     { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
     {
-      title: 'WO Number',
-      dataIndex: 'woNumber',
+      title: 'Engineer',
+      key: 'engineer',
+      render: (_, record) => (record as any).siteEngineer?.name || (record as any).siteEngineer?.email || record.siteEngineerId || '-',
+    },
+    {
+      title: 'Week',
+      key: 'week',
+      render: (_, record) => `${formatDate(record.weekStart)} - ${formatDate(record.weekEnd)}`,
+    },
+    {
+      title: 'Total Hours',
+      dataIndex: 'totalHours',
+      align: 'right',
+      render: (v) => Number(v || 0).toFixed(1),
+    },
+    {
+      title: 'Total Cost',
+      key: 'cost',
+      align: 'right',
+      render: (_, record) => formatCurrency(calcCost(record)),
+    },
+    {
+      title: 'Status',
+      key: 'status',
       width: 120,
-      render: (value) => <span className="whitespace-nowrap">{value}</span>,
+      render: (_, record) => {
+        const color: Record<string, string> = { pending: 'orange', verified: 'purple', approved: 'green', rejected: 'red' };
+        return <Tag color={color[record.status] || 'default'}>{record.status?.toUpperCase()}</Tag>;
+      },
     },
     {
-      title: 'Subcontractor',
-      key: 'subcontractor',
-      width: 160,
-      render: (_, record) => <span className="whitespace-nowrap">{record.subcontractor?.name || '-'}</span>,
-    },
-    {
-      title: 'Project',
-      key: 'project',
-      width: 160,
-      render: (_, record) => <span className="whitespace-nowrap">{record.project?.name || '-'}</span>,
-    },
-    {
-      title: 'Description of Work',
-      dataIndex: 'description',
-      ellipsis: true,
-      width: 200,
-      render: (value) => <span className="whitespace-nowrap">{value || '-'}</span>,
-    },
-    {
-      title: 'Qty',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      align: 'right',
-      width: 80,
-      render: (value) => <span className="whitespace-nowrap">{Number(value).toLocaleString()}</span>,
-    },
-    {
-      title: 'Unit',
-      dataIndex: 'unit',
-      width: 70,
-      render: (value) => <span className="whitespace-nowrap">{value}</span>,
-    },
-    {
-      title: 'Rate',
-      dataIndex: 'rate',
-      align: 'right',
-      width: 110,
-      render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span>,
-    },
-    {
-      title: 'Basic Amt',
-      dataIndex: 'amount',
-      align: 'right',
-      width: 120,
-      render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span>,
-    },
-    {
-      title: 'GST %',
-      dataIndex: 'gstPercentage',
-      align: 'right',
-      width: 70,
-      render: (value) => <span className="whitespace-nowrap">{value}%</span>,
-    },
-    {
-      title: 'Total',
-      dataIndex: 'totalAmount',
-      align: 'right',
-      width: 120,
-      render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span>,
-    },
-    {
-      title: 'PDF',
-      key: 'pdf',
-      width: 60,
+      title: 'Actions',
+      key: 'actions',
+      width: 220,
       render: (_, record) => (
-        <PDFDownloadLink
-          document={<SubcontractWorkOrderPdf workOrder={record} />}
-          fileName={`${record.woNumber || record.id}.pdf`}
-        >
+        <Flex gap={4} wrap="wrap">
+          {record.status === 'pending' && (
+            <Button size="small" type="primary" ghost onClick={() => handleTimesheetAction(record.id, 'verify')} loading={isPending}>
+              Verify
+            </Button>
+          )}
+          {record.status === 'verified' && (
+            <>
+              <Button size="small" type="primary" onClick={() => handleTimesheetAction(record.id, 'approve')} loading={isPending}>
+                Approve & Pay
+              </Button>
+              <Button size="small" danger onClick={() => handleTimesheetAction(record.id, 'reject')} loading={isPending}>
+                Reject
+              </Button>
+            </>
+          )}
+          {record.status === 'pending' && (
+            <Button size="small" danger onClick={() => handleTimesheetAction(record.id, 'reject')} loading={isPending}>
+              Reject
+            </Button>
+          )}
+        </Flex>
+      ),
+    },
+  ];
+
+  const dailyColumns: ColumnsType<DailyLabourReport> = [
+    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
+    { title: 'Date', dataIndex: 'reportDate', render: formatDate },
+    { title: 'Project', key: 'project', render: (_, record) => record.project?.name || '-' },
+    {
+      title: 'Headcount', key: 'headcount',
+      render: (_, record) => record.workers?.reduce((s, w) => s + Number(w.count || 1), 0) || 0,
+    },
+    {
+      title: 'Actions', key: 'actions', width: 80,
+      render: (_, record) => (
+        <Button size="small" icon={<EyeOutlined />} onClick={() => router.push(`/dashboard/daily-labour/${record.id}`)} title="View Details" />
+      ),
+    },
+    {
+      title: 'Status', key: 'status', width: 140,
+      render: (_, record) => (
+        <Select
+          defaultValue={record.status || 'pending'} size="small" variant="borderless" className="w-full"
+          onChange={(newStatus) => handleDailyStatusChange(record.id, newStatus)}
+          options={APPROVAL_STATUS_OPTIONS} popupMatchSelectWidth={false} disabled={isPending}
+        />
+      ),
+    },
+  ];
+
+  const poColumns: ColumnsType<PurchaseOrder> = [
+    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
+    { title: 'PO Number', dataIndex: 'poNumber' },
+    { title: 'Vendor', key: 'vendor', render: (_, record) => record.vendor?.name || '-' },
+    { title: 'Project', key: 'project', render: (_, record) => record.project?.name || '-' },
+    { title: 'Amount', dataIndex: 'totalAmount', align: 'right', render: (value) => `₹${Number(value).toLocaleString()}` },
+    {
+      title: 'Quotation Bill', key: 'billFile', width: 120,
+      render: (_, record) =>
+        record.billFileUrl ? (
+          <Button type="link" size="small" icon={<FilePdfOutlined />} href={record.billFileUrl} target="_blank">View Bill</Button>
+        ) : <Typography.Text type="secondary">—</Typography.Text>,
+    },
+    { title: 'Created At', dataIndex: 'createdAt', render: formatDate },
+    {
+      title: 'Status', key: 'status', width: 140,
+      render: (_, record) => (
+        <Select
+          defaultValue={record.status || 'pending'} size="small" variant="borderless" className="w-full"
+          onChange={(newStatus) => handlePoStatusChange(record.id, newStatus)}
+          options={APPROVAL_STATUS_OPTIONS} popupMatchSelectWidth={false} disabled={isPending}
+        />
+      ),
+    },
+  ];
+
+  const expenseColumns: ColumnsType<Expense> = [
+    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
+    { title: 'Date', dataIndex: 'expenseDate', render: formatDate },
+    { title: 'Expense Type', key: 'expenseType', render: (_, record) => record.expenseType?.name || record.category || '-' },
+    { title: 'Project', key: 'project', render: (_, record) => record.project?.name || '-' },
+    { title: 'Trade', key: 'trade', render: (_, record) => record.trade?.name || '-' },
+    { title: 'Description', dataIndex: 'description', ellipsis: true },
+    { title: 'Amount', dataIndex: 'amount', align: 'right', render: formatCurrency },
+    {
+      title: 'Receipts', key: 'receipts', width: 90,
+      render: (_, record) =>
+        record.receiptUrls?.length ? (
+          <Flex gap={4} wrap="wrap">
+            {record.receiptUrls.map((url, i) => (
+              <Button key={i} type="link" size="small" icon={<FilePdfOutlined />} href={`${getApiBaseUrl().replace('/api/v1', '')}${url}`} target="_blank" />
+            ))}
+          </Flex>
+        ) : '-',
+    },
+    {
+      title: 'Site Photos', key: 'photos', width: 110,
+      render: (_, record) =>
+        record.sitePhotoUrls?.length ? (
+          <Flex gap={4} wrap="wrap">
+            {record.sitePhotoUrls.map((url, i) => (
+              <Button key={i} type="link" size="small" icon={<CameraOutlined />} href={`${getApiBaseUrl().replace('/api/v1', '')}${url}`} target="_blank" />
+            ))}
+          </Flex>
+        ) : '-',
+    },
+    {
+      title: 'Status', key: 'status', width: 140,
+      render: (_, record) => (
+        <Select
+          defaultValue={record.status || 'pending'} size="small" variant="borderless" className="w-full"
+          onChange={(newStatus) => handleExpenseStatusChange(record.id, newStatus)}
+          options={APPROVAL_STATUS_OPTIONS} popupMatchSelectWidth={false} disabled={isPending}
+        />
+      ),
+    },
+  ];
+
+  const billColumns: ColumnsType<PurchaseBill> = [
+    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
+    { title: 'Date', dataIndex: 'billDate', render: formatDate },
+    { title: 'Bill No', dataIndex: 'billNumber' },
+    { title: 'Vendor', key: 'vendor', render: (_, record) => record.vendor?.name || '-' },
+    { title: 'Amount', dataIndex: 'amount', align: 'right', render: formatCurrency },
+    {
+      title: 'Actions', key: 'actions', width: 80,
+      render: (_, record) => (
+        <Button size="small" icon={<EyeOutlined />} onClick={() => router.push(`/dashboard/accounts/bills/${record.id}`)} title="View Details" />
+      ),
+    },
+    {
+      title: 'Status', key: 'status', width: 140,
+      render: (_, record) => (
+        <Select
+          defaultValue={record.status || 'pending'} size="small" variant="borderless" className="w-full"
+          onChange={(newStatus) => handleBillStatusChange(record.id, newStatus)}
+          options={APPROVAL_STATUS_OPTIONS} popupMatchSelectWidth={false} disabled={isPending}
+        />
+      ),
+    },
+  ];
+
+  const swoColumns: ColumnsType<SubcontractWorkOrder> = [
+    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
+    { title: 'WO Number', dataIndex: 'woNumber', width: 120, render: (value) => <span className="whitespace-nowrap">{value}</span> },
+    { title: 'Subcontractor', key: 'subcontractor', width: 160, render: (_, record) => <span className="whitespace-nowrap">{record.subcontractor?.name || '-'}</span> },
+    { title: 'Project', key: 'project', width: 160, render: (_, record) => <span className="whitespace-nowrap">{record.project?.name || '-'}</span> },
+    { title: 'Description of Work', dataIndex: 'description', ellipsis: true, width: 200, render: (value) => <span className="whitespace-nowrap">{value || '-'}</span> },
+    { title: 'Qty', dataIndex: 'quantity', align: 'right', width: 80, render: (value) => <span className="whitespace-nowrap">{Number(value).toLocaleString()}</span> },
+    { title: 'Unit', dataIndex: 'unit', width: 70, render: (value) => <span className="whitespace-nowrap">{value}</span> },
+    { title: 'Rate', dataIndex: 'rate', align: 'right', width: 110, render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span> },
+    { title: 'Basic Amt', dataIndex: 'amount', align: 'right', width: 120, render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span> },
+    { title: 'GST %', dataIndex: 'gstPercentage', align: 'right', width: 70, render: (value) => <span className="whitespace-nowrap">{value}%</span> },
+    { title: 'Total', dataIndex: 'totalAmount', align: 'right', width: 120, render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span> },
+    {
+      title: 'PDF', key: 'pdf', width: 60,
+      render: (_, record) => (
+        <PDFDownloadLink document={<SubcontractWorkOrderPdf workOrder={record} />} fileName={`${record.woNumber || record.id}.pdf`}>
           {({ loading }) => (
-            <Button
-              type="text"
-              size="small"
-              icon={<FilePdfOutlined className="text-red-500" />}
-              loading={loading}
-              title="Download PDF"
-            />
+            <Button type="text" size="small" icon={<FilePdfOutlined className="text-red-500" />} loading={loading} title="Download PDF" />
           )}
         </PDFDownloadLink>
       ),
     },
     {
-      title: 'Status',
-      key: 'status',
-      width: 140,
+      title: 'Status', key: 'status', width: 140,
       render: (_, record) => (
         <Select
-          defaultValue={record.status || 'pending'}
-          size="small"
-          variant="borderless"
-          className="w-full whitespace-nowrap"
+          defaultValue={record.status || 'pending'} size="small" variant="borderless" className="w-full whitespace-nowrap"
           onChange={(newStatus) => handleSwoStatusChange(record.id, newStatus)}
-          options={EXPENSE_STATUS_OPTIONS}
-          popupMatchSelectWidth={false}
-          disabled={isPending}
+          options={APPROVAL_STATUS_OPTIONS} popupMatchSelectWidth={false} disabled={isPending}
         />
       ),
     },
   ];
 
   const renderContent = (
-    counts: { pending: number; admin_approved: number; approved: number; rejected: number },
+    counts: Record<string, number>,
     dataSource: any[],
     columns: ColumnsType<any>,
     emptyText: string,
   ) => (
     <>
       <Row gutter={16} className="mb-4">
+        {Object.entries(counts).map(([key, val]) => {
+          const cfg: Record<string, { color: string; label: string; bg: string; border: string }> = {
+            pending: { color: 'warning', label: 'Pending', bg: 'bg-amber-500/5!', border: 'border-amber-500/20!' },
+            verified: { color: 'purple', label: 'Verified', bg: 'bg-purple-500/5!', border: 'border-purple-500/20!' },
+            admin_approved: { color: 'purple', label: 'Admin Approved', bg: 'bg-purple-500/5!', border: 'border-purple-500/20!' },
+            approved: { color: 'success', label: 'Approved', bg: 'bg-emerald-500/5!', border: 'border-emerald-500/20!' },
+            rejected: { color: 'error', label: 'Rejected', bg: 'bg-red-500/5!', border: 'border-red-500/20!' },
+          };
+          const c = cfg[key] || { color: 'default', label: key, bg: '', border: '' };
+          return (
+            <Col key={key} xs={12} sm={6} md={4} lg={3}>
+              <Card size="small" className={`border! ${c.border} ${c.bg}`}>
+                <Statistic title={<Tag color={c.color}>{c.label}</Tag>} value={val} />
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+      <div className="flex flex-col gap-4">
+        <Row gutter={16}>
+          <Col xs={24} sm={12} md={8}>
+            <Input.Search
+              placeholder="Search..."
+              allowClear value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              prefix={<SearchOutlined className="text-slate-400" />}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              allowClear placeholder="Filter by status" className="w-full"
+              value={statusFilter || undefined}
+              onChange={(val) => setStatusFilter(val || '')}
+              options={APPROVAL_STATUS_OPTIONS}
+            />
+          </Col>
+        </Row>
+        <Table
+          dataSource={dataSource} columns={columns} rowKey="id"
+          pagination={{ pageSize: 10 }} scroll={{ x: 1200 }}
+          locale={{ emptyText }}
+        />
+      </div>
+    </>
+  );
+
+  const renderTsContent = (
+    counts: { pending: number; verified: number; approved: number; rejected: number },
+    dataSource: WeeklyTimesheet[],
+    columns: ColumnsType<WeeklyTimesheet>,
+  ) => (
+    <>
+      <Row gutter={16} className="mb-4">
         <Col xs={12} sm={6} md={4} lg={3}>
           <Card size="small" className="border! border-amber-500/20! bg-amber-500/5!">
-            <Statistic
-              title={<Tag color="warning">Pending</Tag>}
-              value={counts.pending}
-              prefix={<ClockCircleOutlined className="text-amber-500" />}
-            />
+            <Statistic title={<Tag color="warning">Pending</Tag>} value={counts.pending} />
           </Card>
         </Col>
         <Col xs={12} sm={6} md={4} lg={3}>
           <Card size="small" className="border! border-purple-500/20! bg-purple-500/5!">
-            <Statistic
-              title={<Tag color="purple">Admin Approved</Tag>}
-              value={counts.admin_approved}
-            />
+            <Statistic title={<Tag color="purple">Verified</Tag>} value={counts.verified} />
           </Card>
         </Col>
         <Col xs={12} sm={6} md={4} lg={3}>
           <Card size="small" className="border! border-emerald-500/20! bg-emerald-500/5!">
-            <Statistic
-              title={<Tag color="success">Approved</Tag>}
-              value={counts.approved}
-              prefix={<CheckCircleOutlined className="text-emerald-500" />}
-            />
+            <Statistic title={<Tag color="success">Approved</Tag>} value={counts.approved} />
           </Card>
         </Col>
         <Col xs={12} sm={6} md={4} lg={3}>
           <Card size="small" className="border! border-red-500/20! bg-red-500/5!">
-            <Statistic
-              title={<Tag color="error">Rejected</Tag>}
-              value={counts.rejected}
-              prefix={<CloseCircleOutlined className="text-red-500" />}
-            />
+            <Statistic title={<Tag color="error">Rejected</Tag>} value={counts.rejected} />
           </Card>
         </Col>
       </Row>
@@ -618,37 +537,26 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
         <Row gutter={16}>
           <Col xs={24} sm={12} md={8}>
             <Input.Search
-              placeholder="Search..."
-              allowClear
-              value={searchText}
+              placeholder="Search engineer..."
+              allowClear value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               prefix={<SearchOutlined className="text-slate-400" />}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Select
-              allowClear
-              placeholder="Filter by status"
-              className="w-full"
+              allowClear placeholder="Filter by status" className="w-full"
               value={statusFilter || undefined}
               onChange={(val) => setStatusFilter(val || '')}
-              options={[
-                { label: 'Pending', value: 'pending' },
-                { label: 'Admin Approved', value: 'admin_approved' },
-                { label: 'Approved', value: 'approved' },
-                { label: 'Rejected', value: 'rejected' },
-              ]}
+              options={TIMESHEET_STATUS_OPTIONS}
             />
           </Col>
         </Row>
         <Table
-          dataSource={dataSource}
-          columns={columns}
-          rowKey="id"
-          pagination={{ pageSize: 10 }}
-        scroll={{ x: 1200 }}
-        locale={{ emptyText }}
-      />
+          dataSource={dataSource} columns={columns} rowKey="id"
+          pagination={{ pageSize: 10 }} scroll={{ x: 1000 }}
+          locale={{ emptyText: 'No timesheets pending approval' }}
+        />
       </div>
     </>
   );
@@ -662,8 +570,7 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
         <DatePicker.RangePicker
           value={dateRange[0] || dateRange[1] ? dateRange : [null, null]}
           onChange={(dates) => setDateRange(dates ? [dates[0], dates[1]] : [null, null])}
-          allowClear
-          placeholder={['From date', 'To date']}
+          allowClear placeholder={['From date', 'To date']}
         />
       </Flex>
 
@@ -696,6 +603,11 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
               key: 'daily',
               label: <span><CalendarOutlined /> Daily Labour List</span>,
               children: renderContent(dailyCounts, filteredDaily, dailyColumns, 'No daily labour reports'),
+            },
+            {
+              key: 'timesheet',
+              label: <span><TeamOutlined /> Timesheet</span>,
+              children: renderTsContent(tsCounts, filteredTimesheets, tsColumns),
             },
           ]}
         />

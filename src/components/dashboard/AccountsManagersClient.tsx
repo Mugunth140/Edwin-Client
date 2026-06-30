@@ -8,7 +8,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined, BankOutlined } from '@ant-d
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { createAccountsManager, deleteAccountsManager, updateAccountsManager } from '@/actions/accounts-managers';
-import type { AccountsManager, Project } from '@/types/erp';
+import type { AccountsManager, Project, Salary } from '@/types/erp';
 import {
   cardClassName,
   pageHeaderClassName,
@@ -25,6 +25,7 @@ const accountsManagerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').optional().or(z.literal('')),
   password: z.string().min(4, 'Password must be at least 4 characters').optional().or(z.literal('')),
   isActive: z.boolean(),
+  salaryGradeId: z.string().optional(),
 });
 
 type AccountsManagerFormValues = z.infer<typeof accountsManagerSchema>;
@@ -32,9 +33,10 @@ type AccountsManagerFormValues = z.infer<typeof accountsManagerSchema>;
 type AccountsManagersClientProps = {
   accountsManagers: AccountsManager[];
   projects: Project[];
+  salaries: Salary[];
 };
 
-export function AccountsManagersClient({ accountsManagers, projects }: AccountsManagersClientProps) {
+export function AccountsManagersClient({ accountsManagers, projects, salaries }: AccountsManagersClientProps) {
   const [open, setOpen] = useState(false);
   const [editingManager, setEditingManager] = useState<AccountsManager | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -50,7 +52,8 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
       address: '',
       username: '',
       password: '',
-      isActive: true
+      isActive: true,
+      salaryGradeId: '',
     }
   });
   const { control, handleSubmit, reset, setValue } = form;
@@ -64,6 +67,7 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
       setValue('address', editingManager.address || '');
       setValue('username', editingManager.username || '');
       setValue('isActive', editingManager.isActive);
+      setValue('salaryGradeId', editingManager.salaryGradeId || '');
       setValue('password', '');
     } else {
       reset({
@@ -75,6 +79,7 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
         username: '',
         password: '',
         isActive: true,
+        salaryGradeId: '',
       });
     }
   }, [editingManager, setValue, reset]);
@@ -123,6 +128,15 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
       title: 'Username',
       dataIndex: 'username',
       render: (text) => text || '-',
+    },
+    {
+      title: 'Salary Grade',
+      key: 'salaryGrade',
+      render: (_, record) => (
+        record.salaryGrade
+          ? <Tag color="cyan">{record.salaryGrade.grades}</Tag>
+          : <Typography.Text type="secondary">-</Typography.Text>
+      ),
     },
     {
       title: 'Status',
@@ -325,6 +339,22 @@ export function AccountsManagersClient({ accountsManagers, projects }: AccountsM
               )}
             />
           </Flex>
+
+          <Controller
+            control={control}
+            name="salaryGradeId"
+            render={({ field }) => (
+              <Form.Item label="Salary Grade">
+                <Select
+                  {...field}
+                  placeholder="Select salary grade"
+                  allowClear
+                  options={salaries.map(s => ({ label: `${s.grades} (${s.expInYears} yrs - ₹${Number(s.monthlySalary).toLocaleString()})`, value: s.id }))}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            )}
+          />
 
           <Controller
             control={control}

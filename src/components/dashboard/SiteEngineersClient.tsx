@@ -8,7 +8,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined, UserOutlined } from '@ant-d
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { createSiteEngineer, deleteSiteEngineer, updateSiteEngineer } from '@/actions/site-engineers';
-import type { SiteEngineer, Project } from '@/types/erp';
+import type { SiteEngineer, Project, Salary } from '@/types/erp';
 import {
   cardClassName,
   pageHeaderClassName,
@@ -26,6 +26,7 @@ const siteEngineerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
   isActive: z.boolean(),
   projectIds: z.array(z.string()).optional(),
+  salaryGradeId: z.string().optional(),
 });
 
 type SiteEngineerFormValues = z.infer<typeof siteEngineerSchema>;
@@ -33,9 +34,10 @@ type SiteEngineerFormValues = z.infer<typeof siteEngineerSchema>;
 type SiteEngineersClientProps = {
   siteEngineers: SiteEngineer[];
   projects: Project[];
+  salaries: Salary[];
 };
 
-export function SiteEngineersClient({ siteEngineers, projects }: SiteEngineersClientProps) {
+export function SiteEngineersClient({ siteEngineers, projects, salaries }: SiteEngineersClientProps) {
   const [open, setOpen] = useState(false);
   const [editingEngineer, setEditingEngineer] = useState<SiteEngineer | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -58,6 +60,7 @@ export function SiteEngineersClient({ siteEngineers, projects }: SiteEngineersCl
       password: '',
       isActive: true,
       projectIds: [],
+      salaryGradeId: '',
     },
   });
 
@@ -71,7 +74,7 @@ export function SiteEngineersClient({ siteEngineers, projects }: SiteEngineersCl
       setValue('username', editingEngineer.username || '');
       setValue('isActive', editingEngineer.isActive);
       setValue('projectIds', editingEngineer.projects?.map(p => p.id) || []);
-      // Don't set password when editing, let them leave it blank unless changing
+      setValue('salaryGradeId', editingEngineer.salaryGradeId || '');
       setValue('password', '');
     } else {
       reset({
@@ -84,6 +87,7 @@ export function SiteEngineersClient({ siteEngineers, projects }: SiteEngineersCl
         password: '',
         isActive: true,
         projectIds: [],
+        salaryGradeId: '',
       });
     }
   }, [editingEngineer, setValue, reset]);
@@ -134,18 +138,28 @@ export function SiteEngineersClient({ siteEngineers, projects }: SiteEngineersCl
       render: (text) => text || '-',
     },
     {
+      title: 'Salary Grade',
+      key: 'salaryGrade',
+      render: (_, record) => (
+        record.salaryGrade
+          ? <Tag color="cyan">{record.salaryGrade.grades}</Tag>
+          : <Typography.Text type="secondary">-</Typography.Text>
+      ),
+    },
+    {
       title: 'Assigned Projects',
       key: 'projects',
+      width: 260,
       render: (_, record) => (
-        <Space size={[0, 4]} wrap>
+        <div className="flex flex-wrap gap-1">
           {record.projects && record.projects.length > 0 ? (
             record.projects.map((p) => (
-              <Tag key={p.id} color="blue">{p.name}</Tag>
+              <Tag key={p.id} color="blue" className="max-w-[180px] truncate!">{p.name}</Tag>
             ))
           ) : (
             <Typography.Text type="secondary">None</Typography.Text>
           )}
-        </Space>
+        </div>
       ),
     },
     {
@@ -230,14 +244,17 @@ export function SiteEngineersClient({ siteEngineers, projects }: SiteEngineersCl
       </Flex>
 
       <Card className={cardClassName}>
-        <Table
-          dataSource={siteEngineers}
-          columns={columns}
-          rowKey="id"
-          size="middle"
-          scroll={{ x: 1000 }}
-          pagination={{ pageSize: 10 }}
-        />
+        <div className="overflow-x-auto">
+          <Table
+            dataSource={siteEngineers}
+            columns={columns}
+            rowKey="id"
+            size="middle"
+            scroll={{ x: 1200 }}
+            style={{ minWidth: 1100 }}
+            pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} engineers` }}
+          />
+        </div>
       </Card>
 
       <Drawer
@@ -354,6 +371,22 @@ export function SiteEngineersClient({ siteEngineers, projects }: SiteEngineersCl
           </Flex>
 
           <Typography.Title level={5} className="mt-4 mb-2 border-b border-white/10 pb-2">Assignments</Typography.Title>
+
+          <Controller
+            control={control}
+            name="salaryGradeId"
+            render={({ field }) => (
+              <Form.Item label="Salary Grade">
+                <Select
+                  {...field}
+                  placeholder="Select salary grade"
+                  allowClear
+                  options={salaries.map(s => ({ label: `${s.grades} (${s.expInYears} yrs - ₹${Number(s.monthlySalary).toLocaleString()})`, value: s.id }))}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            )}
+          />
 
           <Controller
             control={control}

@@ -10,6 +10,7 @@ import {
   BankOutlined,
   CalendarOutlined,
   CreditCardOutlined,
+  DollarOutlined,
   FileDoneOutlined,
   FileImageOutlined,
   FileProtectOutlined,
@@ -50,6 +51,7 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
       { key: '/dashboard/new', icon: <FormOutlined />, label: 'Daily Entry List', allowedRoles: ['site_engineer'] },
       { key: '/dashboard/dpw', icon: <CalendarOutlined />, label: 'Attendance (DPW)', allowedRoles: ['site_engineer'] },
       { key: '/dashboard/expenses/new', icon: <WalletOutlined />, label: 'Expense', allowedRoles: ['site_engineer'] },
+      { key: '/dashboard/timesheet-attendance', icon: <CalendarOutlined />, label: 'Timesheet', allowedRoles: ['site_engineer'] },
       { key: '/dashboard/projects', icon: <FolderOpenOutlined />, label: 'Projects', allowedRoles: ['admin'] },
       { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors', allowedRoles: ['purchase_team'] },
       { key: '/dashboard/subcontractors', icon: <TeamOutlined />, label: 'Subcontractors', allowedRoles: ['purchase_team'] },
@@ -74,6 +76,14 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
       { key: '/dashboard/approvals', icon: <SafetyCertificateOutlined />, label: 'Approvals', allowedRoles: ['admin', 'accounts_manager'] },
       { key: '/dashboard/expenses', icon: <WalletOutlined />, label: 'Expenses', allowedRoles: ['admin', 'accounts_manager'] },
       { key: '/dashboard/payments', icon: <CreditCardOutlined />, label: 'Payments', allowedRoles: ['admin', 'accounts_manager'] },
+    ],
+  },
+  {
+    title: 'Settings',
+    allowedRoles: ['admin'],
+    items: [
+      { key: '/dashboard/salary', icon: <DollarOutlined />, label: 'Salary', allowedRoles: ['admin'] },
+      { key: '/dashboard/schemas', icon: <FileTextOutlined />, label: 'DB Schemas', allowedRoles: ['admin'] },
     ],
   },
 ];
