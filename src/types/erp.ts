@@ -23,7 +23,7 @@ export type ExpenseType = {
 };
 
 export type PaymentType = 'material' | 'labour' | 'rent' | 'accommodation' | 'office_maintenance' | 'transport' | 'travel' | 'staff_expense';
-export type TimesheetStatus = 'pending' | 'verified' | 'approved' | 'rejected';
+export type TimesheetStatus = 'pending' | 'verified' | 'admin_approved' | 'approved' | 'rejected';
 export type ItemDescription = {
   id: string;
   name: string;
@@ -156,6 +156,8 @@ export type PurchaseTeamMember = {
   address?: string | null;
   isActive: boolean;
   projects?: Project[];
+  salaryGradeId?: string | null;
+  salaryGrade?: Salary | null;
   createdAt?: string;
 };
 
@@ -447,7 +449,15 @@ export type WeeklyTimesheet = {
   rows: TimesheetRow[];
   createdAt?: string;
   updatedAt?: string;
-  siteEngineer?: { id: string; name: string; email: string };
+  siteEngineer?: {
+    id: string;
+    name: string;
+    email: string;
+    employeeId?: string | null;
+    phone?: string | null;
+    role?: string;
+    salaryGrade?: Salary | null;
+  };
 };
 
 export type Salary = {

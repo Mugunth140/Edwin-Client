@@ -1,14 +1,15 @@
-import { fetchPurchaseTeam, fetchProjects } from '@/lib/api';
+import { fetchPurchaseTeam, fetchProjects, fetchSalaries } from '@/lib/api';
 import { PurchaseTeamClient } from '@/components/dashboard/PurchaseTeamClient';
 import { Alert } from 'antd';
 
 async function loadData() {
   try {
-    const [purchaseTeamMembers, projects] = await Promise.all([
+    const [purchaseTeamMembers, projects, salaries] = await Promise.all([
       fetchPurchaseTeam(),
       fetchProjects(),
+      fetchSalaries(),
     ]);
-    return { purchaseTeamMembers, projects };
+    return { purchaseTeamMembers, projects, salaries };
   } catch (error) {
     console.error('Failed to fetch data for purchase team:', error);
     return null;
@@ -33,6 +34,7 @@ export default async function PurchaseTeamPage() {
     <PurchaseTeamClient
       purchaseTeamMembers={data.purchaseTeamMembers}
       projects={data.projects}
+      salaries={data.salaries}
     />
   );
 }

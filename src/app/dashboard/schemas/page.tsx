@@ -43,11 +43,13 @@ const usersSchema: ColumnDef[] = [
 
 const weeklyTimesheetSchema: ColumnDef[] = [
   { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
-  { column: 'siteEngineerId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to users.id' },
+  { column: 'siteEngineerId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to users.id (ManyToOne -> User)' },
   { column: 'weekStart', type: 'date', nullable: 'NO', default: '-', description: 'Week start Monday' },
   { column: 'weekEnd', type: 'date', nullable: 'NO', default: '-', description: 'Week end Sunday' },
   { column: 'totalHours', type: 'decimal(10,2)', nullable: 'NO', default: '0', description: 'Total hours' },
   { column: 'status', type: 'varchar', nullable: 'NO', default: 'draft', description: 'draft/submitted/approved/rejected' },
+  { column: 'approvedById', type: 'varchar', nullable: 'YES', default: '-', description: 'FK to users.id (who verified/approved)' },
+  { column: 'approvedAt', type: 'date', nullable: 'YES', default: '-', description: 'Verification/approval timestamp' },
   { column: 'isDeleted', type: 'boolean', nullable: 'NO', default: 'false', description: 'Soft delete' },
   { column: 'createdAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: '' },
   { column: 'updatedAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: '' },
@@ -187,6 +189,8 @@ CREATE TABLE users (
   "weekEnd"        DATE NOT NULL,
   "totalHours"     DECIMAL(10,2) NOT NULL DEFAULT 0,
   status           VARCHAR NOT NULL DEFAULT 'draft',
+  "approvedById"   VARCHAR NULL,
+  "approvedAt"     DATE NULL,
   "isDeleted"      BOOLEAN NOT NULL DEFAULT false,
   "createdAt"      TIMESTAMP NOT NULL DEFAULT now(),
   "updatedAt"      TIMESTAMP NOT NULL DEFAULT now()

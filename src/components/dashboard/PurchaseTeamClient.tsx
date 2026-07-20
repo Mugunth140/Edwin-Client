@@ -5,10 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Card, Drawer, Flex, Form, Input, Popconfirm, Space, Table, Typography, App, Select, Switch, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { createPurchaseTeamMember, deletePurchaseTeamMember, updatePurchaseTeamMember } from '@/actions/purchase-team';
-import type { PurchaseTeamMember, Project } from '@/types/erp';
+import type { PurchaseTeamMember, Project, Salary } from '@/types/erp';
 import {
   cardClassName,
   pageHeaderClassName,
@@ -25,6 +25,7 @@ const purchaseTeamSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').optional().or(z.literal('')),
   password: z.string().min(4, 'Password must be at least 4 characters').optional().or(z.literal('')),
   isActive: z.boolean(),
+  salaryGradeId: z.string().optional(),
 });
 
 type PurchaseTeamFormValues = z.infer<typeof purchaseTeamSchema>;
@@ -32,9 +33,10 @@ type PurchaseTeamFormValues = z.infer<typeof purchaseTeamSchema>;
 type PurchaseTeamClientProps = {
   purchaseTeamMembers: PurchaseTeamMember[];
   projects: Project[];
+  salaries: Salary[];
 };
 
-export function PurchaseTeamClient({ purchaseTeamMembers, projects }: PurchaseTeamClientProps) {
+export function PurchaseTeamClient({ purchaseTeamMembers, projects, salaries }: PurchaseTeamClientProps) {
   const [open, setOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<PurchaseTeamMember | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -50,10 +52,14 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects }: PurchaseTe
       address: '',
       username: '',
       password: '',
-      isActive: true
+      isActive: true,
+      salaryGradeId: '',
     }
   });
   const { control, handleSubmit, reset, setValue } = form;
+
+  const selectedSalaryId = useWatch({ control, name: 'salaryGradeId' });
+  const selectedSalary = salaries.find(s => s.id === selectedSalaryId);
 
   useEffect(() => {
     if (editingMember) {
@@ -64,6 +70,7 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects }: PurchaseTe
       setValue('address', editingMember.address || '');
       setValue('username', editingMember.username || '');
       setValue('isActive', editingMember.isActive);
+      setValue('salaryGradeId', editingMember.salaryGradeId || '');
       setValue('password', '');
     } else {
       reset({
@@ -75,6 +82,7 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects }: PurchaseTe
         username: '',
         password: '',
         isActive: true,
+        salaryGradeId: '',
       });
     }
   }, [editingMember, setValue, reset]);
@@ -123,6 +131,15 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects }: PurchaseTe
       title: 'Username',
       dataIndex: 'username',
       render: (text) => text || '-',
+    },
+    {
+      title: 'Salary Grade',
+      key: 'salaryGrade',
+      render: (_, record) => (
+        record.salaryGrade
+          ? <Tag color="cyan">{record.salaryGrade.grades}</Tag>
+          : <Typography.Text type="secondary">-</Typography.Text>
+      ),
     },
     {
       title: 'Status',
@@ -335,6 +352,29 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects }: PurchaseTe
                   <Switch checked={value} onChange={onChange} />
                   <Typography.Text>{value ? 'Active' : 'Inactive'}</Typography.Text>
                 </Space>
+              </Form.Item>
+            )}
+          />
+
+          <Typography.Title level={5} className="mt-4 mb-2 border-b border-white/10 pb-2">Assignments</Typography.Title>
+
+          <Controller
+            control={control}
+            name="salaryGradeId"
+            render={({ field }) => (
+              <Form.Item label="Salary Grade">
+                <Select
+                  {...field}
+                  placeholder="Select salary grade"
+                  allowClear
+                  options={salaries.map(s => ({ label: `${s.grades} (${s.expInYears} yrs - ₹${Number(s.monthlySalary).toLocaleString()})`, value: s.id }))}
+                  style={{ width: '100%' }}
+                />
+                {selectedSalary && (
+                  <Typography.Text type="secondary" className="block mt-1">
+                    Avg Cost/hr: ₹{Number(selectedSalary.avgCostPerHr).toLocaleString()}
+                  </Typography.Text>
+                )}
               </Form.Item>
             )}
           />
