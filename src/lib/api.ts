@@ -24,6 +24,8 @@ import type {
   ProjectDetails,
   Salary,
   WeeklyTimesheet,
+  ProjectCategory,
+  AppUser,
 } from '@/types/erp';
 import { getApiBaseUrl } from './api-url';
 
@@ -73,6 +75,8 @@ export const fetchPurchaseTeam = () => apiFetch<PurchaseTeamMember[]>('/purchase
 export const fetchSubcontractor = (id: string) => apiFetch<Subcontractor>(`/subcontractors/${id}`);
 export const fetchItemDescriptions = () => apiFetch<ItemDescription[]>('/item-descriptions');
 export const fetchWorkCategories = () => apiFetch<WorkCategory[]>('/work-categories');
+export const fetchProjectCategories = () => apiFetch<ProjectCategory[]>('/project-categories');
+export const fetchUsers = () => apiFetch<AppUser[]>('/users');
 export const fetchTrades = () => apiFetch<Trade[]>('/trades');
 export const fetchInvoices = () => apiFetch<SalesInvoice[]>('/invoices');
 export const fetchInvoice = (id: string) => apiFetch<SalesInvoice>(`/invoices/${id}`);

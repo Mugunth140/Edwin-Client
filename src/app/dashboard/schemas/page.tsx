@@ -72,11 +72,35 @@ const timesheetRowSchema: ColumnDef[] = [
   { column: 'updatedAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: '' },
 ];
 
+const projectCategorySchema: ColumnDef[] = [
+  { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
+  { column: 'name', type: 'character varying', nullable: 'NO', default: '-', description: 'Category name, e.g. Residential, Commercial, Institutional, Infrastructure (unique)' },
+  { column: 'isDeleted', type: 'boolean', nullable: 'NO', default: 'false', description: 'Soft delete flag' },
+  { column: 'createdAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record creation timestamp' },
+  { column: 'updatedAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record update timestamp' },
+];
+
+const projectsSchema: ColumnDef[] = [
+  { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
+  { column: 'name', type: 'character varying', nullable: 'NO', default: '-', description: 'Project name' },
+  { column: 'projectCode', type: 'character varying', nullable: 'NO', default: '-', description: 'Unique project code' },
+  { column: 'status', type: 'enum', nullable: 'NO', default: 'planning', description: 'planning / in_progress / on_hold / completed' },
+  { column: 'projectCategoryId', type: 'uuid', nullable: 'YES', default: '-', description: 'FK to project_categories.id' },
+  { column: 'projectNature', type: 'enum', nullable: 'YES', default: '-', description: 'brownfield / greenfield' },
+  { column: 'jobType', type: 'enum', nullable: 'YES', default: '-', description: 'contracting / design_build / design' },
+  { column: 'jobStatus', type: 'enum', nullable: 'NO', default: 'bidding', description: 'bidding / awarded' },
+  { column: 'financialYear', type: 'character varying', nullable: 'YES', default: '-', description: 'e.g. 2026-2027' },
+  { column: 'dateOfCreation', type: 'date', nullable: 'YES', default: '-', description: 'Manually set project creation date' },
+  { column: 'createdAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record creation timestamp (system-managed)' },
+];
+
 const schemaList = [
   { table: 'salaries', columns: salarySchema, description: 'Salary grade master table' },
   { table: 'users', columns: usersSchema, description: 'All users' },
   { table: 'weekly_timesheets', columns: weeklyTimesheetSchema, description: 'Weekly timesheet header' },
   { table: 'timesheet_rows', columns: timesheetRowSchema, description: 'Per-project daily hours' },
+  { table: 'project_categories', columns: projectCategorySchema, description: 'Admin-editable project category master table' },
+  { table: 'projects', columns: projectsSchema, description: 'New classification columns added to the existing projects table' },
 ];
 
 const colDefColumns: ColumnsType<ColumnDef> = [
@@ -219,6 +243,58 @@ CREATE TABLE users (
 );`}
               </pre>
             </Typography.Paragraph>
+          )}
+
+          {idx === 4 && (
+            <Typography.Paragraph>
+              <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+{`CREATE TABLE project_categories (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        VARCHAR NOT NULL UNIQUE,
+  "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Optional seed data:
+INSERT INTO project_categories (name) VALUES
+  ('Residential'), ('Commercial'), ('Institutional'), ('Infrastructure');`}
+              </pre>
+            </Typography.Paragraph>
+          )}
+
+          {idx === 5 && (
+            <>
+              <Typography.Paragraph className="mt-4 text-slate-500 text-sm">
+                <strong>SQL ALTER reference (adding columns to the existing projects table):</strong>
+              </Typography.Paragraph>
+              <Typography.Paragraph>
+                <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+{`-- If the projects table already has rows, add "projectCode" nullable first,
+-- backfill unique values, then apply NOT NULL + UNIQUE.
+ALTER TABLE projects
+  ADD COLUMN "projectCode"       VARCHAR,
+  ADD COLUMN "projectCategoryId" UUID NULL REFERENCES project_categories(id),
+  ADD COLUMN "projectNature"     VARCHAR NULL,
+  ADD COLUMN "jobType"           VARCHAR NULL,
+  ADD COLUMN "jobStatus"         VARCHAR NOT NULL DEFAULT 'bidding',
+  ADD COLUMN "financialYear"     VARCHAR NULL,
+  ADD COLUMN "dateOfCreation"    DATE NULL;
+
+-- After backfilling projectCode for existing rows:
+ALTER TABLE projects
+  ALTER COLUMN "projectCode" SET NOT NULL,
+  ADD CONSTRAINT uq_projects_project_code UNIQUE ("projectCode");
+
+-- Join table for "Resources Assigned" (many-to-many projects <-> users):
+CREATE TABLE project_resources (
+  "projectId" UUID NOT NULL REFERENCES projects(id),
+  "userId"    UUID NOT NULL REFERENCES users(id),
+  PRIMARY KEY ("projectId", "userId")
+);`}
+                </pre>
+              </Typography.Paragraph>
+            </>
           )}
         </Card>
       ))}

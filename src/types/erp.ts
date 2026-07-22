@@ -6,6 +6,9 @@ export type PagedResponse<T> = {
 };
 
 export type ProjectStatus = 'planning' | 'in_progress' | 'on_hold' | 'completed';
+export type ProjectNature = 'brownfield' | 'greenfield';
+export type JobType = 'contracting' | 'design_build' | 'design';
+export type JobStatus = 'bidding' | 'awarded';
 export type WorkOrderStatus = 'draft' | 'sent' | 'approved';
 export type SubcontractWorkOrderStatus = 'pending' | 'admin_approved' | 'approved' | 'rejected';
 export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'cancelled';
@@ -47,9 +50,25 @@ export type Trade = {
   updatedAt?: string;
 };
 
+export type ProjectCategory = {
+  id: string;
+  name: string;
+  isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AppUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
 export type Project = {
   id: string;
   name: string;
+  projectCode: string;
   description?: string | null;
   location?: string | null;
   email?: string | null;
@@ -61,6 +80,14 @@ export type Project = {
   estimatedBudget: number | string;
   startDate?: string | null;
   endDate?: string | null;
+  projectCategoryId?: string | null;
+  projectCategory?: ProjectCategory | null;
+  projectNature?: ProjectNature | null;
+  jobType?: JobType | null;
+  jobStatus?: JobStatus;
+  financialYear?: string | null;
+  dateOfCreation?: string | null;
+  resources?: AppUser[];
   createdAt?: string;
   updatedAt?: string;
 };

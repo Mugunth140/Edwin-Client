@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Progress, Select, Space, Table, Typography, App } from 'antd';
+import { AutoComplete, Button, Card, DatePicker, Divider, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Progress, Select, Space, Table, Typography, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ProjectOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
@@ -10,7 +10,8 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import dayjs from 'dayjs';
 import { createProject, deleteProject, updateProject } from '@/actions/projects';
-import type { Project } from '@/types/erp';
+import { createProjectCategory } from '@/actions/project-categories';
+import type { AppUser, Project, ProjectCategory } from '@/types/erp';
 import {
   StatusTag,
   cardClassName,
@@ -22,8 +23,18 @@ import {
   titleIconClassName,
 } from './ui';
 
+function generateFinancialYears(): string[] {
+  const currentYear = dayjs().year();
+  const years: string[] = [];
+  for (let i = -1; i <= 5; i++) {
+    years.push(`${currentYear + i}-${currentYear + i + 1}`);
+  }
+  return years;
+}
+
 const projectSchema = z.object({
   name: z.string().min(3, 'Project name is required'),
+  projectCode: z.string().min(1, 'Project code is required'),
   clientName: z.string().min(1, 'Client name is required'),
   location: z.string().optional(),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
@@ -35,20 +46,57 @@ const projectSchema = z.object({
   startDate: z.any().optional(),
   endDate: z.any().optional(),
   completionPct: z.number().min(0).max(100).optional(),
+  projectCategoryId: z.string().optional(),
+  projectNature: z.enum(['brownfield', 'greenfield']).optional(),
+  jobType: z.enum(['contracting', 'design_build', 'design']).optional(),
+  jobStatus: z.enum(['bidding', 'awarded']).optional(),
+  financialYear: z.string().optional(),
+  dateOfCreation: z.any().optional(),
+  resourceIds: z.array(z.string()).optional(),
 });
 
 type ProjectFormValues = z.infer<typeof projectSchema>;
 
 type ProjectsClientProps = {
   projects: Project[];
+  projectCategories: ProjectCategory[];
+  users: AppUser[];
 };
 
-export function ProjectsClient({ projects }: ProjectsClientProps) {
+export function ProjectsClient({ projects, projectCategories, users }: ProjectsClientProps) {
   const [open, setOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
   const router = useRouter();
+
+  // For adding a new project category inline
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const categoryInputRef = useRef<any>(null);
+
+  const onCategoryNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewCategoryName(event.target.value);
+  };
+
+  const addCategory = (e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+
+    startTransition(async () => {
+      try {
+        await createProjectCategory({ name: newCategoryName });
+        setNewCategoryName('');
+        message.success('Category added');
+        setTimeout(() => {
+          categoryInputRef.current?.focus();
+        }, 0);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed to add category');
+      }
+    });
+  };
+
+  const financialYearOptions = generateFinancialYears().map((year) => ({ value: year }));
 
   const {
     control,
@@ -59,6 +107,7 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
     resolver: zodResolver(projectSchema),
     defaultValues: {
       name: '',
+      projectCode: '',
       clientName: '',
       location: '',
       email: '',
@@ -68,12 +117,15 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       status: 'planning',
       estimatedBudget: 0,
       completionPct: 0,
+      jobStatus: 'bidding',
+      resourceIds: [],
     },
   });
 
   useEffect(() => {
     if (editingProject) {
       setValue('name', editingProject.name);
+      setValue('projectCode', editingProject.projectCode || '');
       setValue('clientName', editingProject.clientName || '');
       setValue('location', editingProject.location || '');
       setValue('email', editingProject.email || '');
@@ -85,9 +137,17 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       setValue('completionPct', Number(editingProject.completionPct) || 0);
       setValue('startDate', editingProject.startDate ? dayjs(editingProject.startDate) : undefined);
       setValue('endDate', editingProject.endDate ? dayjs(editingProject.endDate) : undefined);
+      setValue('projectCategoryId', editingProject.projectCategoryId || editingProject.projectCategory?.id || undefined);
+      setValue('projectNature', editingProject.projectNature || undefined);
+      setValue('jobType', editingProject.jobType || undefined);
+      setValue('jobStatus', editingProject.jobStatus || 'bidding');
+      setValue('financialYear', editingProject.financialYear || undefined);
+      setValue('dateOfCreation', editingProject.dateOfCreation ? dayjs(editingProject.dateOfCreation) : undefined);
+      setValue('resourceIds', editingProject.resources?.map((u) => u.id) || []);
     } else {
       reset({
         name: '',
+        projectCode: '',
         clientName: '',
         location: '',
         email: '',
@@ -99,6 +159,13 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
         completionPct: 0,
         startDate: undefined,
         endDate: undefined,
+        projectCategoryId: undefined,
+        projectNature: undefined,
+        jobType: undefined,
+        jobStatus: 'bidding',
+        financialYear: undefined,
+        dateOfCreation: dayjs(),
+        resourceIds: [],
       });
     }
   }, [editingProject, setValue, reset]);
@@ -127,6 +194,12 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       render: (_text, _record, index) => index + 1,
     },
     {
+      title: 'Code',
+      dataIndex: 'projectCode',
+      width: 120,
+      sorter: (a, b) => (a.projectCode || '').localeCompare(b.projectCode || ''),
+    },
+    {
       title: 'Project',
       dataIndex: 'name',
       sorter: (a, b) => a.name.localeCompare(b.name),
@@ -138,6 +211,12 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
           </Typography.Text>
         </Flex>
       ),
+    },
+    {
+      title: 'Category',
+      key: 'category',
+      width: 130,
+      render: (_, record) => record.projectCategory?.name || '-',
     },
     {
       title: 'Status',
@@ -224,6 +303,7 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
       ...values,
       startDate: values.startDate ? values.startDate.toISOString() : undefined,
       endDate: values.endDate ? values.endDate.toISOString() : undefined,
+      dateOfCreation: values.dateOfCreation ? values.dateOfCreation.toISOString() : undefined,
     };
 
     startTransition(async () => {
@@ -285,20 +365,38 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
         }
       >
         <Form layout="vertical" onFinish={handleSubmit(submit)}>
-          <Controller
-            control={control}
-            name="name"
-            render={({ field, fieldState }) => (
-              <Form.Item
-                label="Project Name"
-                required
-                validateStatus={fieldState.error ? 'error' : undefined}
-                help={fieldState.error?.message}
-              >
-                <Input {...field} placeholder="e.g. Skyline Apartments Phase 2" />
-              </Form.Item>
-            )}
-          />
+          <Flex gap={16}>
+            <Controller
+              control={control}
+              name="name"
+              render={({ field, fieldState }) => (
+                <Form.Item
+                  label="Project Name"
+                  className="flex-1"
+                  required
+                  validateStatus={fieldState.error ? 'error' : undefined}
+                  help={fieldState.error?.message}
+                >
+                  <Input {...field} placeholder="e.g. Skyline Apartments Phase 2" />
+                </Form.Item>
+              )}
+            />
+            <Controller
+              control={control}
+              name="projectCode"
+              render={({ field, fieldState }) => (
+                <Form.Item
+                  label="Project Code"
+                  className="flex-1"
+                  required
+                  validateStatus={fieldState.error ? 'error' : undefined}
+                  help={fieldState.error?.message}
+                >
+                  <Input {...field} placeholder="e.g. PRJ-2026-001" />
+                </Form.Item>
+              )}
+            />
+          </Flex>
 
           <Flex gap={16}>
             <Controller
@@ -441,6 +539,138 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
               )}
             />
           </Flex>
+
+          <Divider>Classification</Divider>
+
+          <Flex gap={16}>
+            <Controller
+              control={control}
+              name="projectCategoryId"
+              render={({ field }) => (
+                <Form.Item label="Project Category" className="flex-1">
+                  <Select
+                    {...field}
+                    allowClear
+                    placeholder="Select category"
+                    popupRender={(menu) => (
+                      <>
+                        {menu}
+                        <Divider style={{ margin: '8px 0' }} />
+                        <Space style={{ padding: '0 8px 4px' }}>
+                          <Input
+                            placeholder="New category"
+                            ref={categoryInputRef}
+                            value={newCategoryName}
+                            onChange={onCategoryNameChange}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                          <Button type="text" icon={<PlusOutlined />} onClick={addCategory}>
+                            Add
+                          </Button>
+                        </Space>
+                      </>
+                    )}
+                    options={projectCategories.map((c) => ({ label: c.name, value: c.id }))}
+                  />
+                </Form.Item>
+              )}
+            />
+            <Controller
+              control={control}
+              name="projectNature"
+              render={({ field }) => (
+                <Form.Item label="Project Nature" className="flex-1">
+                  <Select
+                    {...field}
+                    allowClear
+                    placeholder="Select nature"
+                    options={[
+                      { label: 'Brownfield', value: 'brownfield' },
+                      { label: 'Greenfield', value: 'greenfield' },
+                    ]}
+                  />
+                </Form.Item>
+              )}
+            />
+          </Flex>
+
+          <Flex gap={16}>
+            <Controller
+              control={control}
+              name="jobType"
+              render={({ field }) => (
+                <Form.Item label="Job Type" className="flex-1">
+                  <Select
+                    {...field}
+                    allowClear
+                    placeholder="Select job type"
+                    options={[
+                      { label: 'Contracting', value: 'contracting' },
+                      { label: 'Design & Build', value: 'design_build' },
+                      { label: 'Design', value: 'design' },
+                    ]}
+                  />
+                </Form.Item>
+              )}
+            />
+            <Controller
+              control={control}
+              name="jobStatus"
+              render={({ field }) => (
+                <Form.Item label="Job Status" className="flex-1">
+                  <Select
+                    {...field}
+                    options={[
+                      { label: 'Bidding', value: 'bidding' },
+                      { label: 'Awarded', value: 'awarded' },
+                    ]}
+                  />
+                </Form.Item>
+              )}
+            />
+          </Flex>
+
+          <Flex gap={16}>
+            <Controller
+              control={control}
+              name="financialYear"
+              render={({ field }) => (
+                <Form.Item label="Financial Year" className="flex-1">
+                  <AutoComplete
+                    {...field}
+                    options={financialYearOptions}
+                    placeholder="e.g. 2026-2027"
+                    className="w-full"
+                  />
+                </Form.Item>
+              )}
+            />
+            <Controller
+              control={control}
+              name="dateOfCreation"
+              render={({ field }) => (
+                <Form.Item label="Date of Creation" className="flex-1">
+                  <DatePicker {...field} className="w-full" />
+                </Form.Item>
+              )}
+            />
+          </Flex>
+
+          <Controller
+            control={control}
+            name="resourceIds"
+            render={({ field }) => (
+              <Form.Item label="Resources Assigned (White Collars)">
+                <Select
+                  {...field}
+                  mode="multiple"
+                  allowClear
+                  placeholder="Select staff assigned to this project"
+                  options={users.map((u) => ({ label: `${u.name} (${u.role})`, value: u.id }))}
+                />
+              </Form.Item>
+            )}
+          />
         </Form>
       </Drawer>
     </div>
