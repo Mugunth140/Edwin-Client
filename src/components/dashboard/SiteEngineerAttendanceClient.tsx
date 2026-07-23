@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { App, Button, Card, DatePicker, Flex, Input, Select, Table, Tabs, Typography } from 'antd';
+import { App, Button, Card, DatePicker, Flex, Input, Select, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { EyeOutlined, SearchOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { WeeklyTimesheet, Project } from '@/types/erp';
@@ -9,6 +9,9 @@ import { useRouter } from 'next/navigation';
 import { verifyTimesheet, approveTimesheet, rejectTimesheet } from '@/actions/timesheet-approval';
 import { cardClassName, formatCurrency, formatDate, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import dayjs from 'dayjs';
+
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAYS = ['monHours', 'tueHours', 'wedHours', 'thuHours', 'friHours', 'satHours', 'sunHours'] as const;
 
 const STATUS_OPTIONS = [
   { label: 'All', value: '' },
@@ -132,14 +135,31 @@ export function SiteEngineerAttendanceClient({ projects, timesheets }: Props) {
       render: (_, record) => <Typography.Text className="text-emerald-400">{formatCurrency(calcCost(record))}</Typography.Text>,
     },
     {
-      title: 'Projects', key: 'projects', width: 200, ellipsis: true,
+      title: 'Daily Projects', key: 'projects', width: 300,
       render: (_, record) => {
-        const names = record.rows
-          ?.filter((r) => r.projectId)
-          .map((r) => projects.find((p) => p.id === r.projectId)?.name)
-          .filter(Boolean)
-          .join(', ');
-        return <Typography.Text className="text-slate-400 text-xs">{names || '-'}</Typography.Text>;
+        const dayInfo: { label: string; projectName: string; hours: number }[] = [];
+        for (let d = 0; d < 7; d++) {
+          let projectName = '-';
+          let hours = 0;
+          for (const row of record.rows || []) {
+            const h = Number((row as any)[DAYS[d]] || 0);
+            if (h > 0) {
+              projectName = projects.find((p) => p.id === row.projectId)?.name || '-';
+              hours = h;
+              break;
+            }
+          }
+          dayInfo.push({ label: DAY_LABELS[d], projectName, hours });
+        }
+        return (
+          <Flex wrap="wrap" gap={4}>
+            {dayInfo.map((d) => (
+              d.hours > 0
+                ? <Tag key={d.label} className="text-xs">{d.label}: {d.projectName}</Tag>
+                : <Tag key={d.label} className="text-xs opacity-40">{d.label}: -</Tag>
+            ))}
+          </Flex>
+        );
       },
     },
     {

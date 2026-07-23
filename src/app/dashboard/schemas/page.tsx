@@ -60,6 +60,7 @@ const timesheetRowSchema: ColumnDef[] = [
   { column: 'timesheetId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to weekly_timesheets.id' },
   { column: 'projectId', type: 'uuid', nullable: 'YES', default: '-', description: 'FK to projects.id' },
   { column: 'entryType', type: 'varchar', nullable: 'NO', default: 'project', description: 'project / public_holiday / idle_time / leave' },
+  { column: 'amount', type: 'decimal(12,2)', nullable: 'NO', default: '0', description: 'Calculated cost amount (set on approval)' },
   { column: 'monHours', type: 'decimal(5,2)', nullable: 'NO', default: '0', description: 'Monday hours' },
   { column: 'tueHours', type: 'decimal(5,2)', nullable: 'NO', default: '0', description: 'Tuesday hours' },
   { column: 'wedHours', type: 'decimal(5,2)', nullable: 'NO', default: '0', description: 'Wednesday hours' },
@@ -97,8 +98,8 @@ const projectsSchema: ColumnDef[] = [
 const schemaList = [
   { table: 'salaries', columns: salarySchema, description: 'Salary grade master table' },
   { table: 'users', columns: usersSchema, description: 'All users' },
-  { table: 'weekly_timesheets', columns: weeklyTimesheetSchema, description: 'Weekly timesheet header' },
-  { table: 'timesheet_rows', columns: timesheetRowSchema, description: 'Per-project daily hours' },
+  { table: 'weekly_timesheets', columns: weeklyTimesheetSchema, description: 'Weekly timesheet header (one per engineer per week)' },
+  { table: 'timesheet_rows', columns: timesheetRowSchema, description: 'Per-project daily hours — each row stores one project with hours mapped to monHours..sunHours columns. UI shows day-centric view: one project per day, converted to this format on save.' },
   { table: 'project_categories', columns: projectCategorySchema, description: 'Admin-editable project category master table' },
   { table: 'projects', columns: projectsSchema, description: 'New classification columns added to the existing projects table' },
 ];
