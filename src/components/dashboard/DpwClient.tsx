@@ -140,7 +140,7 @@ export function DpwClient({
         const tradeSummary = getTradeSummary(record.workers);
         const total = getTotalCount(record.workers);
         return (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Typography.Text strong className="text-sky-400">
               Total: {total}
             </Typography.Text>
@@ -275,7 +275,7 @@ export function DpwClient({
         destroyOnClose
       >
         {viewingReport && (
-          <Space direction="vertical" size={24} style={{ width: '100%' }}>
+          <Space orientation="vertical" size={24} style={{ width: '100%' }}>
             <div>
               <Typography.Title level={5} className="text-sky-400 mb-1">Basic Information</Typography.Title>
               <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-lg">

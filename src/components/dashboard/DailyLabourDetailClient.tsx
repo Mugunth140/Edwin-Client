@@ -94,7 +94,7 @@ export function DailyLabourDetailClient() {
             title={<><ProjectOutlined className="mr-2 text-sky-400" /> Project Info</>} 
             className="border-white/10 bg-slate-900/50"
           >
-            <Space direction="vertical" size={16} className="w-full">
+            <Space orientation="vertical" size={16} className="w-full">
               <div>
                 <Typography.Text type="secondary" className="text-xs uppercase block">Project Name</Typography.Text>
                 <Typography.Text strong className="text-lg">{report.project?.name || 'N/A'}</Typography.Text>
@@ -110,7 +110,7 @@ export function DailyLabourDetailClient() {
 
               <div className="mt-4 pt-4 border-t border-white/5">
                 <Typography.Text type="secondary" className="text-xs uppercase block mb-3">Trade Breakdown</Typography.Text>
-                <Space direction="vertical" size={8} className="w-full">
+                <Space orientation="vertical" size={8} className="w-full">
                   {Object.entries(
                     report.workers.reduce((acc, w) => {
                       const trade = w.trade || 'Other';

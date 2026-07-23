@@ -53,7 +53,7 @@ export default function NewExpensePage() {
       title: 'Added By',
       dataIndex: 'creator',
       render: (creator) => creator ? (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Typography.Text strong>{creator.name}</Typography.Text>
           <Typography.Text type="secondary" className="text-[10px] uppercase">
             {creator.role.replace('_', ' ')}

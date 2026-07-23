@@ -281,7 +281,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
       title: 'Bill Number',
       dataIndex: 'billNumber',
       render: (value: string, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
           {record.purchaseOrder && (
             <Typography.Text type="secondary" className="text-xs">

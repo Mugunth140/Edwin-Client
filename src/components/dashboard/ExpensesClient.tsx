@@ -110,9 +110,9 @@ export function ExpensesClient({ expenses: initialExpenses, projects }: Expenses
     {
       title: 'Added By',
       dataIndex: 'creator',
-      render: (creator) => creator ? (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong>{creator.name}</Typography.Text>
+        render: (creator) => creator ? (
+          <Space orientation="vertical" size={0}>
+            <Typography.Text strong>{creator.name}</Typography.Text>
           <Typography.Text type="secondary" className="text-[10px] uppercase">
             {creator.role.replace('_', ' ')}
           </Typography.Text>
@@ -140,7 +140,7 @@ export function ExpensesClient({ expenses: initialExpenses, projects }: Expenses
       dataIndex: 'description',
       sorter: (a, b) => a.description.localeCompare(b.description),
       render: (value: string, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
           {record.project && (
             <Typography.Text type="secondary" className="text-xs">
