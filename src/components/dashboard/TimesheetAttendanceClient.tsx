@@ -247,7 +247,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
           />
 
           <Table
-            dataSource={[{}]}
+            dataSource={[{ key: 'total-row' }]}
             columns={[
               { title: '', key: 'name', width: 200, render: () => <Typography.Text strong>Week Total</Typography.Text> },
               ...DAYS.map((field) => ({
@@ -256,7 +256,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
               })),
               { title: '', key: 'grand', width: 80, render: () => <Typography.Text className="block text-center font-bold text-green-400">{totals.total.toFixed(1)}</Typography.Text> },
             ]}
-            rowKey="total"
+            rowKey="key"
             size="small"
             pagination={false}
             showHeader={false}

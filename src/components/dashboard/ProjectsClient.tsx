@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AutoComplete, Button, Card, DatePicker, Divider, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Progress, Select, Space, Table, Typography, App } from 'antd';
+import { AutoComplete, Button, Card, Col, DatePicker, Divider, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Progress, Row, Select, Space, Statistic, Table, Tag, Typography, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ProjectOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
@@ -265,7 +265,6 @@ export function ProjectsClient({ projects, projectCategories, users }: ProjectsC
     {
       title: 'Actions',
       key: 'actions',
-      fixed: 'right',
       width: 100,
       render: (_, record) => (
         <Space>
@@ -338,7 +337,26 @@ export function ProjectsClient({ projects, projectCategories, users }: ProjectsC
           Add Project
         </Button>
       </Flex>
-      <Card className={cardClassName}>
+      <Row gutter={[10, 10]} className="mb-4">
+        {[
+          { status: 'planning', label: 'Planning', color: 'processing' },
+          { status: 'in_progress', label: 'In Progress', color: 'success' },
+          { status: 'on_hold', label: 'On Hold', color: 'warning' },
+          { status: 'completed', label: 'Completed', color: 'default' },
+        ].map((item) => (
+          <Col xs={12} sm={12} md={6} key={item.status}>
+            <Card className={cardClassName} size="small">
+              <Statistic
+                title={<Tag color={item.color}>{item.label}</Tag>}
+                value={projects.filter((p) => p.status === item.status).length}
+                valueStyle={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0' }}
+              />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      <Card className={cardClassName} styles={{ body: { overflowX: 'auto' } }}>
         <Table
           dataSource={projects}
           columns={columns}

@@ -9,6 +9,7 @@ import {
   AuditOutlined,
   BankOutlined,
   CalendarOutlined,
+  CloseOutlined,
   CreditCardOutlined,
   DollarOutlined,
   FileDoneOutlined,
@@ -92,6 +93,8 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
@@ -103,7 +106,20 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     }
   }, []);
 
-  const sidebarWidth = collapsed ? COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname]);
+
+  const sidebarWidth = isMobile ? 0 : (collapsed ? COLLAPSED_WIDTH : SIDEBAR_WIDTH);
+  const effectiveCollapsed = isMobile ? false : collapsed;
+  const effectiveCollapsedWidth = isMobile ? SIDEBAR_WIDTH : COLLAPSED_WIDTH;
 
   const filteredNavigationSections = useMemo(() => {
     const role = user?.role || 'viewer';
@@ -223,21 +239,28 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
         <Sider
           trigger={null}
           collapsible
-          collapsed={collapsed}
-          collapsedWidth={COLLAPSED_WIDTH}
+          collapsed={effectiveCollapsed}
+          collapsedWidth={effectiveCollapsedWidth}
           width={SIDEBAR_WIDTH}
-          className="fixed! left-0 top-0 bottom-0 z-100 h-screen overflow-hidden border-r border-white/10 bg-[#0b1120]! transition-[width] duration-300 ease-in-out"
+          className={`fixed! left-0 top-0 bottom-0 z-100 h-screen overflow-hidden border-r border-white/10 bg-[#0b1120]! transition-all duration-300 ease-in-out ${
+            isMobile
+              ? mobileSidebarOpen
+                ? 'translate-x-0 shadow-2xl'
+                : '-translate-x-full'
+              : ''
+          }`}
+          style={isMobile ? { width: `${SIDEBAR_WIDTH}px` } : undefined}
         >
           <div className="flex h-full flex-col">
             <div
               className={`flex h-18 items-center border-b border-white/10 ${
-                collapsed ? 'justify-center px-3' : 'gap-3 px-5'
+                effectiveCollapsed ? 'justify-center px-3' : 'gap-3 px-5'
               }`}
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sky-400/30 bg-sky-400/10 text-sky-300">
                 <SafetyCertificateOutlined className="text-[22px]" />
               </div>
-              {!collapsed && (
+              {!effectiveCollapsed && (
                 <div className="min-w-0">
                   <Text strong className="block truncate text-[15px] leading-tight! text-slate-100!">
                     Edwin ERP
@@ -252,14 +275,14 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
               {filteredNavigationSections.map((section) => (
                 <div key={section.title} className="mb-5 last:mb-0">
-                  {!collapsed && (
+                  {!effectiveCollapsed && (
                     <Text className="mb-2 block px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500!">
                       {section.title}
                     </Text>
                   )}
                   <Menu
                     mode="inline"
-                    inlineCollapsed={collapsed}
+                    inlineCollapsed={effectiveCollapsed}
                     selectedKeys={[selectedKey]}
                     items={section.items}
                     onClick={({ key }) => router.push(key)}
@@ -271,21 +294,31 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
           </div>
         </Sider>
 
+        {isMobile && mobileSidebarOpen && (
+          <div
+            className="fixed inset-0 z-99 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
         <Layout
           className="min-w-0 transition-[margin-left,width] duration-300 ease-in-out"
           style={{
             marginLeft: sidebarWidth,
-            width: `calc(100% - ${sidebarWidth}px)`,
+            width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
           }}
         >
           <Header className="sticky top-0 z-90 flex h-16 items-center justify-between border-b border-white/10 bg-[#101827]/95! px-5 backdrop-blur-xl">
             <button
               type="button"
-              onClick={() => setCollapsed(!collapsed)}
+              onClick={() => isMobile ? setMobileSidebarOpen(!mobileSidebarOpen) : setCollapsed(!collapsed)}
               className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white"
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={isMobile ? (mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar') : (collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             >
-              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              {isMobile
+                ? mobileSidebarOpen ? <CloseOutlined /> : <MenuUnfoldOutlined />
+                : collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
+              }
             </button>
 
             <Dropdown

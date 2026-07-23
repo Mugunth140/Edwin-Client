@@ -154,7 +154,6 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects, salaries }: 
     {
       title: 'Actions',
       key: 'actions',
-      fixed: 'right',
       width: 100,
       render: (_, record) => (
         <Space>
@@ -219,7 +218,7 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects, salaries }: 
         </Button>
       </Flex>
 
-      <Card className={cardClassName}>
+      <Card className={cardClassName} styles={{ body: { overflowX: 'auto' } }}>
         <Table
           dataSource={purchaseTeamMembers}
           columns={columns}

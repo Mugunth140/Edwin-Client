@@ -175,7 +175,6 @@ export function SiteEngineersClient({ siteEngineers, projects, salaries }: SiteE
     {
       title: 'Actions',
       key: 'actions',
-      fixed: 'right',
       width: 100,
       render: (_, record) => (
         <Space>
@@ -243,18 +242,15 @@ export function SiteEngineersClient({ siteEngineers, projects, salaries }: SiteE
         </Button>
       </Flex>
 
-      <Card className={cardClassName}>
-        <div className="overflow-x-auto">
-          <Table
-            dataSource={siteEngineers}
-            columns={columns}
-            rowKey="id"
-            size="middle"
-            scroll={{ x: 1200 }}
-            style={{ minWidth: 1100 }}
-            pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} engineers` }}
-          />
-        </div>
+      <Card className={cardClassName} styles={{ body: { overflowX: 'auto' } }}>
+        <Table
+          dataSource={siteEngineers}
+          columns={columns}
+          rowKey="id"
+          size="middle"
+          scroll={{ x: 1200 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} engineers` }}
+        />
       </Card>
 
       <Drawer

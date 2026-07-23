@@ -160,7 +160,7 @@ export function ArchitectureDiagram() {
       <div className="relative min-h-[500px] w-full overflow-auto rounded-lg bg-[#0b1120]/50 p-6">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0b1120]/80">
-            <Spin size="large" tip="Generating Diagram..." />
+            <Spin size="large" description="Generating Diagram..." />
           </div>
         )}
         <div 
