@@ -351,7 +351,7 @@ export function PurchaseEnquiryClient({ enquiries, projects, vendors, itemDescri
         </Flex>
         <Flex vertical gap={4}>
           {itemDescriptions?.map((desc) => (
-            <Flex key={desc.id} justify="space-between" align="center" className="rounded-lg border border-white/10 px-3 py-2">
+            <Flex key={desc.id} justify="space-between" align="center" className="rounded-lg border border-[var(--border)] px-3 py-2">
               <Typography.Text>{desc.name}</Typography.Text>
               <Popconfirm
                 title="Delete"

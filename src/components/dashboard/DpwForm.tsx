@@ -207,13 +207,13 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
           </Col>
         </Row>
 
-        <Divider className="border-white/10 text-slate-400">Trade Wise Attendance</Divider>
+        <Divider className="border-[var(--border)] text-[var(--text-muted)]">Trade Wise Attendance</Divider>
         
         <Form.List name="workers">
           {(fields, { add, remove }) => (
             <>
               {fields.map(({ key, name, ...restField }) => (
-                <Card size="small" key={key} className="mb-6 border-white/10 bg-white/5 shadow-md" 
+                <Card size="small" key={key} className="mb-6 border-[var(--border)] bg-[var(--subtle-bg)] shadow-md" 
                   title={<Typography.Text strong className="text-sky-400">Trade Entry #{name + 1}</Typography.Text>}
                   extra={<Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />}
                 >
@@ -311,7 +311,7 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
           )}
         </Form.List>
 
-        <Divider className="border-white/10 text-slate-400">Summary</Divider>
+        <Divider className="border-[var(--border)] text-[var(--text-muted)]">Summary</Divider>
         
         <Form.Item name="remarks" label="Overall Remarks">
           <Input.TextArea rows={3} placeholder="E.g., Site activities completed as planned." />

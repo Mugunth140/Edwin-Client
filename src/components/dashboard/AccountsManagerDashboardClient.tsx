@@ -120,7 +120,7 @@ export function AccountsManagerDashboardClient() {
       )}
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Typography.Title level={3} className="m-0! text-slate-200!">
+        <Typography.Title level={3} className="m-0! text-[var(--text-primary)]!">
           Accounts Dashboard
         </Typography.Title>
         <Button
@@ -141,7 +141,7 @@ export function AccountsManagerDashboardClient() {
               </div>
               <div>
                 <Typography.Text className={secondaryTextClassName}>Total Receivables</Typography.Text>
-                <div className="text-2xl font-bold text-slate-200">{formatCurrency(kpis?.totalReceivable || 0)}</div>
+                <div className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(kpis?.totalReceivable || 0)}</div>
                 <Typography.Text type="secondary" className="text-xs">{kpis?.pendingInvoiceCount} pending invoices</Typography.Text>
               </div>
             </div>
@@ -155,7 +155,7 @@ export function AccountsManagerDashboardClient() {
               </div>
               <div>
                 <Typography.Text className={secondaryTextClassName}>Total Payables</Typography.Text>
-                <div className="text-2xl font-bold text-slate-200">{formatCurrency(kpis?.totalPayable || 0)}</div>
+                <div className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(kpis?.totalPayable || 0)}</div>
                 <Typography.Text type="secondary" className="text-xs">{kpis?.pendingBillCount} pending bills</Typography.Text>
               </div>
             </div>
@@ -169,7 +169,7 @@ export function AccountsManagerDashboardClient() {
               </div>
               <div>
                 <Typography.Text className={secondaryTextClassName}>Month Inflow</Typography.Text>
-                <div className="text-2xl font-bold text-slate-200">{formatCurrency(kpis?.monthInflow || 0)}</div>
+                <div className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(kpis?.monthInflow || 0)}</div>
                 <Typography.Text type="secondary" className="text-xs">Current month collections</Typography.Text>
               </div>
             </div>
@@ -183,7 +183,7 @@ export function AccountsManagerDashboardClient() {
               </div>
               <div>
                 <Typography.Text className={secondaryTextClassName}>Month Outflow</Typography.Text>
-                <div className="text-2xl font-bold text-slate-200">{formatCurrency(kpis?.monthOutflow || 0)}</div>
+                <div className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(kpis?.monthOutflow || 0)}</div>
                 <Typography.Text type="secondary" className="text-xs">Current month payments</Typography.Text>
               </div>
             </div>

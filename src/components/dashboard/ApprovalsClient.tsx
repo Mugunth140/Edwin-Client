@@ -484,7 +484,7 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
               placeholder="Search..."
               allowClear value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              prefix={<SearchOutlined className="text-slate-400" />}
+              prefix={<SearchOutlined className="text-[var(--text-muted)]" />}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -540,7 +540,7 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
               placeholder="Search engineer..."
               allowClear value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              prefix={<SearchOutlined className="text-slate-400" />}
+              prefix={<SearchOutlined className="text-[var(--text-muted)]" />}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>

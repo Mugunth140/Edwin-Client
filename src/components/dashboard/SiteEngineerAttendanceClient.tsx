@@ -110,20 +110,20 @@ export function SiteEngineerAttendanceClient({ projects, timesheets }: Props) {
       render: (_, record) => (
         <Flex align="center" gap={6}>
           <UserOutlined className="text-sky-400" />
-          <Typography.Text strong className="text-slate-200">{record.siteEngineer?.name || record.siteEngineerId}</Typography.Text>
+          <Typography.Text strong className="text-[var(--text-primary)]">{record.siteEngineer?.name || record.siteEngineerId}</Typography.Text>
         </Flex>
       ),
     },
     {
       title: 'Email', key: 'email', width: 200,
       render: (_, record) => (
-        <Typography.Text className="text-slate-400 text-sm">{record.siteEngineer?.email || '-'}</Typography.Text>
+        <Typography.Text className="text-[var(--text-muted)] text-sm">{record.siteEngineer?.email || '-'}</Typography.Text>
       ),
     },
     {
       title: 'Week', key: 'week', width: 220,
       render: (_, record) => (
-        <Typography.Text className="text-slate-300">{formatDate(record.weekStart)} - {formatDate(record.weekEnd)}</Typography.Text>
+        <Typography.Text className="text-[var(--text-secondary)]">{formatDate(record.weekStart)} - {formatDate(record.weekEnd)}</Typography.Text>
       ),
     },
     {
@@ -208,7 +208,7 @@ export function SiteEngineerAttendanceClient({ projects, timesheets }: Props) {
           allowClear
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          prefix={<SearchOutlined className="text-slate-400" />}
+          prefix={<SearchOutlined className="text-[var(--text-muted)]" />}
           style={{ width: 240 }}
         />
         <Select

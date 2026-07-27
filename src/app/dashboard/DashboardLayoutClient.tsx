@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Layout, Menu, Typography, Avatar, Dropdown, Space, theme, ConfigProvider, App } from 'antd';
+import { Layout, Menu, Typography, Avatar, Dropdown, Space, App } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   AppstoreOutlined,
@@ -22,13 +22,16 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  MoonOutlined,
   NodeIndexOutlined,
   SafetyCertificateOutlined,
+  SunOutlined,
   TeamOutlined,
   UserOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
+import { useThemeStore } from '@/store/theme';
 
 const { Sider, Content, Header } = Layout;
 const { Text } = Typography;
@@ -99,11 +102,10 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
 
+  const { mode, toggle: toggleTheme } = useThemeStore();
+
   useEffect(() => {
     setMounted(true);
-    if (typeof window !== 'undefined') {
-      document.documentElement.dataset.theme = 'dark';
-    }
   }, []);
 
   useEffect(() => {
@@ -180,69 +182,24 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     { key: 'logout', icon: <LogoutOutlined />, label: 'Sign Out', danger: true },
   ];
 
-  const themeConfig = useMemo(
-    () => ({
-      algorithm: theme.darkAlgorithm,
-      token: {
-        colorPrimary: '#38bdf8',
-        colorInfo: '#38bdf8',
-        colorBgBase: '#0b1120',
-        colorBgContainer: '#101827',
-        colorBgElevated: '#111827',
-        colorBgLayout: '#0b1120',
-        colorText: '#e5e7eb',
-        colorTextSecondary: '#94a3b8',
-        colorBorder: 'rgba(148,163,184,0.18)',
-        colorBorderSecondary: 'rgba(148,163,184,0.14)',
-        fontFamily: 'var(--app-font)',
-        borderRadius: 8,
-      },
-      components: {
-        Button: {
-          borderRadius: 8,
-          controlHeight: 36,
-        },
-        Card: {
-          borderRadiusLG: 8,
-        },
-        Layout: {
-          headerBg: '#101827',
-          bodyBg: '#0b1120',
-          siderBg: '#0b1120',
-        },
-        Menu: {
-          itemBg: 'transparent',
-          itemBorderRadius: 8,
-          itemColor: '#cbd5e1',
-          itemHoverBg: 'rgba(148,163,184,0.10)',
-          itemHoverColor: '#f8fafc',
-          itemSelectedBg: 'rgba(56,189,248,0.14)',
-          itemSelectedColor: '#e0f2fe',
-        },
-      },
-    }),
-    [],
-  );
-
   if (!mounted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0b1120]">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--page-bg)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <ConfigProvider theme={themeConfig}>
-      <App>
-        <Layout className="min-h-screen bg-[#0b1120]">
+    <App>
+      <Layout className="min-h-screen bg-[var(--page-bg)]">
         <Sider
           trigger={null}
           collapsible
           collapsed={effectiveCollapsed}
           collapsedWidth={effectiveCollapsedWidth}
           width={SIDEBAR_WIDTH}
-          className={`fixed! left-0 top-0 bottom-0 z-100 h-screen overflow-hidden border-r border-white/10 bg-[#0b1120]! transition-all duration-300 ease-in-out ${
+          className={`fixed! left-0 top-0 bottom-0 z-100 h-screen overflow-hidden border-r border-[var(--border)] bg-[var(--sidebar-bg)]! transition-all duration-300 ease-in-out ${
             isMobile
               ? mobileSidebarOpen
                 ? 'translate-x-0 shadow-2xl'
@@ -253,7 +210,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
         >
           <div className="flex h-full flex-col">
             <div
-              className={`flex h-18 items-center border-b border-white/10 ${
+              className={`flex h-18 items-center border-b border-[var(--border)] ${
                 effectiveCollapsed ? 'justify-center px-3' : 'gap-3 px-5'
               }`}
             >
@@ -262,10 +219,10 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
               </div>
               {!effectiveCollapsed && (
                 <div className="min-w-0">
-                  <Text strong className="block truncate text-[15px] leading-tight! text-slate-100!">
+                  <Text strong className="block truncate text-[15px] leading-tight! text-[var(--sidebar-text)]!">
                     Edwin ERP
                   </Text>
-                  <Text className="block truncate text-xs text-slate-400!">
+                  <Text className="block truncate text-xs text-[var(--sidebar-text-muted)]!">
                     Construction Management
                   </Text>
                 </div>
@@ -276,7 +233,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
               {filteredNavigationSections.map((section) => (
                 <div key={section.title} className="mb-5 last:mb-0">
                   {!effectiveCollapsed && (
-                    <Text className="mb-2 block px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500!">
+                    <Text className="mb-2 block px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--sidebar-text-very-muted)]!">
                       {section.title}
                     </Text>
                   )}
@@ -296,7 +253,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
         {isMobile && mobileSidebarOpen && (
           <div
-            className="fixed inset-0 z-99 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-99 bg-[var(--overlay-bg)] backdrop-blur-sm"
             onClick={() => setMobileSidebarOpen(false)}
           />
         )}
@@ -308,18 +265,30 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
             width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
           }}
         >
-          <Header className="sticky top-0 z-90 flex h-16 items-center justify-between border-b border-white/10 bg-[#101827]/95! px-5 backdrop-blur-xl">
-            <button
-              type="button"
-              onClick={() => isMobile ? setMobileSidebarOpen(!mobileSidebarOpen) : setCollapsed(!collapsed)}
-              className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white ${isMobile ? 'ml-1' : ''}`}
-              aria-label={isMobile ? (mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar') : (collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
-            >
-              {isMobile
-                ? mobileSidebarOpen ? <CloseOutlined /> : <MenuUnfoldOutlined />
-                : collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
-              }
-            </button>
+          <Header className="sticky top-0 z-90 flex h-16 items-center justify-between border-b border-[var(--border)] bg-[var(--header-bg)]! px-5 backdrop-blur-xl">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => isMobile ? setMobileSidebarOpen(!mobileSidebarOpen) : setCollapsed(!collapsed)}
+                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] text-[var(--text-secondary)] transition hover:bg-[var(--subtle-hover-bg)] hover:text-[var(--text-primary)] ${isMobile ? 'ml-1' : ''}`}
+                aria-label={isMobile ? (mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar') : (collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+              >
+                {isMobile
+                  ? mobileSidebarOpen ? <CloseOutlined /> : <MenuUnfoldOutlined />
+                  : collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
+                }
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] text-[var(--text-secondary)] transition hover:bg-[var(--subtle-hover-bg)] hover:text-[var(--text-primary)]"
+                aria-label="Toggle theme"
+              >
+                {mode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
+              </button>
 
             <Dropdown
               menu={{
@@ -330,21 +299,22 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
               }}
               placement="bottomRight"
             >
-              <Space className="cursor-pointer rounded-lg px-2 py-1 transition hover:bg-slate-500/10">
+              <Space className="cursor-pointer rounded-lg px-2 py-1 transition hover:bg-[var(--subtle-bg)]">
                 <Avatar
                   className="bg-linear-to-br! from-sky-500! to-cyan-500!"
                   icon={<UserOutlined />}
                 />
                 {user && (
-                  <Text className="hidden text-sm font-medium sm:inline text-slate-200!">
+                  <Text className="hidden text-sm font-medium sm:inline text-[var(--text-primary)]!">
                     {user.name}
                   </Text>
                 )}
               </Space>
             </Dropdown>
+            </div>
           </Header>
 
-          <Content className="min-h-[calc(100vh-64px)] bg-[#0b1120] px-6 pt-6">
+          <Content className="min-h-[calc(100vh-64px)] bg-[var(--page-bg)] px-6 pt-6">
             <div className="mx-auto w-full max-w-[1600px]" style={{ marginBottom: 80 }}>
               {children}
             </div>
@@ -352,6 +322,5 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
         </Layout>
       </Layout>
     </App>
-  </ConfigProvider>
 );
 }

@@ -121,7 +121,7 @@ export default function SchemasPage() {
         </Typography.Title>
       </Flex>
 
-      <Typography.Paragraph className="mb-6 text-slate-400">
+      <Typography.Paragraph className="mb-6 text-[var(--text-muted)]">
         Reference for database tables. Create this table on your server by running the entity migration or using TypeORM synchronize.
       </Typography.Paragraph>
 
@@ -132,7 +132,7 @@ export default function SchemasPage() {
           title={
             <Flex align="center" gap={8}>
               <DatabaseOutlined className="text-sky-400" />
-              <Typography.Text strong className="text-slate-200 text-base">
+              <Typography.Text strong className="text-[var(--text-primary)] text-base">
                 {schema.table}
               </Typography.Text>
             </Flex>
@@ -150,11 +150,11 @@ export default function SchemasPage() {
 
           {idx === 0 && (
             <>
-              <Typography.Paragraph className="mt-4 text-slate-500 text-sm">
+              <Typography.Paragraph className="mt-4 text-[var(--text-very-muted)] text-sm">
                 <strong>SQL CREATE TABLE reference:</strong>
               </Typography.Paragraph>
               <Typography.Paragraph>
-                <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+                <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
 {`CREATE TABLE salaries (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   grades          VARCHAR NOT NULL,
@@ -173,11 +173,11 @@ export default function SchemasPage() {
 
           {idx === 1 && (
             <>
-              <Typography.Paragraph className="mt-4 text-slate-500 text-sm">
+              <Typography.Paragraph className="mt-4 text-[var(--text-very-muted)] text-sm">
                 <strong>SQL DDL & ALTER reference:</strong>
               </Typography.Paragraph>
               <Typography.Paragraph>
-                <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+                <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
 {`-- Add salaryGradeId column if missing on existing users table:
 ALTER TABLE users
   ADD COLUMN "salaryGradeId" UUID NULL,
@@ -206,7 +206,7 @@ CREATE TABLE users (
 
           {idx === 2 && (
             <Typography.Paragraph>
-              <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+              <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
 {`CREATE TABLE weekly_timesheets (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "siteEngineerId" UUID NOT NULL REFERENCES users(id),
@@ -225,7 +225,7 @@ CREATE TABLE users (
           )}
           {idx === 3 && (
             <Typography.Paragraph>
-              <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+              <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
 {`CREATE TABLE timesheet_rows (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "timesheetId" UUID NOT NULL REFERENCES weekly_timesheets(id),
@@ -248,7 +248,7 @@ CREATE TABLE users (
 
           {idx === 4 && (
             <Typography.Paragraph>
-              <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+              <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
 {`CREATE TABLE project_categories (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        VARCHAR NOT NULL UNIQUE,
@@ -266,11 +266,11 @@ INSERT INTO project_categories (name) VALUES
 
           {idx === 5 && (
             <>
-              <Typography.Paragraph className="mt-4 text-slate-500 text-sm">
+              <Typography.Paragraph className="mt-4 text-[var(--text-very-muted)] text-sm">
                 <strong>SQL ALTER reference (adding columns to the existing projects table):</strong>
               </Typography.Paragraph>
               <Typography.Paragraph>
-                <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+                <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
 {`-- If the projects table already has rows, add "projectCode" nullable first,
 -- backfill unique values, then apply NOT NULL + UNIQUE.
 ALTER TABLE projects

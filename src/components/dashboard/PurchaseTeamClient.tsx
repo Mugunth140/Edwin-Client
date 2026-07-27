@@ -308,7 +308,7 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects, salaries }: 
             )}
           />
 
-          <Typography.Title level={5} className="mt-4 mb-2 border-b border-white/10 pb-2">Login Credentials</Typography.Title>
+          <Typography.Title level={5} className="mt-4 mb-2 border-b border-[var(--border)] pb-2">Login Credentials</Typography.Title>
 
           <Flex gap={16}>
             <Controller
@@ -355,7 +355,7 @@ export function PurchaseTeamClient({ purchaseTeamMembers, projects, salaries }: 
             )}
           />
 
-          <Typography.Title level={5} className="mt-4 mb-2 border-b border-white/10 pb-2">Assignments</Typography.Title>
+          <Typography.Title level={5} className="mt-4 mb-2 border-b border-[var(--border)] pb-2">Assignments</Typography.Title>
 
           <Controller
             control={control}

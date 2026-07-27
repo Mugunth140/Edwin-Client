@@ -460,7 +460,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
         }
       >
         <Form layout="vertical" onFinish={handleSubmit(submit)}>
-          <Form.Item label="Import from Purchase Order" className="mb-6 rounded-lg border border-white/10 bg-slate-50/5 p-4">
+          <Form.Item label="Import from Purchase Order" className="mb-6 rounded-lg border border-[var(--border)] bg-slate-50/5 p-4">
             <Select
               showSearch
               placeholder="Search PO number to autofill..."
@@ -821,7 +821,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
             ]}
           />
         ) : (
-          <div className="py-8 text-center text-slate-500">
+          <div className="py-8 text-center text-[var(--text-very-muted)]">
             No payments recorded yet for this bill.
           </div>
         )}

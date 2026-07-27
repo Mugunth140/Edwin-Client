@@ -99,7 +99,7 @@ export function EngineerDashboardClient() {
       )}
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Typography.Title level={3} className="m-0! text-slate-200!">
+        <Typography.Title level={3} className="m-0! text-[var(--text-primary)]!">
           My Dashboard
         </Typography.Title>
         <Button
@@ -120,7 +120,7 @@ export function EngineerDashboardClient() {
               </div>
               <div>
                 <Typography.Text className={secondaryTextClassName}>Assigned Projects</Typography.Text>
-                <div className="text-2xl font-bold text-slate-200">{data.totalProjects}</div>
+                <div className="text-2xl font-bold text-[var(--text-primary)]">{data.totalProjects}</div>
               </div>
             </div>
           </Card>

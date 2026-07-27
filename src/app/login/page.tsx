@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Form, Input, Button, Card, Typography, Space, Alert, ConfigProvider, theme, App } from 'antd';
+import { Form, Input, Button, Card, Typography, Space, App } from 'antd';
 import { UserOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 
@@ -43,7 +43,7 @@ function LoginForm() {
 
   return (
     <Card
-      className="w-105 rounded-2xl! border! border-white/10! bg-white/3! shadow-[0_32px_64px_rgba(0,0,0,0.4)] backdrop-blur-2xl"
+      className="w-105 rounded-2xl! border! border-[var(--border)]! bg-[var(--subtle-bg)] shadow-[0_32px_64px_rgba(0,0,0,0.4)] backdrop-blur-2xl"
       classNames={{ body: 'px-8 py-10' }}
     >
       <Space orientation="vertical" size="large" className="w-full text-center">
@@ -51,10 +51,10 @@ function LoginForm() {
           <SafetyCertificateOutlined
             className="mb-3 text-5xl text-blue-500"
           />
-          <Title level={3} className="m-0! font-bold! text-slate-200!">
+          <Title level={3} className="m-0! font-bold! text-[var(--text-primary)]!">
             Edwin Constructions
           </Title>
-          <Text className="text-sm text-slate-400!">ERP Management System</Text>
+          <Text className="text-sm text-[var(--text-muted)]!">ERP Management System</Text>
         </div>
 
         <Form
@@ -72,9 +72,9 @@ function LoginForm() {
             ]}
           >
             <Input
-              prefix={<UserOutlined className="text-slate-500" />}
+              prefix={<UserOutlined className="text-[var(--text-very-muted)]" />}
               placeholder="Email address"
-              className="h-12 rounded-[10px]! border-white/10! bg-white/5! text-slate-200!"
+              className="h-12 rounded-[10px]! border-[var(--border)]! bg-[var(--subtle-bg)]! text-[var(--text-primary)]!"
             />
           </Form.Item>
 
@@ -83,9 +83,9 @@ function LoginForm() {
             rules={[{ required: true, message: 'Please enter your password' }]}
           >
             <Input.Password
-              prefix={<LockOutlined className="text-slate-500" />}
+              prefix={<LockOutlined className="text-[var(--text-very-muted)]" />}
               placeholder="Password"
-              className="h-12 rounded-[10px]! border-white/10! bg-white/5! text-slate-200!"
+              className="h-12 rounded-[10px]! border-[var(--border)]! bg-[var(--subtle-bg)]! text-[var(--text-primary)]!"
             />
           </Form.Item>
 
@@ -110,20 +110,17 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
-      <div
-        className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#0a1628_0%,#1a2744_50%,#0d1f3c_100%)]"
-      >
-        {/* Ambient background circles */}
-        <div className="absolute -right-25 -top-25 h-100 w-100 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
-        <div className="absolute -bottom-12.5 -left-12.5 h-75 w-75 rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
+    <div
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--page-bg)]"
+    >
+      <div className="absolute -right-25 -top-25 h-100 w-100 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
+      <div className="absolute -bottom-12.5 -left-12.5 h-75 w-75 rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
 
-        <Suspense fallback={<div className="text-slate-200">Loading...</div>}>
-          <App>
-            <LoginForm />
-          </App>
-        </Suspense>
-      </div>
-    </ConfigProvider>
+      <Suspense fallback={<div className="text-[var(--text-primary)]">Loading...</div>}>
+        <App>
+          <LoginForm />
+        </App>
+      </Suspense>
+    </div>
   );
 }

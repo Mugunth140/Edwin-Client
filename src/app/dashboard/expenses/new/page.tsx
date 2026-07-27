@@ -122,7 +122,7 @@ export default function NewExpensePage() {
                 src={`${getApiOrigin()}${url}`}
                 width={30}
                 height={30}
-                className="rounded object-cover border border-white/10"
+                className="rounded object-cover border border-[var(--border)]"
               />
             ))}
           </Space>
@@ -139,11 +139,11 @@ export default function NewExpensePage() {
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Typography.Title level={3} className="m-0! text-slate-200!">
+          <Typography.Title level={3} className="m-0! text-[var(--text-primary)]!">
             <DollarOutlined className="mr-2 text-sky-500" />
             My Expenses
           </Typography.Title>
-          <Typography.Text className="text-slate-400">
+          <Typography.Text className="text-[var(--text-muted)]">
             Track and submit your project-related expenses.
           </Typography.Text>
         </div>

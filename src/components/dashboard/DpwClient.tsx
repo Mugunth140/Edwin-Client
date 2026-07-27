@@ -278,7 +278,7 @@ export function DpwClient({
           <Space orientation="vertical" size={24} style={{ width: '100%' }}>
             <div>
               <Typography.Title level={5} className="text-sky-400 mb-1">Basic Information</Typography.Title>
-              <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 bg-[var(--subtle-bg)] p-4 rounded-lg">
                 <div>
                   <Typography.Text type="secondary" className="block text-xs uppercase">Project</Typography.Text>
                   <Typography.Text strong>{viewingReport.project?.name || 'N/A'}</Typography.Text>
@@ -301,7 +301,7 @@ export function DpwClient({
                 pagination={false}
                 size="small"
                 rowKey="id"
-                className="border border-white/10 rounded-lg overflow-hidden"
+                className="border border-[var(--border)] rounded-lg overflow-hidden"
                 columns={[
                   { title: 'Trade', dataIndex: 'trade', key: 'trade', render: (t) => <Tag color="blue">{t}</Tag> },
                   { title: 'Count', dataIndex: 'count', key: 'count', render: (c) => <Typography.Text strong>{c}</Typography.Text> },

@@ -547,7 +547,7 @@ export function InvoicesClient({ invoices, projects }: InvoicesClientProps) {
             ]}
           />
         ) : (
-          <div className="py-8 text-center text-slate-500">
+          <div className="py-8 text-center text-[var(--text-very-muted)]">
             No payments received for this invoice yet.
           </div>
         )}

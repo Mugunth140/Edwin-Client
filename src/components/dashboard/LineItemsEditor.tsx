@@ -47,7 +47,7 @@ export function LineItemsEditor<TFormValues extends FieldValues>({
         {fields.map((field, index) => (
           <div
             key={field.id}
-            className="rounded-[10px] border border-white/10 bg-white/2.5 p-3"
+            className="rounded-[10px] border border-[var(--border)] bg-[var(--subtle-bg)] p-3"
           >
             <Flex gap={8} align="flex-start" wrap="wrap">
               <Controller

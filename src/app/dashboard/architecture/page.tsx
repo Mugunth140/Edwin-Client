@@ -13,13 +13,13 @@ export default function ArchitecturePage() {
             { title: <HomeOutlined />, href: '/dashboard' },
             { title: 'System Architecture' },
           ]}
-          className="text-slate-400"
+          className="text-[var(--text-muted)]"
         />
-        <Typography.Title level={2} className="m-0! text-slate-100!">
+        <Typography.Title level={2} className="m-0! text-[var(--text-primary)]!">
           <NodeIndexOutlined className="mr-3 text-sky-400" />
           System Architecture
         </Typography.Title>
-        <Typography.Text className="text-slate-400">
+        <Typography.Text className="text-[var(--text-muted)]">
           Visual overview of database relationships and application page flows.
         </Typography.Text>
       </div>

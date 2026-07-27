@@ -19,7 +19,7 @@ export function BillDetailClient({ bill }: Props) {
 
   if (!bill) {
     return (
-      <div className="p-10 text-center text-slate-500">
+      <div className="p-10 text-center text-[var(--text-very-muted)]">
         Bill not found.
       </div>
     );
@@ -43,15 +43,15 @@ export function BillDetailClient({ bill }: Props) {
         <Card size="small" title="Bill Information">
           <table className="w-full text-sm">
             <tbody>
-              <tr><td className="pr-6 py-1.5 text-slate-400 w-40">Vendor</td><td>{bill.vendor?.name || '-'}</td></tr>
-              <tr><td className="pr-6 py-1.5 text-slate-400">Project</td><td>{bill.project?.name || '-'}</td></tr>
-              <tr><td className="pr-6 py-1.5 text-slate-400">Bill Amount</td><td><Typography.Text strong>{formatCurrency(bill.amount)}</Typography.Text></td></tr>
-              <tr><td className="pr-6 py-1.5 text-slate-400">Paid Amount</td><td>{formatCurrency(bill.paidAmount)}</td></tr>
-              <tr><td className="pr-6 py-1.5 text-slate-400">Bill Date</td><td>{formatDate(bill.billDate)}</td></tr>
-              <tr><td className="pr-6 py-1.5 text-slate-400">Due Date</td><td>{bill.dueDate ? formatDate(bill.dueDate) : '-'}</td></tr>
-              {bill.notes && <tr><td className="pr-6 py-1.5 text-slate-400">Notes</td><td>{bill.notes}</td></tr>}
+              <tr><td className="pr-6 py-1.5 text-[var(--text-muted)] w-40">Vendor</td><td>{bill.vendor?.name || '-'}</td></tr>
+              <tr><td className="pr-6 py-1.5 text-[var(--text-muted)]">Project</td><td>{bill.project?.name || '-'}</td></tr>
+              <tr><td className="pr-6 py-1.5 text-[var(--text-muted)]">Bill Amount</td><td><Typography.Text strong>{formatCurrency(bill.amount)}</Typography.Text></td></tr>
+              <tr><td className="pr-6 py-1.5 text-[var(--text-muted)]">Paid Amount</td><td>{formatCurrency(bill.paidAmount)}</td></tr>
+              <tr><td className="pr-6 py-1.5 text-[var(--text-muted)]">Bill Date</td><td>{formatDate(bill.billDate)}</td></tr>
+              <tr><td className="pr-6 py-1.5 text-[var(--text-muted)]">Due Date</td><td>{bill.dueDate ? formatDate(bill.dueDate) : '-'}</td></tr>
+              {bill.notes && <tr><td className="pr-6 py-1.5 text-[var(--text-muted)]">Notes</td><td>{bill.notes}</td></tr>}
               {bill.billFileUrl && (
-                <tr><td className="pr-6 py-1.5 text-slate-400">Bill File</td><td><Button type="link" size="small" icon={<FilePdfOutlined />} href={bill.billFileUrl} target="_blank">View Document</Button></td></tr>
+                <tr><td className="pr-6 py-1.5 text-[var(--text-muted)]">Bill File</td><td><Button type="link" size="small" icon={<FilePdfOutlined />} href={bill.billFileUrl} target="_blank">View Document</Button></td></tr>
               )}
             </tbody>
           </table>
@@ -149,7 +149,7 @@ export function BillDetailClient({ bill }: Props) {
                   }}
                 />
               ) : (
-                <div className="py-4 text-center text-slate-500">No billed items recorded for this bill.</div>
+                <div className="py-4 text-center text-[var(--text-very-muted)]">No billed items recorded for this bill.</div>
               )}
             </Card>
 
@@ -265,7 +265,7 @@ export function BillDetailClient({ bill }: Props) {
                 ]}
               />
             ) : (
-              <div className="py-4 text-center text-slate-500">No items recorded for this bill.</div>
+              <div className="py-4 text-center text-[var(--text-very-muted)]">No items recorded for this bill.</div>
             )}
           </Card>
         )}

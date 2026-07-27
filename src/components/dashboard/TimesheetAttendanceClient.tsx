@@ -247,7 +247,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
               allowClear={false}
             />
             <Button icon={<LeftOutlined />} size="small" onClick={goPrevWeek} disabled={weekIndex <= 0} />
-            <Typography.Text strong className="text-slate-200 text-sm" style={{ minWidth: 180, textAlign: 'center' }}>
+            <Typography.Text strong className="text-[var(--text-primary)] text-sm" style={{ minWidth: 180, textAlign: 'center' }}>
               {formatDate(weekStart)} - {formatDate(weekEnd)}
             </Typography.Text>
             <Button icon={<RightOutlined />} size="small" onClick={goNextWeek} disabled={weekIndex >= weeksInMonth.length - 1} />
@@ -270,26 +270,26 @@ export function TimesheetAttendanceClient({ projects }: Props) {
           <table className="w-full border-collapse text-sm" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th className="border border-white/10 bg-white/5 px-3 py-2 text-left text-slate-300" style={{ width: 260 }}>
+                <th className="border border-[var(--border)] bg-[var(--subtle-bg)] px-3 py-2 text-left text-[var(--text-secondary)]" style={{ width: 260 }}>
                   Project / Category
                 </th>
                 {DAY_LABELS.map((label, i) => {
                   const dateObj = new Date(weekStart);
                   dateObj.setDate(dateObj.getDate() + i);
                   return (
-                    <th key={label} className="border border-white/10 bg-white/5 px-2 py-2 text-center text-slate-300" style={{ width: 90 }}>
+                    <th key={label} className="border border-[var(--border)] bg-[var(--subtle-bg)] px-2 py-2 text-center text-[var(--text-secondary)]" style={{ width: 90 }}>
                       <div>{label}</div>
-                      <div className="text-xs font-normal text-slate-500">{dateObj.getDate()}</div>
+                      <div className="text-xs font-normal text-[var(--text-very-muted)]">{dateObj.getDate()}</div>
                     </th>
                   );
                 })}
-                <th className="border border-white/10 bg-white/5 px-2 py-2 text-center text-slate-300" style={{ width: 56 }} />
+                <th className="border border-[var(--border)] bg-[var(--subtle-bg)] px-2 py-2 text-center text-[var(--text-secondary)]" style={{ width: 56 }} />
               </tr>
             </thead>
             <tbody>
               {rows.filter((r) => r.kind === 'project').map((row) => (
                 <tr key={row.key}>
-                  <td className="border border-white/10 px-2 py-1.5">
+                  <td className="border border-[var(--border)] px-2 py-1.5">
                     <Select
                       className="w-full"
                       placeholder="Select project"
@@ -301,7 +301,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                     />
                   </td>
                   {DAYS.map((_, dayIdx) => (
-                    <td key={dayIdx} className="border border-white/10 p-1 text-center">
+                    <td key={dayIdx} className="border border-[var(--border)] p-1 text-center">
                       <InputNumber
                         className="w-full!"
                         size="small"
@@ -315,7 +315,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       />
                     </td>
                   ))}
-                  <td className="border border-white/10 text-center">
+                  <td className="border border-[var(--border)] text-center">
                     <Button
                       size="small"
                       type="text"
@@ -328,7 +328,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
               ))}
 
               <tr>
-                <td colSpan={9} className="border border-white/10 p-1.5">
+                <td colSpan={9} className="border border-[var(--border)] p-1.5">
                   <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addProjectRow} block>
                     Add Project
                   </Button>
@@ -337,11 +337,11 @@ export function TimesheetAttendanceClient({ projects }: Props) {
 
               {rows.filter((r) => r.kind !== 'project').map((row) => (
                 <tr key={row.key}>
-                  <td className="border border-white/10 px-3 py-1.5 text-slate-400 italic">
+                  <td className="border border-[var(--border)] px-3 py-1.5 text-[var(--text-muted)] italic">
                     {FIXED_CATEGORIES.find((c) => c.kind === row.kind)?.label}
                   </td>
                   {DAYS.map((_, dayIdx) => (
-                    <td key={dayIdx} className="border border-white/10 p-1 text-center">
+                    <td key={dayIdx} className="border border-[var(--border)] p-1 text-center">
                       <InputNumber
                         className="w-full!"
                         size="small"
@@ -355,22 +355,22 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       />
                     </td>
                   ))}
-                  <td className="border border-white/10" />
+                  <td className="border border-[var(--border)]" />
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
-                <td className="border border-white/10 px-3 py-2 font-semibold text-slate-300">Daily Total</td>
+                <td className="border border-[var(--border)] px-3 py-2 font-semibold text-[var(--text-secondary)]">Daily Total</td>
                 {dayTotals.map((t, i) => (
                   <td
                     key={i}
-                    className={`border border-white/10 px-2 py-2 text-center font-semibold ${t > 24 ? 'text-red-400' : 'text-slate-300'}`}
+                    className={`border border-[var(--border)] px-2 py-2 text-center font-semibold ${t > 24 ? 'text-red-400' : 'text-[var(--text-secondary)]'}`}
                   >
                     {t.toFixed(1)}
                   </td>
                 ))}
-                <td className="border border-white/10" />
+                <td className="border border-[var(--border)]" />
               </tr>
             </tfoot>
           </table>

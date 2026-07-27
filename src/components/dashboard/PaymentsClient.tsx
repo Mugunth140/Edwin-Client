@@ -209,7 +209,7 @@ export function PaymentsClient({ payments, summary, projects, vendors }: Payment
           allowClear
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          prefix={<SearchOutlined className="text-slate-400" />}
+          prefix={<SearchOutlined className="text-[var(--text-muted)]" />}
         />
       </Col>
       <Col xs={24} sm={12} md={6}>

@@ -43,7 +43,7 @@ const emptyDashboard: DashboardData = {
 const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7'];
 const chartHeight = 280;
 
-const statisticClassNames = { content: 'text-slate-200! font-bold!' };
+const statisticClassNames = { content: 'text-[var(--text-primary)]! font-bold!' };
 
 const kpiCardClassNames = {
   blue: 'rounded-xl! border! border-blue-500/20! bg-linear-to-br! from-blue-500/15! to-blue-500/5!',
@@ -189,7 +189,7 @@ export function DashboardClient() {
       )}
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Typography.Title level={3} className="m-0! text-slate-200!">
+        <Typography.Title level={3} className="m-0! text-[var(--text-primary)]!">
           Master Dashboard
         </Typography.Title>
         <Button

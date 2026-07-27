@@ -30,7 +30,7 @@ export function DailyLabourDetailClient() {
     loadData();
   }, [id]);
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-[#0b1120]"><Spin size="large" /></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center bg-[var(--page-bg)]"><Spin size="large" /></div>;
   if (error) return <Alert type="error" message={error} showIcon />;
   if (!report) return null;
 
@@ -92,7 +92,7 @@ export function DailyLabourDetailClient() {
         <Col xs={24} lg={8}>
           <Card 
             title={<><ProjectOutlined className="mr-2 text-sky-400" /> Project Info</>} 
-            className="border-white/10 bg-slate-900/50"
+            className="border-[var(--border)] bg-[var(--subtle-bg)]"
           >
             <Space orientation="vertical" size={16} className="w-full">
               <div>
@@ -118,8 +118,8 @@ export function DailyLabourDetailClient() {
                       return acc;
                     }, {} as Record<string, number>)
                   ).map(([trade, count]) => (
-                    <Flex key={trade} justify="space-between" align="center" className="bg-white/5 px-3 py-2 rounded-md">
-                      <Typography.Text className="text-slate-300">{trade}</Typography.Text>
+                    <Flex key={trade} justify="space-between" align="center" className="bg-[var(--subtle-bg)] px-3 py-2 rounded-md">
+                      <Typography.Text className="text-[var(--text-secondary)]">{trade}</Typography.Text>
                       <Tag color="blue" className="m-0!">{count} Workers</Tag>
                     </Flex>
                   ))}
@@ -130,9 +130,9 @@ export function DailyLabourDetailClient() {
 
           <Card 
             title={<><TeamOutlined className="mr-2 text-sky-400" /> Overall Remarks</>} 
-            className="mt-6 border-white/10 bg-slate-900/50"
+            className="mt-6 border-[var(--border)] bg-[var(--subtle-bg)]"
           >
-            <Typography.Paragraph className="text-slate-300 italic">
+            <Typography.Paragraph className="text-[var(--text-secondary)] italic">
               {report.remarks || "No overall remarks provided for this date."}
             </Typography.Paragraph>
           </Card>
@@ -142,7 +142,7 @@ export function DailyLabourDetailClient() {
         <Col xs={24} lg={16}>
           <Card 
             title={<><TeamOutlined className="mr-2 text-sky-400" /> Trade Attendance Log</>} 
-            className="border-white/10 bg-slate-900/50"
+            className="border-[var(--border)] bg-[var(--subtle-bg)]"
             styles={{ body: { padding: 0 } }}
           >
             <Table
@@ -156,7 +156,7 @@ export function DailyLabourDetailClient() {
           </Card>
 
           {/* Trade Photos Section */}
-          <Divider className="border-white/10 text-slate-400 mt-8">Site Photographs (Trade-wise)</Divider>
+          <Divider className="border-[var(--border)] text-[var(--text-muted)] mt-8">Site Photographs (Trade-wise)</Divider>
           
           <div className="space-y-6">
             {report.workers.map((worker, index) => {
@@ -167,7 +167,7 @@ export function DailyLabourDetailClient() {
                 <Card 
                   key={worker.id || index}
                   title={<Typography.Text strong className="text-sky-400">{worker.trade} - Photos</Typography.Text>}
-                  className="border-white/10 bg-slate-900/50"
+                  className="border-[var(--border)] bg-[var(--subtle-bg)]"
                 >
                   <Row gutter={[24, 24]}>
                     <Col xs={24} md={12}>
@@ -178,7 +178,7 @@ export function DailyLabourDetailClient() {
                             <Col span={12} key={i}>
                               <Image
                                 src={`${getApiOrigin()}${url}`}
-                                className="rounded-lg object-cover w-full aspect-video border border-white/10 shadow-lg hover:scale-[1.02] transition-transform"
+                                className="rounded-lg object-cover w-full aspect-video border border-[var(--border)] shadow-lg hover:scale-[1.02] transition-transform"
                                 placeholder={<div className="w-full aspect-video bg-slate-800 animate-pulse rounded-lg" />}
                               />
                             </Col>
@@ -200,7 +200,7 @@ export function DailyLabourDetailClient() {
                             <Col span={12} key={i}>
                               <Image
                                 src={`${getApiOrigin()}${url}`}
-                                className="rounded-lg object-cover w-full aspect-video border border-white/10 shadow-lg hover:scale-[1.02] transition-transform"
+                                className="rounded-lg object-cover w-full aspect-video border border-[var(--border)] shadow-lg hover:scale-[1.02] transition-transform"
                                 placeholder={<div className="w-full aspect-video bg-slate-800 animate-pulse rounded-lg" />}
                               />
                             </Col>

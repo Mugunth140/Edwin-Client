@@ -338,7 +338,7 @@ export function ExpenseForm({ projects, trades, expenseTypes, initialValues, onS
           </Typography.Text>
         </Form.Item>
 
-        <Divider className="my-0 border-white/10" />
+        <Divider className="my-0 border-[var(--border)]" />
 
         <Controller
           control={control}

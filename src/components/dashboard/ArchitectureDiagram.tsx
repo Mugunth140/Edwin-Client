@@ -139,11 +139,11 @@ export function ArchitectureDiagram() {
 
   return (
     <Card 
-      className="overflow-hidden border border-white/10 bg-white/5"
+      className="overflow-hidden border border-[var(--border)] bg-[var(--subtle-bg)]"
       title={
         <Space>
           <NodeIndexOutlined className="text-sky-400" />
-          <Typography.Text strong className="text-slate-200">ERP System Connections</Typography.Text>
+          <Typography.Text strong className="text-[var(--text-primary)]">ERP System Connections</Typography.Text>
         </Space>
       }
       extra={
@@ -157,9 +157,9 @@ export function ArchitectureDiagram() {
         />
       }
     >
-      <div className="relative min-h-[500px] w-full overflow-auto rounded-lg bg-[#0b1120]/50 p-6">
+      <div className="relative min-h-[500px] w-full overflow-auto rounded-lg bg-[var(--page-bg)]/50 p-6">
         {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0b1120]/80">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--page-bg)]/80">
             <Spin size="large" description="Generating Diagram..." />
           </div>
         )}
@@ -170,10 +170,10 @@ export function ArchitectureDiagram() {
       </div>
       
       <div className="mt-6 border-t border-white/5 pt-6">
-        <Typography.Title level={5} className="text-slate-300">
+        <Typography.Title level={5} className="text-[var(--text-secondary)]">
           {view === 'flow' ? 'How the ERP Works (Business Map)' : 'Technical Database Structure'}
         </Typography.Title>
-        <Typography.Paragraph className="text-slate-400">
+        <Typography.Paragraph className="text-[var(--text-muted)]">
           {view === 'flow' 
             ? 'This map shows how different departments work together. Site Engineers record field data, the Purchase Team manages procurement, and the Admin/Office Team oversees financials. All activities automatically flow into the Payment Ledger to track the project’s real profit and balance.'
             : 'This is a technical view showing how the database tables are linked. It helps developers understand how data like Projects, Invoices, and Payments are connected behind the scenes.'}

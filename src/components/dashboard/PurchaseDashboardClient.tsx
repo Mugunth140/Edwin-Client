@@ -110,7 +110,7 @@ export function PurchaseDashboardClient() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={16}>
-          <Card title="Pending Purchase Orders (Fulfillment Tracking)" className="h-full border-white/10">
+          <Card title="Pending Purchase Orders (Fulfillment Tracking)" className="h-full border-[var(--border)]">
             <Table
               dataSource={data.pendingPOs}
               columns={poColumns}
@@ -121,7 +121,7 @@ export function PurchaseDashboardClient() {
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title="Recent Activity" className="h-full border-white/10">
+          <Card title="Recent Activity" className="h-full border-[var(--border)]">
             <Typography.Text strong className="mb-3 block">Latest Bills</Typography.Text>
             <div className="space-y-4">
               {data.recentActivity.bills.map((bill: any) => (

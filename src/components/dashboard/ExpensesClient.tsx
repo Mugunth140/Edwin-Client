@@ -212,7 +212,7 @@ export function ExpensesClient({ expenses: initialExpenses, projects }: Expenses
                 src={`${getApiOrigin()}${url}`}
                 width={30}
                 height={30}
-                className="rounded object-cover border border-white/10"
+                className="rounded object-cover border border-[var(--border)]"
               />
             ))}
           </Space>
