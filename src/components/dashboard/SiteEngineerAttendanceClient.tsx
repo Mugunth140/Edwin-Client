@@ -135,27 +135,29 @@ export function SiteEngineerAttendanceClient({ projects, timesheets }: Props) {
       render: (_, record) => <Typography.Text className="text-emerald-400">{formatCurrency(calcCost(record))}</Typography.Text>,
     },
     {
-      title: 'Daily Projects', key: 'projects', width: 300,
+      title: 'Daily Projects', key: 'projects', width: 320,
       render: (_, record) => {
-        const dayInfo: { label: string; projectName: string; hours: number }[] = [];
+        const FIXED_LABELS: Record<string, string> = { holiday: 'Holiday', idle: 'Idle', leave: 'Leave' };
+        const dayInfo: { label: string; parts: string[] }[] = [];
         for (let d = 0; d < 7; d++) {
-          let projectName = '-';
-          let hours = 0;
+          const parts: string[] = [];
           for (const row of record.rows || []) {
             const h = Number((row as any)[DAYS[d]] || 0);
-            if (h > 0) {
-              projectName = projects.find((p) => p.id === row.projectId)?.name || '-';
-              hours = h;
-              break;
+            if (h <= 0) continue;
+            if (row.entryType === 'project') {
+              const name = projects.find((p) => p.id === row.projectId)?.name || 'Project';
+              parts.push(`${name} ${h}h`);
+            } else {
+              parts.push(`${FIXED_LABELS[row.entryType] || row.entryType} ${h}h`);
             }
           }
-          dayInfo.push({ label: DAY_LABELS[d], projectName, hours });
+          dayInfo.push({ label: DAY_LABELS[d], parts });
         }
         return (
           <Flex wrap="wrap" gap={4}>
             {dayInfo.map((d) => (
-              d.hours > 0
-                ? <Tag key={d.label} className="text-xs">{d.label}: {d.projectName}</Tag>
+              d.parts.length > 0
+                ? <Tag key={d.label} className="text-xs">{d.label}: {d.parts.join(', ')}</Tag>
                 : <Tag key={d.label} className="text-xs opacity-40">{d.label}: -</Tag>
             ))}
           </Flex>

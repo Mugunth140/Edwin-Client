@@ -2,24 +2,62 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import {
-  Button, Card, DatePicker, Flex, InputNumber, Select, Table, Typography, App,
+  Button, Card, DatePicker, Flex, InputNumber, Select, Spin, Typography, App,
 } from 'antd';
-import { LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import {
+  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined,
+} from '@ant-design/icons';
 import { saveTimesheet, updateTimesheet } from '@/actions/timesheet-attendance';
-import type { Project, TimesheetRow } from '@/types/erp';
+import type { Project } from '@/types/erp';
 import { cardClassName, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import dayjs from 'dayjs';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAYS = ['monHours', 'tueHours', 'wedHours', 'thuHours', 'friHours', 'satHours', 'sunHours'] as const;
 
+const FIXED_CATEGORIES = [
+  { kind: 'holiday', label: 'Public Holiday' },
+  { kind: 'idle', label: 'Idle Time' },
+  { kind: 'leave', label: 'Leave' },
+] as const;
+
+const STANDARD_DAILY_HOURS = 8.5;
+const STANDARD_WORKING_DAYS = 6;
+const STANDARD_WEEKLY_HOURS = STANDARD_DAILY_HOURS * STANDARD_WORKING_DAYS;
+
+type FixedKind = (typeof FIXED_CATEGORIES)[number]['kind'];
+
+type GridRow = {
+  key: string;
+  kind: 'project' | FixedKind;
+  rowId?: string;
+  projectId: string | null;
+  hours: number[];
+};
+
 type Props = { projects: Project[] };
 
-type DayEntry = {
-  day: number;
-  projectId: string | null;
-  hours: number;
-};
+let rowSeq = 0;
+function nextKey() {
+  rowSeq += 1;
+  return `row-${rowSeq}`;
+}
+
+function emptyHours(): number[] {
+  return [0, 0, 0, 0, 0, 0, 0];
+}
+
+function emptyProjectRow(): GridRow {
+  return { key: nextKey(), kind: 'project', projectId: null, hours: emptyHours() };
+}
+
+function emptyFixedRows(): GridRow[] {
+  return FIXED_CATEGORIES.map((c) => ({ key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours() }));
+}
+
+function defaultRows(): GridRow[] {
+  return [emptyProjectRow(), ...emptyFixedRows()];
+}
 
 function getMonday(d: Date) {
   const date = new Date(d);
@@ -36,42 +74,54 @@ function formatDate(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-function rowsToDayEntries(rows: TimesheetRow[]): DayEntry[] {
-  const days: DayEntry[] = Array.from({ length: 7 }, (_, i) => ({ day: i, projectId: null, hours: 0 }));
-  for (const row of rows) {
-    for (let d = 0; d < 7; d++) {
-      const h = Number((row as any)[DAYS[d]] || 0);
-      if (h > 0) {
-        days[d] = { day: d, projectId: row.projectId || null, hours: h };
-      }
+function rowsFromServer(tsRows: any[]): GridRow[] {
+  const projectRows: GridRow[] = [];
+  const fixedMap = new Map<string, GridRow>();
+  for (const c of FIXED_CATEGORIES) fixedMap.set(c.kind, { key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours() });
+
+  for (const row of tsRows) {
+    const hours = DAYS.map((d) => Number((row as any)[d] || 0));
+    if (row.entryType === 'project') {
+      projectRows.push({ key: nextKey(), kind: 'project', rowId: row.id, projectId: row.projectId || null, hours });
+    } else if (fixedMap.has(row.entryType)) {
+      fixedMap.set(row.entryType, { key: nextKey(), kind: row.entryType, rowId: row.id, projectId: null, hours });
     }
   }
-  return days;
+
+  if (projectRows.length === 0) projectRows.push(emptyProjectRow());
+  return [...projectRows, ...FIXED_CATEGORIES.map((c) => fixedMap.get(c.kind)!)];
 }
 
-function dayEntriesToRows(entries: DayEntry[], existingIdMap?: Map<string, string>): any[] {
-  const projectMap = new Map<string, Record<string, number>>();
-  for (const entry of entries) {
-    if (!entry.projectId) continue;
-    if (!projectMap.has(entry.projectId)) {
-      projectMap.set(entry.projectId, { monHours: 0, tueHours: 0, wedHours: 0, thuHours: 0, friHours: 0, satHours: 0, sunHours: 0 });
+function rowsToPayload(rows: GridRow[]): any[] {
+  const out: any[] = [];
+  for (const row of rows) {
+    const total = row.hours.reduce((a, b) => a + b, 0);
+    if (row.kind === 'project') {
+      if (!row.projectId) continue;
+    } else if (total <= 0) {
+      continue;
     }
-    const dayField = DAYS[entry.day];
-    projectMap.get(entry.projectId)![dayField] = (projectMap.get(entry.projectId)![dayField] || 0) + entry.hours;
+    out.push({
+      ...(row.rowId ? { id: row.rowId } : {}),
+      ...(row.kind === 'project' ? { projectId: row.projectId } : {}),
+      entryType: row.kind,
+      monHours: row.hours[0],
+      tueHours: row.hours[1],
+      wedHours: row.hours[2],
+      thuHours: row.hours[3],
+      friHours: row.hours[4],
+      satHours: row.hours[5],
+      sunHours: row.hours[6],
+    });
   }
-  return Array.from(projectMap.entries()).map(([projectId, hours]) => ({
-    ...(existingIdMap?.has(projectId) ? { id: existingIdMap.get(projectId) } : {}),
-    projectId,
-    entryType: 'project',
-    ...hours,
-  }));
+  return out;
 }
 
 export function TimesheetAttendanceClient({ projects }: Props) {
   const [month, setMonth] = useState<dayjs.Dayjs>(dayjs().startOf('month'));
   const [weekStart, setWeekStart] = useState<Date>(getMonday(new Date()));
   const [existingTs, setExistingTs] = useState<any>(null);
-  const [dayEntries, setDayEntries] = useState<DayEntry[]>(Array.from({ length: 7 }, (_, i) => ({ day: i, projectId: null, hours: 0 })));
+  const [rows, setRows] = useState<GridRow[]>(defaultRows());
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
@@ -93,20 +143,18 @@ export function TimesheetAttendanceClient({ projects }: Props) {
   const weekIndex = weeksInMonth.findIndex((w) => formatDate(w) === weekStartStr);
 
   const goPrevWeek = () => {
-    const idx = weekIndex;
-    if (idx > 0) {
-      setWeekStart(weeksInMonth[idx - 1]);
+    if (weekIndex > 0) {
+      setWeekStart(weeksInMonth[weekIndex - 1]);
       setExistingTs(null);
-      setDayEntries(Array.from({ length: 7 }, (_, i) => ({ day: i, projectId: null, hours: 0 })));
+      setRows(defaultRows());
     }
   };
 
   const goNextWeek = () => {
-    const idx = weekIndex;
-    if (idx < weeksInMonth.length - 1) {
-      setWeekStart(weeksInMonth[idx + 1]);
+    if (weekIndex < weeksInMonth.length - 1) {
+      setWeekStart(weeksInMonth[weekIndex + 1]);
       setExistingTs(null);
-      setDayEntries(Array.from({ length: 7 }, (_, i) => ({ day: i, projectId: null, hours: 0 })));
+      setRows(defaultRows());
     }
   };
 
@@ -117,30 +165,52 @@ export function TimesheetAttendanceClient({ projects }: Props) {
       if (res.ok) {
         const data = await res.json();
         setExistingTs(data);
-        if (data && data.rows && data.rows.length > 0) {
-          setDayEntries(rowsToDayEntries(data.rows));
-        } else {
-          setDayEntries(Array.from({ length: 7 }, (_, i) => ({ day: i, projectId: null, hours: 0 })));
-        }
+        setRows(data && data.rows && data.rows.length > 0 ? rowsFromServer(data.rows) : defaultRows());
       }
     } catch { /* silent */ } finally { setLoading(false); }
   }, [weekStartStr]);
 
   useEffect(() => { loadTs(); }, [loadTs]);
 
-  const totalHours = useMemo(() => dayEntries.reduce((s, e) => s + e.hours, 0), [dayEntries]);
+  const dayTotals = useMemo(
+    () => DAY_LABELS.map((_, dayIdx) => rows.reduce((s, r) => s + (r.hours[dayIdx] || 0), 0)),
+    [rows],
+  );
+  const totalHours = useMemo(() => dayTotals.reduce((s, v) => s + v, 0), [dayTotals]);
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
 
+  const addProjectRow = () => {
+    setRows((prev) => {
+      const projectRows = prev.filter((r) => r.kind === 'project');
+      const fixedRows = prev.filter((r) => r.kind !== 'project');
+      return [...projectRows, emptyProjectRow(), ...fixedRows];
+    });
+  };
+
+  const removeProjectRow = (key: string) => {
+    setRows((prev) => prev.filter((r) => r.key !== key));
+  };
+
+  const setProjectId = (key: string, projectId: string | null) => {
+    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, projectId } : r)));
+  };
+
+  const setHour = (key: string, dayIdx: number, value: number) => {
+    setRows((prev) => prev.map((r) => {
+      if (r.key !== key) return r;
+      const hours = [...r.hours];
+      hours[dayIdx] = value;
+      return { ...r, hours };
+    }));
+  };
+
   const handleSave = () => {
     startTransition(async () => {
       try {
-        const existingIdMap = existingTs?.rows
-          ? new Map<string, string>(existingTs.rows.filter((r: any) => r.projectId).map((r: any) => [r.projectId, r.id]))
-          : undefined;
-        const rows = dayEntriesToRows(dayEntries, existingIdMap);
-        const payload = { weekStart: weekStartStr, rows };
+        const payloadRows = rowsToPayload(rows);
+        const payload = { weekStart: weekStartStr, rows: payloadRows };
         if (existingTs?.id) { await updateTimesheet(existingTs.id, payload); message.success('Updated'); }
         else { await saveTimesheet(payload); message.success('Saved'); }
         loadTs();
@@ -149,58 +219,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
       }
     });
   };
-
-  const columns: any[] = [
-    {
-      title: 'Day', key: 'day', width: 60,
-      render: (_: any, __: any, idx: number) => {
-        const dateObj = new Date(weekStart);
-        dateObj.setDate(dateObj.getDate() + idx);
-        return (
-          <div>
-            <Typography.Text strong className="text-slate-200">{DAY_LABELS[idx]}</Typography.Text>
-            <Typography.Text className="ml-1 text-xs text-slate-500">{dateObj.getDate()}</Typography.Text>
-          </div>
-        );
-      },
-    },
-    {
-      title: 'Project', key: 'project', width: 280,
-      render: (_: any, __: any, idx: number) => (
-        <Select
-          className="w-full"
-          placeholder="Select project"
-          allowClear
-          value={dayEntries[idx]?.projectId || undefined}
-          onChange={(val) => {
-            const copy = [...dayEntries];
-            copy[idx] = { ...copy[idx], projectId: val || null };
-            setDayEntries(copy);
-          }}
-          options={projects.map((p) => ({ label: p.name, value: p.id }))}
-          size="small"
-        />
-      ),
-    },
-    {
-      title: 'Hours', key: 'hours', width: 100,
-      render: (_: any, __: any, idx: number) => (
-        <InputNumber
-          className="w-full!"
-          size="small"
-          min={0} max={24} step={0.5}
-          value={dayEntries[idx]?.hours || 0}
-          onChange={(v) => {
-            const copy = [...dayEntries];
-            copy[idx] = { ...copy[idx], hours: v ?? 0 };
-            setDayEntries(copy);
-          }}
-          variant="borderless"
-          style={{ textAlign: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 4 }}
-        />
-      ),
-    },
-  ];
 
   return (
     <div>
@@ -222,7 +240,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                   const m = getMonday(d.startOf('month').toDate());
                   setWeekStart(m);
                   setExistingTs(null);
-                  setDayEntries(Array.from({ length: 7 }, (_, i) => ({ day: i, projectId: null, hours: 0 })));
+                  setRows(defaultRows());
                 }
               }}
               style={{ width: 160 }}
@@ -236,29 +254,131 @@ export function TimesheetAttendanceClient({ projects }: Props) {
           </Flex>
 
           <Flex gap={12} align="center">
-            <Typography.Text strong className="text-sky-400">
-              Total: {totalHours.toFixed(1)} hrs
-            </Typography.Text>
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/15 px-4 py-1.5">
+              <Typography.Text strong className="text-emerald-300">
+                Total: {totalHours.toFixed(1)} / {STANDARD_WEEKLY_HOURS.toFixed(1)} hrs
+              </Typography.Text>
+            </div>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={isPending}>
               {existingTs?.id ? 'Update' : 'Save'}
             </Button>
           </Flex>
         </Flex>
 
+        <Spin spinning={loading}>
         <div className="overflow-x-auto">
-          <Table
-            dataSource={dayEntries.map((_, i) => ({ key: i }))}
-            columns={columns}
-            rowKey="key"
-            size="middle"
-            pagination={false}
-            bordered
-            loading={loading}
-          />
+          <table className="w-full border-collapse text-sm" style={{ tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th className="border border-white/10 bg-white/5 px-3 py-2 text-left text-slate-300" style={{ width: 260 }}>
+                  Project / Category
+                </th>
+                {DAY_LABELS.map((label, i) => {
+                  const dateObj = new Date(weekStart);
+                  dateObj.setDate(dateObj.getDate() + i);
+                  return (
+                    <th key={label} className="border border-white/10 bg-white/5 px-2 py-2 text-center text-slate-300" style={{ width: 90 }}>
+                      <div>{label}</div>
+                      <div className="text-xs font-normal text-slate-500">{dateObj.getDate()}</div>
+                    </th>
+                  );
+                })}
+                <th className="border border-white/10 bg-white/5 px-2 py-2 text-center text-slate-300" style={{ width: 56 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.filter((r) => r.kind === 'project').map((row) => (
+                <tr key={row.key}>
+                  <td className="border border-white/10 px-2 py-1.5">
+                    <Select
+                      className="w-full"
+                      placeholder="Select project"
+                      allowClear
+                      value={row.projectId || undefined}
+                      onChange={(val) => setProjectId(row.key, val || null)}
+                      options={projects.map((p) => ({ label: p.name, value: p.id }))}
+                      size="small"
+                    />
+                  </td>
+                  {DAYS.map((_, dayIdx) => (
+                    <td key={dayIdx} className="border border-white/10 p-1 text-center">
+                      <InputNumber
+                        className="w-full!"
+                        size="small"
+                        min={0}
+                        max={24}
+                        step={0.5}
+                        value={row.hours[dayIdx] || 0}
+                        onChange={(v) => setHour(row.key, dayIdx, v ?? 0)}
+                        variant="borderless"
+                        style={{ textAlign: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 4 }}
+                      />
+                    </td>
+                  ))}
+                  <td className="border border-white/10 text-center">
+                    <Button
+                      size="small"
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeProjectRow(row.key)}
+                    />
+                  </td>
+                </tr>
+              ))}
+
+              <tr>
+                <td colSpan={9} className="border border-white/10 p-1.5">
+                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addProjectRow} block>
+                    Add Project
+                  </Button>
+                </td>
+              </tr>
+
+              {rows.filter((r) => r.kind !== 'project').map((row) => (
+                <tr key={row.key}>
+                  <td className="border border-white/10 px-3 py-1.5 text-slate-400 italic">
+                    {FIXED_CATEGORIES.find((c) => c.kind === row.kind)?.label}
+                  </td>
+                  {DAYS.map((_, dayIdx) => (
+                    <td key={dayIdx} className="border border-white/10 p-1 text-center">
+                      <InputNumber
+                        className="w-full!"
+                        size="small"
+                        min={0}
+                        max={24}
+                        step={0.5}
+                        value={row.hours[dayIdx] || 0}
+                        onChange={(v) => setHour(row.key, dayIdx, v ?? 0)}
+                        variant="borderless"
+                        style={{ textAlign: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 4 }}
+                      />
+                    </td>
+                  ))}
+                  <td className="border border-white/10" />
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td className="border border-white/10 px-3 py-2 font-semibold text-slate-300">Daily Total</td>
+                {dayTotals.map((t, i) => (
+                  <td
+                    key={i}
+                    className={`border border-white/10 px-2 py-2 text-center font-semibold ${t > 24 ? 'text-red-400' : 'text-slate-300'}`}
+                  >
+                    {t.toFixed(1)}
+                  </td>
+                ))}
+                <td className="border border-white/10" />
+              </tr>
+            </tfoot>
+          </table>
         </div>
+        </Spin>
 
         <Typography.Text type="secondary" className="mt-2 block text-xs">
-          Public holiday or leave? Just leave hours as <strong>0</strong> and project empty for that day.
+          Add a row per project — the same day can be split across multiple projects (e.g. 4 hrs on Project A and 4 hrs on Project B). Use Public Holiday, Idle Time or Leave for non-project days.
         </Typography.Text>
       </Card>
     </div>
