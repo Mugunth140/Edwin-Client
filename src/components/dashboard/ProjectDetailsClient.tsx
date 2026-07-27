@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card, Flex, Table, Typography } from 'antd';
+import { Card, Descriptions, Flex, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ProjectOutlined } from '@ant-design/icons';
 import type { Expense, Payment, ProjectDetails, PurchaseBill, SalesInvoice, SubcontractWorkOrder } from '@/types/erp';
@@ -106,6 +106,29 @@ export function ProjectDetailsClient({ data }: Props) {
           </Card>
         ))}
       </Flex>
+
+      <Card title={<Text strong>Classification</Text>} size="small">
+        <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small" bordered>
+          <Descriptions.Item label="Project Category">
+            {project.projectCategory?.name || '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Project Nature">
+            {project.projectNature ? <Tag>{project.projectNature}</Tag> : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Job Type">
+            {project.jobType ? <Tag>{project.jobType}</Tag> : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Job Status">
+            {project.jobStatus ? <Tag>{project.jobStatus}</Tag> : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Financial Year">
+            {project.financialYear || '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Date of Creation">
+            {project.dateOfCreation ? formatDate(project.dateOfCreation) : '-'}
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
 
       <Card title={<Text strong>Expenses ({expenses.length})</Text>} size="small">
         <Table
