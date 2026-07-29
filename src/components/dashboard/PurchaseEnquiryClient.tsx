@@ -213,7 +213,7 @@ export function PurchaseEnquiryClient({ enquiries, projects, itemDescriptions }:
     <div>
       <Flex justify="space-between" align="center" className={`${pageHeaderClassName} mb-0!`} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
-          <ShoppingCartOutlined className={titleIconClassName} /> {isSiteEngineer ? 'Material Requirement' : 'Material Requirement Request'}
+          <ShoppingCartOutlined style={{ marginBottom: 24 }} className={titleIconClassName} /> {isSiteEngineer ? 'Material Requirement' : 'Material Requirement Request'}
         </Typography.Title>
         {isSiteEngineer && (
           <Button

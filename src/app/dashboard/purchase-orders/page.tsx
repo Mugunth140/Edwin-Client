@@ -1,15 +1,15 @@
 import { Alert } from 'antd';
 import { PurchaseOrdersClient } from '@/components/dashboard/PurchaseOrdersClient';
-import { fetchProjects, fetchPurchaseOrders, fetchVendors, fetchItemDescriptions, fetchPurchaseEnquiries } from '@/lib/api';
+import { fetchProjects, fetchPurchaseOrders, fetchVendors, fetchItemDescriptions, fetchVendorQuotations } from '@/lib/api';
 
 async function loadPageData() {
   try {
-    const [purchaseOrders, projects, vendors, itemDescriptions, purchaseEnquiries] = await Promise.all([
+    const [purchaseOrders, projects, vendors, itemDescriptions, vendorQuotations] = await Promise.all([
       fetchPurchaseOrders(),
       fetchProjects(),
       fetchVendors(),
       fetchItemDescriptions(),
-      fetchPurchaseEnquiries(),
+      fetchVendorQuotations(),
     ]);
 
     return { 
@@ -17,7 +17,7 @@ async function loadPageData() {
       projects, 
       vendors,
       itemDescriptions,
-      purchaseEnquiries,
+      vendorQuotations,
     };
   } catch (error) {
     return {
@@ -25,14 +25,14 @@ async function loadPageData() {
       projects: [],
       vendors: [],
       itemDescriptions: [],
-      purchaseEnquiries: [],
+      vendorQuotations: [],
       error: error instanceof Error ? error.message : 'Unable to load purchase orders',
     };
   }
 }
 
 export default async function PurchaseOrdersPage() {
-  const { purchaseOrders, projects, vendors, itemDescriptions, purchaseEnquiries, error } = await loadPageData();
+  const { purchaseOrders, projects, vendors, itemDescriptions, vendorQuotations, error } = await loadPageData();
 
   return (
     <>
@@ -42,7 +42,7 @@ export default async function PurchaseOrdersPage() {
         projects={projects} 
         vendors={vendors}
         itemDescriptions={itemDescriptions}
-        purchaseEnquiries={purchaseEnquiries}
+        vendorQuotations={vendorQuotations}
       />
     </>
   );

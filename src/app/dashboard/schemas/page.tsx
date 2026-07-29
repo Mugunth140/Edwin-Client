@@ -96,6 +96,20 @@ const materialRequirementsSchema: ColumnDef[] = [
   { column: 'updatedAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record update timestamp' },
 ];
 
+const vendorQuotationsSchema: ColumnDef[] = [
+  { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
+  { column: 'enquiryNo', type: 'character varying', nullable: 'NO', default: '-', description: 'Unique enquiry number' },
+  { column: 'projectId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to projects.id' },
+  { column: 'vendorId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to vendors.id' },
+  { column: 'items', type: 'jsonb', nullable: 'NO', default: '[]', description: 'Array of { description, quantity }' },
+  { column: 'quotationUrl', type: 'varchar', nullable: 'YES', default: '-', description: 'Uploaded quotation file URL' },
+  { column: 'quotationKey', type: 'varchar', nullable: 'YES', default: '-', description: 'Uploaded quotation file key' },
+  { column: 'status', type: 'varchar(50)', nullable: 'NO', default: 'draft', description: 'draft / pending / approved / rejected' },
+  { column: 'isDeleted', type: 'boolean', nullable: 'NO', default: 'false', description: 'Soft delete flag' },
+  { column: 'createdAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record creation timestamp' },
+  { column: 'updatedAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record update timestamp' },
+];
+
 const projectsSchema: ColumnDef[] = [
   { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
   { column: 'name', type: 'character varying', nullable: 'NO', default: '-', description: 'Project name' },
@@ -110,6 +124,37 @@ const projectsSchema: ColumnDef[] = [
   { column: 'createdAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record creation timestamp (system-managed)' },
 ];
 
+const purchaseOrdersSchema: ColumnDef[] = [
+  { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
+  { column: 'poNumber', type: 'varchar', nullable: 'NO', default: '-', description: 'Unique PO number (PO-YYYY-NNN)' },
+  { column: 'vendorId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to vendors.id' },
+  { column: 'projectId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to projects.id' },
+  { column: 'paymentTerms', type: 'text', nullable: 'YES', default: '-', description: 'Payment terms description' },
+  { column: 'status', type: 'varchar(50)', nullable: 'NO', default: 'pending', description: 'pending / admin_approved / approved / rejected' },
+  { column: 'totalAmount', type: 'decimal(12,2)', nullable: 'NO', default: '0', description: 'Basic total (sum of item amounts)' },
+  { column: 'gstPercent', type: 'decimal(5,2)', nullable: 'YES', default: '-', description: 'GST percentage applied' },
+  { column: 'gstAmount', type: 'decimal(12,2)', nullable: 'YES', default: '-', description: 'Calculated GST amount' },
+  { column: 'totalWithGst', type: 'decimal(12,2)', nullable: 'YES', default: '-', description: 'Total including GST' },
+  { column: 'billFileUrl', type: 'varchar', nullable: 'YES', default: '-', description: 'Uploaded PO file URL' },
+  { column: 'billFileKey', type: 'varchar', nullable: 'YES', default: '-', description: 'Uploaded PO file key' },
+  { column: 'isDeleted', type: 'boolean', nullable: 'NO', default: 'false', description: 'Soft delete flag' },
+  { column: 'createdBy', type: 'uuid', nullable: 'YES', default: '-', description: 'FK to users.id' },
+  { column: 'updatedBy', type: 'uuid', nullable: 'YES', default: '-', description: 'FK to users.id' },
+  { column: 'createdAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record creation timestamp' },
+  { column: 'updatedAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record update timestamp' },
+];
+
+const poItemsSchema: ColumnDef[] = [
+  { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
+  { column: 'purchaseOrderId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to purchase_orders.id (CASCADE delete)' },
+  { column: 'description', type: 'varchar', nullable: 'NO', default: '-', description: 'Item description' },
+  { column: 'quantity', type: 'decimal(12,3)', nullable: 'NO', default: '-', description: 'Ordered quantity' },
+  { column: 'unit', type: 'varchar', nullable: 'NO', default: 'nos', description: 'Unit of measure' },
+  { column: 'rate', type: 'decimal(12,2)', nullable: 'NO', default: '-', description: 'Rate per unit' },
+  { column: 'amount', type: 'decimal(12,2)', nullable: 'NO', default: '-', description: 'Calculated amount (qty * rate)' },
+  { column: 'billedQuantity', type: 'decimal(12,3)', nullable: 'NO', default: '0', description: 'Quantity already billed against this item' },
+];
+
 const schemaList = [
   { table: 'salaries', columns: salarySchema, description: 'Salary grade master table' },
   { table: 'users', columns: usersSchema, description: 'All users' },
@@ -117,7 +162,10 @@ const schemaList = [
   { table: 'timesheet_rows', columns: timesheetRowSchema, description: 'One row per project (or per Holiday/Idle/Leave category) per week, with hours mapped to monHours..sunHours columns and an optional remark. A single day can have hours split across multiple project rows.' },
   { table: 'project_categories', columns: projectCategorySchema, description: 'Admin-editable project category master table' },
   { table: 'material_requirements', columns: materialRequirementsSchema, description: 'Material requirement requests raised by site engineers' },
+  { table: 'vendor_quotations', columns: vendorQuotationsSchema, description: 'Vendor quotation bills uploaded by purchase team for material enquiries' },
   { table: 'projects', columns: projectsSchema, description: 'New classification columns added to the existing projects table' },
+  { table: 'purchase_orders', columns: purchaseOrdersSchema, description: 'Purchase orders created from approved vendor quotations' },
+  { table: 'po_items', columns: poItemsSchema, description: 'Line items within a purchase order' },
 ];
 
 const colDefColumns: ColumnsType<ColumnDef> = [
@@ -313,6 +361,26 @@ INSERT INTO project_categories (name) VALUES
           )}
 
           {idx === 6 && (
+            <Typography.Paragraph>
+              <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+{`CREATE TABLE vendor_quotations (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "enquiryNo"     VARCHAR NOT NULL UNIQUE,
+  "projectId"     UUID NOT NULL REFERENCES projects(id),
+  "vendorId"      UUID NOT NULL REFERENCES vendors(id),
+  items           JSONB NOT NULL DEFAULT '[]',
+  "quotationUrl"  VARCHAR,
+  "quotationKey"  VARCHAR,
+  status          VARCHAR(50) NOT NULL DEFAULT 'draft',
+  "isDeleted"     BOOLEAN NOT NULL DEFAULT false,
+  "createdAt"     TIMESTAMP NOT NULL DEFAULT now(),
+  "updatedAt"     TIMESTAMP NOT NULL DEFAULT now()
+);`}
+              </pre>
+            </Typography.Paragraph>
+          )}
+
+          {idx === 7 && (
             <>
               <Typography.Paragraph className="mt-4 text-[var(--text-very-muted)] text-sm">
                 <strong>SQL ALTER reference (adding columns to the existing projects table):</strong>
@@ -344,6 +412,49 @@ CREATE TABLE project_resources (
                 </pre>
               </Typography.Paragraph>
             </>
+          )}
+
+          {idx === 8 && (
+            <Typography.Paragraph>
+              <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+{`CREATE TABLE purchase_orders (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "poNumber"      VARCHAR NOT NULL UNIQUE,
+  "vendorId"      UUID NOT NULL REFERENCES vendors(id),
+  "projectId"     UUID NOT NULL REFERENCES projects(id),
+  "paymentTerms"  TEXT,
+  status          VARCHAR(50) NOT NULL DEFAULT 'pending',
+  "totalAmount"   DECIMAL(12,2) NOT NULL DEFAULT 0,
+  "gstPercent"    DECIMAL(5,2),
+  "gstAmount"     DECIMAL(12,2),
+  "totalWithGst"  DECIMAL(12,2),
+  "billFileUrl"   VARCHAR,
+  "billFileKey"   VARCHAR,
+  "isDeleted"     BOOLEAN NOT NULL DEFAULT false,
+  "createdBy"     UUID REFERENCES users(id),
+  "updatedBy"     UUID REFERENCES users(id),
+  "createdAt"     TIMESTAMP NOT NULL DEFAULT now(),
+  "updatedAt"     TIMESTAMP NOT NULL DEFAULT now()
+);`}
+              </pre>
+            </Typography.Paragraph>
+          )}
+
+          {idx === 9 && (
+            <Typography.Paragraph>
+              <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+{`CREATE TABLE po_items (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "purchaseOrderId" UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  description       VARCHAR NOT NULL,
+  quantity          DECIMAL(12,3) NOT NULL,
+  unit              VARCHAR NOT NULL DEFAULT 'nos',
+  rate              DECIMAL(12,2) NOT NULL,
+  amount            DECIMAL(12,2) NOT NULL,
+  "billedQuantity"  DECIMAL(12,3) NOT NULL DEFAULT 0
+);`}
+              </pre>
+            </Typography.Paragraph>
           )}
         </Card>
       ))}

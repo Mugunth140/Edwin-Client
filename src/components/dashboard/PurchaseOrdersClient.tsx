@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, Popconfirm, Select, Space, Table, Typography, Upload, App, Progress } from 'antd';
+import { Button, Card, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Select, Space, Table, Typography, Upload, App, Progress } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { createPurchaseOrder, updatePurchaseOrderStatus, updatePurchaseOrder, deletePurchaseOrder, uploadBillFile } from '@/actions/purchase-orders';
 import { createItemDescription, deleteItemDescription } from '@/actions/item-descriptions';
-import type { Project, Vendor, PurchaseOrder, ItemDescription, PurchaseEnquiry } from '@/types/erp';
+import type { Project, Vendor, PurchaseOrder, ItemDescription, VendorQuotation } from '@/types/erp';
 import { LineItemsEditor } from './LineItemsEditor';
 import { useAuthStore } from '@/store/auth';
 import {
@@ -32,6 +32,7 @@ const poSchema = z.object({
   vendorId: z.string().min(1, 'Select a vendor'),
   projectId: z.string().min(1, 'Select a project'),
   paymentTerms: z.string().optional(),
+  gstPercent: z.number().min(0).optional(),
   items: z.array(itemSchema).min(1, 'Add at least one line item'),
 });
 
@@ -42,7 +43,7 @@ type PurchaseOrdersClientProps = {
   projects: Project[];
   vendors: Vendor[];
   itemDescriptions?: ItemDescription[];
-  purchaseEnquiries?: PurchaseEnquiry[];
+  vendorQuotations?: VendorQuotation[];
 };
 
 const STATUS_OPTIONS = [
@@ -52,7 +53,22 @@ const STATUS_OPTIONS = [
   { label: 'Rejected', value: 'rejected' },
 ];
 
-export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDescriptions, purchaseEnquiries }: PurchaseOrdersClientProps) {
+const peGroupByEnquiryNo = (vqs: VendorQuotation[]) => {
+  const map = new Map<string, VendorQuotation[]>();
+  for (const vq of vqs) {
+    if (vq.status === 'approved') {
+      const key = vq.enquiryNo;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(vq);
+    }
+  }
+  return Array.from(map.entries()).map(([enquiryNo, quotations]) => ({
+    enquiryNo,
+    quotations,
+  }));
+};
+
+export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDescriptions, vendorQuotations: vendorQuotationsProp }: PurchaseOrdersClientProps) {
   const user = useAuthStore((s) => s.user);
   const canUpdateStatus = user?.role === 'admin' || user?.role === 'accounts_manager';
   const [open, setOpen] = useState(false);
@@ -63,27 +79,56 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
 
-  const handleEnquirySelect = (enquiryId: string) => {
-    const enquiry = purchaseEnquiries?.find((e) => e.id === enquiryId);
-    if (!enquiry) return;
+  const vendorQuotations = vendorQuotationsProp || [];
+
+  const peGroups = useMemo(() => peGroupByEnquiryNo(vendorQuotations), [vendorQuotations]);
+
+  const handleEnquirySelect = (enquiryNo: string) => {
+    const group = peGroups.find((g) => g.enquiryNo === enquiryNo);
+    if (!group) return;
+    const first = group.quotations[0];
+    const projectId = first.projectId;
+    const vendorOptions = group.quotations.map((q) => ({
+      value: q.vendorId,
+      label: q.vendor?.name || q.vendorId,
+    }));
+    setPeVendorOptions(vendorOptions);
+    setSelectedPEGroup(group);
     reset({
-      vendorId: enquiry.vendorId ?? undefined,
-      projectId: enquiry.projectId,
+      vendorId: '',
+      projectId,
       paymentTerms: '',
-      items: enquiry.items.map((item) => ({
+      gstPercent: 0,
+      items: [],
+    });
+    message.success(`Loaded ${group.quotations.length} vendor(s) from PE ${enquiryNo}`);
+  };
+
+  const [selectedPEGroup, setSelectedPEGroup] = useState<{ enquiryNo: string; quotations: VendorQuotation[] } | null>(null);
+  const [peVendorOptions, setPeVendorOptions] = useState<{ value: string; label: string }[]>([]);
+
+  const handlePeVendorSelect = (vendorId: string) => {
+    const vq = selectedPEGroup?.quotations.find((q) => q.vendorId === vendorId);
+    if (!vq) return;
+    reset({
+      vendorId: vq.vendorId,
+      projectId: vq.projectId,
+      paymentTerms: '',
+      gstPercent: 0,
+      items: vq.items.map((item) => ({
         description: item.description,
-        quantity: item.quantity,
+        quantity: Number(item.quantity),
         unit: 'nos',
         rate: 0,
       })),
     });
-    message.success(`Loaded ${enquiry.items.length} items from enquiry ${enquiry.enquiryNo}`);
   };
 
   const {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<PoFormValues>({
     resolver: zodResolver(poSchema),
@@ -91,9 +136,19 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
       vendorId: '',
       projectId: '',
       paymentTerms: '',
+      gstPercent: 0,
       items: [{ description: '', quantity: 1, unit: 'nos', rate: 0 }],
     },
   });
+
+  const watchedItems = watch('items');
+  const watchedGstPercent = watch('gstPercent') || 0;
+  const basicAmount = useMemo(() => {
+    if (!watchedItems) return 0;
+    return watchedItems.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.rate || 0)), 0);
+  }, [watchedItems]);
+  const gstAmount = useMemo(() => Number((basicAmount * watchedGstPercent / 100).toFixed(2)), [basicAmount, watchedGstPercent]);
+  const totalWithGst = useMemo(() => Number((basicAmount + gstAmount).toFixed(2)), [basicAmount, gstAmount]);
 
   useEffect(() => {
     if (editingPo) {
@@ -101,6 +156,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         vendorId: editingPo.vendorId,
         projectId: editingPo.projectId,
         paymentTerms: editingPo.paymentTerms || '',
+        gstPercent: Number(editingPo.gstPercent) || 0,
         items: editingPo.items?.map((item) => ({
           description: item.description,
           quantity: Number(item.quantity),
@@ -188,11 +244,26 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         ),
     },
     {
-      title: 'Total',
+      title: 'Basic Amount',
       dataIndex: 'totalAmount',
       align: 'right',
       sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount),
       render: (value: number | string) => formatCurrency(value),
+    },
+    {
+      title: 'GST',
+      key: 'gst',
+      align: 'right',
+      width: 100,
+      render: (_, r) => (r.gstPercent ? `${Number(r.gstPercent)}%` : '-'),
+    },
+    {
+      title: 'Total w/ GST',
+      key: 'totalWithGst',
+      align: 'right',
+      width: 130,
+      sorter: (a, b) => Number(a.totalWithGst || 0) - Number(b.totalWithGst || 0),
+      render: (_, r) => formatCurrency(r.totalWithGst || r.totalAmount),
     },
     {
       title: 'PO',
@@ -291,6 +362,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         }
 
         const payload: Record<string, unknown> = { ...values };
+        if (values.gstPercent) payload.gstPercent = Number(values.gstPercent);
         if (billFileUrl) payload.billFileUrl = billFileUrl;
         if (billFileKey) payload.billFileKey = billFileKey;
 
@@ -323,10 +395,13 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
           onClick={() => {
             setEditingPo(null);
             setBillFile(null);
+            setSelectedPEGroup(null);
+            setPeVendorOptions([]);
             reset({
               vendorId: '',
               projectId: '',
               paymentTerms: '',
+              gstPercent: 0,
               items: [{ description: '', quantity: 1, unit: 'nos', rate: 0 }],
             });
             setOpen(true);
@@ -342,7 +417,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
           columns={columns}
           rowKey="id"
           size="middle"
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1300 }}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} POs` }}
         />
       </Card>
@@ -354,6 +429,8 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         onClose={() => {
           setOpen(false);
           setEditingPo(null);
+          setSelectedPEGroup(null);
+          setPeVendorOptions([]);
         }}
         destroyOnClose
         extra={
@@ -362,6 +439,8 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
               onClick={() => {
                 setOpen(false);
                 setEditingPo(null);
+                setSelectedPEGroup(null);
+                setPeVendorOptions([]);
               }}
             >
               Cancel
@@ -373,18 +452,30 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         }
       >
         <Form layout="vertical" onFinish={handleSubmit(submit)}>
-          {purchaseEnquiries && purchaseEnquiries.length > 0 && (
-            <Form.Item label="Import from Material Requirement" className="mb-6 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
-              <Select
-                showSearch
-                placeholder="Search enquiry to autofill..."
-                optionFilterProp="label"
-                onChange={handleEnquirySelect}
-                options={purchaseEnquiries.map((enq) => ({
-                  value: enq.id,
-                  label: `${enq.enquiryNo} - ${enq.vendor?.name || 'Unknown Vendor'}`,
-                }))}
-              />
+          {peGroups.length > 0 && !editingPo && (
+            <Form.Item label="Import from Purchase Enquiry" className="mb-6 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+              <Flex vertical gap={8}>
+                <Select
+                  showSearch
+                  placeholder="Search PE number..."
+                  optionFilterProp="label"
+                  onChange={handleEnquirySelect}
+                  value={selectedPEGroup?.enquiryNo || undefined}
+                  options={peGroups.map((g) => ({
+                    value: g.enquiryNo,
+                    label: `${g.enquiryNo} (${g.quotations.length} vendor${g.quotations.length > 1 ? 's' : ''})`,
+                  }))}
+                />
+                {peVendorOptions.length > 0 && (
+                  <Select
+                    showSearch
+                    placeholder="Select approved vendor..."
+                    optionFilterProp="label"
+                    onChange={handlePeVendorSelect}
+                    options={peVendorOptions}
+                  />
+                )}
+              </Flex>
             </Form.Item>
           )}
           <Controller
@@ -435,20 +526,50 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
             )}
           />
           <Flex justify="flex-end" className="mb-1">
-                        <Button type="link" size="small" icon={<EditOutlined />} onClick={() => setDescOpen(true)}>
-                          Manage item descriptions
-                        </Button>
-                      </Flex>
-                      <LineItemsEditor
-                        control={control}
-                        name="items"
-                        descriptionOptions={itemDescriptions?.map((d) => ({ label: d.name, value: d.name }))}
-                      />
+            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => setDescOpen(true)}>
+              Manage item descriptions
+            </Button>
+          </Flex>
+          <LineItemsEditor
+            control={control}
+            name="items"
+            descriptionOptions={itemDescriptions?.map((d) => ({ label: d.name, value: d.name }))}
+          />
           {errors.items?.message && (
             <Typography.Text type="danger" className="mt-2 block">
               {errors.items.message}
             </Typography.Text>
           )}
+
+          <div className="mt-4 rounded-lg border border-gray-200! p-4">
+            <Typography.Text strong className="block mb-3">GST & Totals</Typography.Text>
+            <Flex gap={16} wrap="wrap">
+              <Controller
+                control={control}
+                name="gstPercent"
+                render={({ field }) => (
+                  <Form.Item label="GST %" className="mb-0">
+                    <InputNumber
+                      {...field}
+                      min={0}
+                      max={100}
+                      addonAfter="%"
+                      onChange={(v) => field.onChange(v ?? 0)}
+                    />
+                  </Form.Item>
+                )}
+              />
+              <Form.Item label="Basic Amount" className="mb-0">
+                <Typography.Text strong className="text-lg">{formatCurrency(basicAmount)}</Typography.Text>
+              </Form.Item>
+              <Form.Item label="GST Amount" className="mb-0">
+                <Typography.Text className="text-lg">{formatCurrency(gstAmount)}</Typography.Text>
+              </Form.Item>
+              <Form.Item label="Total with GST" className="mb-0">
+                <Typography.Text strong className="text-lg">{formatCurrency(totalWithGst)}</Typography.Text>
+              </Form.Item>
+            </Flex>
+          </div>
 
           <Typography.Text strong className="mt-4 block">PO</Typography.Text>
           <Upload

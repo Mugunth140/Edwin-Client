@@ -263,6 +263,9 @@ export type PurchaseOrder = {
   paymentTerms?: string | null;
   status: PurchaseOrderStatus;
   totalAmount: number | string;
+  gstPercent?: number | null;
+  gstAmount?: number | null;
+  totalWithGst?: number | null;
   items?: LineItem[];
   billFileUrl?: string | null;
   billFileKey?: string | null;
@@ -517,6 +520,22 @@ export type Salary = {
   bookingCost: number;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type VendorQuotation = {
+  id: string;
+  enquiryNo: string;
+  projectId: string;
+  vendorId: string;
+  project?: Project;
+  vendor?: Vendor;
+  materialRequirementId?: string | null;
+  materialRequirement?: { id: string; enquiryNo: string; project?: Project; items?: { description: string; quantity: number }[] };
+  items: { description: string; quantity: number }[];
+  quotationUrl?: string | null;
+  quotationKey?: string | null;
+  status: string;
+  createdAt?: string;
 };
 
 export type ProjectDetails = {
