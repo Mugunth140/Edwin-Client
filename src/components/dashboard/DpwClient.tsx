@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect } from 'react';
 import { App, Button, Card, Flex, Select, Tag, Typography, Table, Space, Drawer } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { deleteDailyLabourReport, updateDailyLabourReportStatus } from '@/actions/daily-labour';
+import { deleteDailyLabourReport } from '@/actions/daily-labour';
 import { DpwForm } from './DpwForm';
 import type { DailyLabourReport, Project, Trade, DailyWorker } from '@/types/erp';
 import { cardClassName, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
@@ -23,13 +23,6 @@ type Props = {
   showActions?: boolean;
 };
 
-const STATUS_OPTIONS = [
-  { label: 'Pending', value: 'pending' },
-  { label: 'Admin Approved', value: 'admin_approved' },
-  { label: 'Approved', value: 'approved' },
-  { label: 'Rejected', value: 'rejected' },
-];
-
 export function DpwClient({ 
   reports, 
   projects, 
@@ -41,7 +34,6 @@ export function DpwClient({
 }: Props) {
   const router = useRouter();
   const { message, modal } = App.useApp();
-  const [isPending, startTransition] = useTransition();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [open, setOpen] = useState(defaultOpen);
   const [viewOpen, setViewOpen] = useState(false);
@@ -164,30 +156,13 @@ export function DpwClient({
     },
     {
       title: 'Status',
+      dataIndex: 'status',
       key: 'status',
-      width: 140,
-      render: (_, record) => (
-        <Select
-          defaultValue={record.status || 'pending'}
-          size="small"
-          variant="borderless"
-          className="w-full"
-          onChange={(newStatus) => {
-            startTransition(async () => {
-              try {
-                await updateDailyLabourReportStatus(record.id, newStatus);
-                message.success('Status updated');
-                if (onRefresh) onRefresh();
-              } catch (error) {
-                message.error(error instanceof Error ? error.message : 'Failed to update status');
-              }
-            });
-          }}
-          options={STATUS_OPTIONS}
-          popupMatchSelectWidth={false}
-          disabled={isPending}
-        />
-      ),
+      width: 130,
+      render: (status) => {
+        const colorMap = { pending: 'default', admin_approved: 'processing', approved: 'success', rejected: 'error' };
+        return <Tag color={colorMap[status] || 'default'}>{status ? status.replace('_', ' ') : 'pending'}</Tag>;
+      },
     },
   ];
 
