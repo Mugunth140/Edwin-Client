@@ -229,12 +229,7 @@ interface Props {
 }
 
 export function SubcontractWorkOrderPdf({ workOrder }: Props) {
-  const qty = Number(workOrder.quantity) || 0;
-  const rate = Number(workOrder.rate) || 0;
-  const amt = Number(workOrder.amount) || (qty * rate);
-  const gstPct = Number(workOrder.gstPercentage) || 0;
-  const gst = Number(workOrder.gstAmount) || ((amt * gstPct) / 100);
-  const total = Number(workOrder.totalAmount) || (amt + gst);
+  const description = workOrder.description || workOrder.workCategory?.name || 'Subcontracted Work';
 
   return (
     <Document>
@@ -288,39 +283,17 @@ export function SubcontractWorkOrderPdf({ workOrder }: Props) {
           </View>
         </View>
 
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.th, styles.colDesc]}>Description of Work</Text>
-            <Text style={[styles.th, styles.colQty]}>Qty ({workOrder.unit})</Text>
-            <Text style={[styles.th, styles.colRate]}>Rate (₹)</Text>
-            <Text style={[styles.th, styles.colAmt]}>Amount (₹)</Text>
+        <View style={styles.detailsTable}>
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailsLabel}>Description of Work</Text>
+            <Text style={styles.detailsValue}>{description}</Text>
           </View>
-
-          <View style={styles.tableRow} wrap={false}>
-            <Text style={[styles.td, styles.colDesc]}>
-              {workOrder.description || workOrder.workCategory?.name || 'Subcontracted Work'}
-            </Text>
-            <Text style={[styles.td, styles.colQty]}>{formatINR(qty)}</Text>
-            <Text style={[styles.td, styles.colRate]}>{formatINR(rate)}</Text>
-            <Text style={[styles.td, styles.colAmt, { fontFamily: 'Helvetica-Bold' }]}>{formatINR(amt)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.totalsContainer}>
-          <View style={styles.totalsBox}>
-            <View style={styles.totalRow}>
-              <Text style={styles.td}>Subtotal</Text>
-              <Text style={styles.td}>{formatINR(amt)}</Text>
+          {workOrder.workorderUrl && (
+            <View style={styles.detailsRow}>
+              <Text style={styles.detailsLabel}>Work Order File</Text>
+              <Text style={styles.detailsValue}>{workOrder.workorderKey || 'Attached'}</Text>
             </View>
-            <View style={styles.totalRow}>
-              <Text style={styles.td}>GST ({gstPct}%)</Text>
-              <Text style={styles.td}>{formatINR(gst)}</Text>
-            </View>
-            <View style={styles.grandTotalRow}>
-              <Text style={styles.grandTotalLabel}>Total Amount</Text>
-              <Text style={styles.grandTotalValue}>INR {formatINR(total)}</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {workOrder.notes && (

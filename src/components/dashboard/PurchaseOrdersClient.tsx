@@ -67,7 +67,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     const enquiry = purchaseEnquiries?.find((e) => e.id === enquiryId);
     if (!enquiry) return;
     reset({
-      vendorId: enquiry.vendorId,
+      vendorId: enquiry.vendorId ?? undefined,
       projectId: enquiry.projectId,
       paymentTerms: '',
       items: enquiry.items.map((item) => ({
@@ -195,13 +195,13 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
       render: (value: number | string) => formatCurrency(value),
     },
     {
-      title: 'Quotation Bill',
+      title: 'PO',
       key: 'billFile',
       width: 120,
       render: (_, record) =>
         record.billFileUrl ? (
           <Button type="link" size="small" icon={<FilePdfOutlined />} href={record.billFileUrl} target="_blank">
-            View Bill
+            View PO
           </Button>
         ) : (
           <Typography.Text type="secondary">—</Typography.Text>
@@ -374,7 +374,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
       >
         <Form layout="vertical" onFinish={handleSubmit(submit)}>
           {purchaseEnquiries && purchaseEnquiries.length > 0 && (
-            <Form.Item label="Import from Purchase Enquiry" className="mb-6 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+            <Form.Item label="Import from Material Requirement" className="mb-6 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
               <Select
                 showSearch
                 placeholder="Search enquiry to autofill..."
@@ -450,7 +450,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
             </Typography.Text>
           )}
 
-          <Typography.Text strong className="mt-4 block">Quotation Bill</Typography.Text>
+          <Typography.Text strong className="mt-4 block">PO</Typography.Text>
           <Upload
             accept=".pdf,.jpg,.jpeg,.png"
             showUploadList={false}
@@ -458,7 +458,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
             onRemove={() => setBillFile(null)}
           >
             <Button icon={<FilePdfOutlined />}>
-              {billFile ? billFile.name : (editingPo?.billFileUrl ? 'Replace Bill' : 'Upload Bill')}
+              {billFile ? billFile.name : (editingPo?.billFileUrl ? 'Replace PO' : 'Upload PO')}
             </Button>
           </Upload>
           {billFile && (
@@ -466,7 +466,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
           )}
           {editingPo?.billFileUrl && !billFile && (
             <Button type="link" size="small" href={editingPo.billFileUrl} target="_blank">
-              View uploaded bill
+              View uploaded PO
             </Button>
           )}
         </Form>

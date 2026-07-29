@@ -1,13 +1,15 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { App, Button, Card, Col, DatePicker, Flex, Input, Row, Select, Statistic, Table, Tabs, Tag, Typography } from 'antd';
+import { App, Button, Card, Col, DatePicker, Flex, Input, Row, Select, Space, Statistic, Table, Tabs, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { CalendarOutlined, CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, EyeOutlined, FileDoneOutlined, FilePdfOutlined, FilterOutlined, SearchOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
+import {
+  CalendarOutlined, CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, EyeOutlined, FileDoneOutlined, FilePdfOutlined, FileExcelOutlined, FileTextOutlined, FileUnknownOutlined, DownloadOutlined, FilterOutlined, SearchOutlined, TeamOutlined, WalletOutlined
+} from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { SubcontractWorkOrderPdf } from './SubcontractWorkOrderPdf';
-import { getApiBaseUrl } from '@/lib/api-url';
+import { getApiBaseUrl, getApiOrigin } from '@/lib/api-url';
 import dayjs from 'dayjs';
 import { updateBillStatus } from '@/actions/invoices';
 import { updateExpenseStatus } from '@/actions/expenses';
@@ -332,10 +334,10 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
     { title: 'Project', key: 'project', render: (_, record) => record.project?.name || '-' },
     { title: 'Amount', dataIndex: 'totalAmount', align: 'right', render: (value) => `₹${Number(value).toLocaleString()}` },
     {
-      title: 'Quotation Bill', key: 'billFile', width: 120,
+      title: 'PO', key: 'billFile', width: 120,
       render: (_, record) =>
         record.billFileUrl ? (
-          <Button type="link" size="small" icon={<FilePdfOutlined />} href={record.billFileUrl} target="_blank">View Bill</Button>
+          <Button type="link" size="small" icon={<FilePdfOutlined />} href={record.billFileUrl} target="_blank">View PO</Button>
         ) : <Typography.Text type="secondary">—</Typography.Text>,
     },
     { title: 'Created At', dataIndex: 'createdAt', render: formatDate },
@@ -417,18 +419,35 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
     },
   ];
 
+  const getFileIcon = (filename: string) => {
+    const ext = filename?.toLowerCase() || '';
+    if (ext.endsWith('.pdf')) return <FilePdfOutlined className="text-red-500" />;
+    if (ext.endsWith('.xls') || ext.endsWith('.xlsx')) return <FileExcelOutlined className="text-green-500" />;
+    if (ext.endsWith('.doc') || ext.endsWith('.docx')) return <FileTextOutlined className="text-blue-500" />;
+    return <FileUnknownOutlined className="text-gray-500" />;
+  };
+
   const swoColumns: ColumnsType<SubcontractWorkOrder> = [
     { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
     { title: 'WO Number', dataIndex: 'woNumber', width: 120, render: (value) => <span className="whitespace-nowrap">{value}</span> },
     { title: 'Subcontractor', key: 'subcontractor', width: 160, render: (_, record) => <span className="whitespace-nowrap">{record.subcontractor?.name || '-'}</span> },
     { title: 'Project', key: 'project', width: 160, render: (_, record) => <span className="whitespace-nowrap">{record.project?.name || '-'}</span> },
     { title: 'Description of Work', dataIndex: 'description', ellipsis: true, width: 200, render: (value) => <span className="whitespace-nowrap">{value || '-'}</span> },
-    { title: 'Qty', dataIndex: 'quantity', align: 'right', width: 80, render: (value) => <span className="whitespace-nowrap">{Number(value).toLocaleString()}</span> },
-    { title: 'Unit', dataIndex: 'unit', width: 70, render: (value) => <span className="whitespace-nowrap">{value}</span> },
-    { title: 'Rate', dataIndex: 'rate', align: 'right', width: 110, render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span> },
-    { title: 'Basic Amt', dataIndex: 'amount', align: 'right', width: 120, render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span> },
-    { title: 'GST %', dataIndex: 'gstPercentage', align: 'right', width: 70, render: (value) => <span className="whitespace-nowrap">{value}%</span> },
-    { title: 'Total', dataIndex: 'totalAmount', align: 'right', width: 120, render: (value) => <span className="whitespace-nowrap">₹{Number(value).toLocaleString()}</span> },
+    {
+      title: 'Work Order', key: 'workorder', width: 120,
+      render: (_, record) =>
+        record.workorderUrl ? (
+          <Space>
+            {getFileIcon(record.workorderKey || '')}
+            <Tooltip title="View">
+              <Button type="link" size="small" icon={<FilePdfOutlined />} href={`${getApiOrigin()}${record.workorderUrl}`} target="_blank" />
+            </Tooltip>
+            <Tooltip title="Download">
+              <Button type="link" size="small" icon={<DownloadOutlined />} href={`${getApiOrigin()}${record.workorderUrl}`} target="_blank" download />
+            </Tooltip>
+          </Space>
+        ) : <Typography.Text type="secondary">—</Typography.Text>,
+    },
     {
       title: 'PDF', key: 'pdf', width: 60,
       render: (_, record) => (

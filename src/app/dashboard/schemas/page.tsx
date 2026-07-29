@@ -82,6 +82,20 @@ const projectCategorySchema: ColumnDef[] = [
   { column: 'updatedAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record update timestamp' },
 ];
 
+const materialRequirementsSchema: ColumnDef[] = [
+  { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
+  { column: 'enquiryNo', type: 'character varying', nullable: 'NO', default: '-', description: 'Unique material requirement number' },
+  { column: 'vendorId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to vendors.id' },
+  { column: 'projectId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to projects.id' },
+  { column: 'notes', type: 'text', nullable: 'YES', default: '-', description: 'Additional notes' },
+  { column: 'items', type: 'jsonb', nullable: 'NO', default: '[]', description: 'Array of { description, quantity }' },
+  { column: 'status', type: 'varchar(50)', nullable: 'NO', default: 'draft', description: 'draft / pending / approved / rejected' },
+  { column: 'isDeleted', type: 'boolean', nullable: 'NO', default: 'false', description: 'Soft delete flag' },
+  { column: 'createdBy', type: 'uuid', nullable: 'YES', default: '-', description: 'FK to users.id (site engineer who created it)' },
+  { column: 'createdAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record creation timestamp' },
+  { column: 'updatedAt', type: 'timestamp', nullable: 'NO', default: 'now()', description: 'Record update timestamp' },
+];
+
 const projectsSchema: ColumnDef[] = [
   { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
   { column: 'name', type: 'character varying', nullable: 'NO', default: '-', description: 'Project name' },
@@ -102,6 +116,7 @@ const schemaList = [
   { table: 'weekly_timesheets', columns: weeklyTimesheetSchema, description: 'Weekly timesheet header (one per engineer per week)' },
   { table: 'timesheet_rows', columns: timesheetRowSchema, description: 'One row per project (or per Holiday/Idle/Leave category) per week, with hours mapped to monHours..sunHours columns and an optional remark. A single day can have hours split across multiple project rows.' },
   { table: 'project_categories', columns: projectCategorySchema, description: 'Admin-editable project category master table' },
+  { table: 'material_requirements', columns: materialRequirementsSchema, description: 'Material requirement requests raised by site engineers' },
   { table: 'projects', columns: projectsSchema, description: 'New classification columns added to the existing projects table' },
 ];
 
@@ -278,6 +293,26 @@ INSERT INTO project_categories (name) VALUES
           )}
 
           {idx === 5 && (
+            <Typography.Paragraph>
+              <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+{`CREATE TABLE material_requirements (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "enquiryNo" VARCHAR NOT NULL UNIQUE,
+  "vendorId"  UUID NOT NULL REFERENCES vendors(id),
+  "projectId" UUID NOT NULL REFERENCES projects(id),
+  notes       TEXT,
+  items       JSONB NOT NULL DEFAULT '[]',
+  status      VARCHAR(50) NOT NULL DEFAULT 'draft',
+  "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+  "createdBy" UUID REFERENCES users(id),
+  "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMP NOT NULL DEFAULT now()
+);`}
+              </pre>
+            </Typography.Paragraph>
+          )}
+
+          {idx === 6 && (
             <>
               <Typography.Paragraph className="mt-4 text-[var(--text-very-muted)] text-sm">
                 <strong>SQL ALTER reference (adding columns to the existing projects table):</strong>

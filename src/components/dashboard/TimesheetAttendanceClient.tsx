@@ -232,7 +232,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     <div>
       <Flex justify="space-between" align="center" className={pageHeaderClassName}>
         <Typography.Title level={3} className={pageTitleClassName}>
-          <ClockCircleOutlined className={titleIconClassName} /> Timesheet
+          <ClockCircleOutlined style={{ marginBottom: 24 }} className={titleIconClassName} /> Timesheet
         </Typography.Title>
       </Flex>
 

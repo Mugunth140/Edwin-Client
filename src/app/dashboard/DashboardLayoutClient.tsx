@@ -53,7 +53,7 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
     items: [
       { key: '/dashboard', icon: <AppstoreOutlined />, label: 'Dashboard', allowedRoles: ['admin', 'accounts_manager', 'site_engineer', 'purchase_team'] },
       { key: '/dashboard/new', icon: <FormOutlined />, label: 'Daily Entry List', allowedRoles: ['site_engineer'] },
-      { key: '/dashboard/dpw', icon: <CalendarOutlined />, label: 'Attendance (DPW)', allowedRoles: ['site_engineer'] },
+
       { key: '/dashboard/expenses/new', icon: <WalletOutlined />, label: 'Expense', allowedRoles: ['site_engineer'] },
       { key: '/dashboard/timesheet-attendance', icon: <CalendarOutlined />, label: 'Timesheet', allowedRoles: ['site_engineer', 'purchase_team'] },
       { key: '/dashboard/projects', icon: <FolderOpenOutlined />, label: 'Projects', allowedRoles: ['admin'] },
@@ -63,7 +63,9 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
       { key: '/dashboard/accounts-managers', icon: <BankOutlined />, label: 'Accounts Managers', allowedRoles: ['admin'] },
       { key: '/dashboard/purchase-team', icon: <TeamOutlined />, label: 'Purchase Team', allowedRoles: ['admin'] },
       { key: '/dashboard/subcontract-work-orders', icon: <FileTextOutlined />, label: 'Subcontract WO', allowedRoles: ['purchase_team'] },
-      { key: '/dashboard/purchase-enquiry', icon: <FileSearchOutlined />, label: 'Purchase Enquiry', allowedRoles: ['purchase_team'] },
+      { key: '/dashboard/material-requirement', icon: <FileSearchOutlined />, label: 'Material Requirement', allowedRoles: ['site_engineer'] },
+      { key: '/dashboard/report', icon: <FileTextOutlined />, label: 'My Report', allowedRoles: ['site_engineer'] },
+      { key: '/dashboard/material-requirement', icon: <FileSearchOutlined />, label: 'Material Requirement Request', allowedRoles: ['purchase_team'] },
       { key: '/dashboard/purchase-orders', icon: <FileProtectOutlined />, label: 'Purchase Orders', allowedRoles: ['purchase_team'] },
       // { key: '/dashboard/dpr', icon: <CalendarOutlined />, label: 'Daily Reports (DPR)', allowedRoles: ['admin'] },
       // { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings', allowedRoles: ['admin'] },

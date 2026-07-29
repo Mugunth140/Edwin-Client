@@ -13,6 +13,26 @@ async function getAuthHeaders() {
   };
 }
 
+export async function uploadWorkOrderFile(formData: FormData) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value;
+
+  const res = await fetch(`${getApiBaseUrl()}/subcontract-work-orders/upload`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Failed to upload file' }));
+    throw new Error(error.message || 'Failed to upload file');
+  }
+
+  return res.json();
+}
+
 export async function createSubcontractWorkOrder(data: Record<string, unknown>) {
   const headers = await getAuthHeaders();
   const res = await fetch(`${getApiBaseUrl()}/subcontract-work-orders`, {

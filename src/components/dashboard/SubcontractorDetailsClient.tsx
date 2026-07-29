@@ -2,7 +2,7 @@
 
 import { Card, Descriptions, Divider, Flex, Space, Table, Tag, Typography, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowLeftOutlined, FileTextOutlined, TeamOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, FileTextOutlined, FilePdfOutlined, TeamOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import type { Subcontractor, SubcontractWorkOrder } from '@/types/erp';
@@ -14,6 +14,7 @@ import {
   pageTitleClassName,
   titleIconClassName,
 } from './ui';
+import { getApiOrigin } from '@/lib/api-url';
 
 type SubcontractorDetailsClientProps = {
   subcontractor: Subcontractor;
@@ -41,15 +42,14 @@ export function SubcontractorDetailsClient({ subcontractor, workOrders }: Subcon
       key: 'category',
     },
     {
-      title: 'Quantity',
-      key: 'qty',
-      render: (_, record) => `${record.quantity} ${record.unit}`,
-    },
-    {
-      title: 'Rate',
-      dataIndex: 'rate',
-      key: 'rate',
-      render: (val) => formatCurrency(val),
+      title: 'Work Order',
+      key: 'workorder',
+      render: (_, record) =>
+        record.workorderUrl ? (
+          <Typography.Link href={`${getApiOrigin()}${record.workorderUrl}`} target="_blank">
+            <FilePdfOutlined className="text-red-500" /> View File
+          </Typography.Link>
+        ) : '-',
     },
     {
       title: 'Total Amount',

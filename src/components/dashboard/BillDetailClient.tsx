@@ -67,7 +67,7 @@ export function BillDetailClient({ bill }: Props) {
                   <Tag color="blue">PO Items</Tag>
                   {po.billFileUrl && (
                     <Button type="link" size="small" icon={<FilePdfOutlined />} href={po.billFileUrl} target="_blank">
-                      Quotation Bill
+                      PO
                     </Button>
                   )}
                 </Flex>

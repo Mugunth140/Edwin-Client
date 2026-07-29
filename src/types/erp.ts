@@ -128,13 +128,12 @@ export type SubcontractWorkOrder = {
   subcontractor?: Subcontractor;
   workCategory?: WorkCategory;
   description?: string | null;
-  quantity: number | string;
-  unit: string;
-  rate: number | string;
   amount: number | string;
   gstPercentage: number | string;
   gstAmount: number | string;
   totalAmount: number | string;
+  workorderUrl?: string | null;
+  workorderKey?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   notes?: string | null;
@@ -242,10 +241,12 @@ export type EnquiryItem = {
 export type PurchaseEnquiry = {
   id: string;
   enquiryNo: string;
-  vendorId: string;
+  vendorId?: string | null;
   projectId: string;
-  vendor?: Vendor;
+  vendor?: Vendor | null;
   project?: Project;
+  createdBy?: string;
+  creator?: { id: string; name: string } | null;
   notes?: string | null;
   items: EnquiryItem[];
   status: string;
@@ -309,6 +310,25 @@ export type DashboardData = {
     headcount: number;
   }>;
   criticalActions: unknown[];
+  materialRequirementCounts?: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+  recentMaterialRequirements?: Array<{
+    id: string;
+    enquiryNo: string;
+    projectName: string;
+    status: string;
+    createdAt: string;
+  }>;
+  timesheetCounts?: {
+    approved: number;
+    submitted: number;
+    draft: number;
+    total: number;
+  };
 };
 
 export type AccountsDashboardData = {

@@ -142,7 +142,7 @@ export function PurchaseEnquiryPdf({ enquiry }: Props) {
             </View>
           </View>
           <View style={styles.docTitleBlock}>
-            <Text style={styles.docTitle}>Purchase Enquiry</Text>
+            <Text style={styles.docTitle}>Material Requirement</Text>
             <View style={styles.docMeta}>
               <Text>
                 <Text style={styles.docMetaLabel}>Enquiry No: </Text>
@@ -166,16 +166,6 @@ export function PurchaseEnquiryPdf({ enquiry }: Props) {
         </View>
 
         <View style={styles.mainGrid}>
-          <View style={styles.vendorSection}>
-            <Text style={styles.sectionLabel}>Vendor</Text>
-            <Text style={styles.vendorName}>{enquiry.vendor?.name || 'N/A'}</Text>
-            <Text style={styles.vendorText}>{enquiry.vendor?.address || ''}</Text>
-            {enquiry.vendor?.gstNumber && (
-              <Text style={[styles.vendorText, { marginTop: 4, fontFamily: 'Helvetica-Bold' }]}>
-                GSTIN: {enquiry.vendor.gstNumber}
-              </Text>
-            )}
-          </View>
           <View style={styles.projectSection}>
             <Text style={styles.sectionLabel}>Enquiry Info</Text>
             <Text style={[styles.vendorText, { marginTop: 4 }]}>Total Items: {items.length}</Text>

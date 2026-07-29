@@ -9,6 +9,7 @@ import {
   Flex,
   Form,
   Input,
+  InputNumber,
   Modal,
   Popconfirm,
   Space,
@@ -17,8 +18,8 @@ import {
   App,
   Select,
   DatePicker,
-  InputNumber,
-  Tag,
+  Upload,
+  Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -27,15 +28,20 @@ import {
   FilePdfOutlined,
   PlusOutlined,
   FileTextOutlined,
+  DownloadOutlined,
+  FileExcelOutlined,
+  FileUnknownOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import dayjs from 'dayjs';
 import {
   createSubcontractWorkOrder,
   deleteSubcontractWorkOrder,
   updateSubcontractWorkOrder,
+  uploadWorkOrderFile,
 } from '@/actions/subcontract-work-orders';
 import type { SubcontractWorkOrder, Project, Subcontractor, WorkCategory } from '@/types/erp';
 import { SubcontractWorkOrderPdf } from './SubcontractWorkOrderPdf';
@@ -46,6 +52,7 @@ import {
   pageTitleClassName,
   titleIconClassName,
 } from './ui';
+import { getApiOrigin } from '@/lib/api-url';
 
 const swoSchema = z.object({
   woNumber: z.string().min(2, 'WO number is required'),
@@ -53,9 +60,6 @@ const swoSchema = z.object({
   subcontractorId: z.string().min(1, 'Subcontractor is required'),
   workCategoryId: z.string().min(1, 'Work category is required'),
   description: z.string().optional(),
-  quantity: z.number().min(0.01, 'Quantity must be greater than 0'),
-  unit: z.string().min(1, 'Unit is required'),
-  rate: z.number().min(0.01, 'Rate must be greater than 0'),
   gstPercentage: z.number().min(0, 'GST % cannot be negative'),
   startDate: z.any().optional(),
   endDate: z.any().optional(),
@@ -78,6 +82,14 @@ const STATUS_OPTIONS = [
   { label: 'Rejected', value: 'rejected' },
 ];
 
+const getFileIcon = (filename: string) => {
+  const ext = filename?.toLowerCase() || '';
+  if (ext.endsWith('.pdf')) return <FilePdfOutlined className="text-red-500" />;
+  if (ext.endsWith('.xls') || ext.endsWith('.xlsx')) return <FileExcelOutlined className="text-green-500" />;
+  if (ext.endsWith('.doc') || ext.endsWith('.docx')) return <FileTextOutlined className="text-blue-500" />;
+  return <FileUnknownOutlined className="text-gray-500" />;
+};
+
 export function SubcontractWorkOrdersClient({
   workOrders,
   projects,
@@ -90,6 +102,11 @@ export function SubcontractWorkOrdersClient({
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
   const [isClient, setIsClient] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<{
+    workorderUrl: string;
+    workorderKey: string;
+  } | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -100,7 +117,6 @@ export function SubcontractWorkOrdersClient({
     handleSubmit,
     reset,
     setValue,
-    watch,
   } = useForm<SwoFormValues>({
     resolver: zodResolver(swoSchema),
     defaultValues: {
@@ -109,20 +125,13 @@ export function SubcontractWorkOrdersClient({
       subcontractorId: '',
       workCategoryId: '',
       description: '',
-      quantity: 0,
-      unit: 'sqft',
-      rate: 0,
       gstPercentage: 18,
       notes: '',
     },
   });
 
-  const selectedSubcontractorId = watch('subcontractorId');
-  const quantity = watch('quantity');
-  const rate = watch('rate');
-  const gstPercentage = watch('gstPercentage');
+  const selectedSubcontractorId = useWatch({ control, name: 'subcontractorId' });
 
-  // Autofill Work Category when Subcontractor is selected
   useEffect(() => {
     if (selectedSubcontractorId && !editingSwo) {
       const sub = subcontractors.find((s) => s.id === selectedSubcontractorId);
@@ -132,10 +141,6 @@ export function SubcontractWorkOrdersClient({
     }
   }, [selectedSubcontractorId, subcontractors, setValue, editingSwo]);
 
-  const amount = (quantity || 0) * (rate || 0);
-  const gstAmount = (amount * (gstPercentage || 0)) / 100;
-  const totalAmount = amount + gstAmount;
-
   useEffect(() => {
     if (editingSwo) {
       setValue('woNumber', editingSwo.woNumber);
@@ -143,13 +148,16 @@ export function SubcontractWorkOrdersClient({
       setValue('subcontractorId', editingSwo.subcontractorId);
       setValue('workCategoryId', editingSwo.workCategoryId);
       setValue('description', editingSwo.description || '');
-      setValue('quantity', Number(editingSwo.quantity));
-      setValue('unit', editingSwo.unit);
-      setValue('rate', Number(editingSwo.rate));
       setValue('gstPercentage', Number(editingSwo.gstPercentage));
       setValue('notes', editingSwo.notes || '');
       setValue('startDate', editingSwo.startDate ? dayjs(editingSwo.startDate) : undefined);
       setValue('endDate', editingSwo.endDate ? dayjs(editingSwo.endDate) : undefined);
+      if (editingSwo.workorderUrl) {
+        setUploadedFile({
+          workorderUrl: editingSwo.workorderUrl,
+          workorderKey: editingSwo.workorderKey || '',
+        });
+      }
     } else {
       reset({
         woNumber: `SWO-${dayjs().format('YYYY')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
@@ -157,12 +165,10 @@ export function SubcontractWorkOrdersClient({
         subcontractorId: '',
         workCategoryId: '',
         description: '',
-        quantity: 0,
-        unit: 'sqft',
-        rate: 0,
         gstPercentage: 18,
         notes: '',
       });
+      setUploadedFile(null);
     }
   }, [editingSwo, setValue, reset]);
 
@@ -180,6 +186,22 @@ export function SubcontractWorkOrdersClient({
         message.error(error instanceof Error ? error.message : 'Failed to delete work order');
       }
     });
+  };
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('workorder', file);
+      const result = await uploadWorkOrderFile(formData);
+      setUploadedFile(result);
+      message.success('File uploaded successfully');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
+    return false;
   };
 
   const columns: ColumnsType<SubcontractWorkOrder> = [
@@ -212,11 +234,36 @@ export function SubcontractWorkOrdersClient({
       render: (val) => val || '-',
     },
     {
-      title: 'Total Amount',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      align: 'right',
-      render: (value) => `₹${Number(value).toLocaleString()}`,
+      title: 'Work Order',
+      key: 'workorder',
+      width: 120,
+      render: (_, record) =>
+        record.workorderUrl ? (
+          <Space>
+            {getFileIcon(record.workorderKey || '')}
+            <Tooltip title="View">
+              <Button
+                type="link"
+                size="small"
+                icon={<FilePdfOutlined />}
+                href={`${getApiOrigin()}${record.workorderUrl}`}
+                target="_blank"
+              />
+            </Tooltip>
+            <Tooltip title="Download">
+              <Button
+                type="link"
+                size="small"
+                icon={<DownloadOutlined />}
+                href={`${getApiOrigin()}${record.workorderUrl}`}
+                target="_blank"
+                download
+              />
+            </Tooltip>
+          </Space>
+        ) : (
+          <Typography.Text type="secondary">—</Typography.Text>
+        ),
     },
     {
       title: 'Status',
@@ -275,23 +322,29 @@ export function SubcontractWorkOrdersClient({
   ];
 
   const submit = (values: SwoFormValues) => {
-    const formattedValues = {
-      ...values,
-      startDate: values.startDate ? dayjs(values.startDate).format('YYYY-MM-DD') : undefined,
-      endDate: values.endDate ? dayjs(values.endDate).format('YYYY-MM-DD') : undefined,
-    };
-
     startTransition(async () => {
       try {
+        const payload: Record<string, unknown> = {
+          ...values,
+          startDate: values.startDate ? dayjs(values.startDate).format('YYYY-MM-DD') : undefined,
+          endDate: values.endDate ? dayjs(values.endDate).format('YYYY-MM-DD') : undefined,
+        };
+
+        if (uploadedFile) {
+          payload.workorderUrl = uploadedFile.workorderUrl;
+          payload.workorderKey = uploadedFile.workorderKey;
+        }
+
         if (editingSwo) {
-          await updateSubcontractWorkOrder(editingSwo.id, formattedValues);
+          await updateSubcontractWorkOrder(editingSwo.id, payload);
           message.success('Work order updated');
         } else {
-          await createSubcontractWorkOrder(formattedValues);
+          await createSubcontractWorkOrder(payload);
           message.success('Work order created');
         }
         setOpen(false);
         setEditingSwo(null);
+        setUploadedFile(null);
       } catch (error) {
         message.error(error instanceof Error ? error.message : 'Failed to save');
       }
@@ -315,7 +368,7 @@ export function SubcontractWorkOrdersClient({
           columns={columns}
           rowKey="id"
           size="middle"
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1400 }}
           pagination={{ pageSize: 10 }}
         />
       </Card>
@@ -427,53 +480,6 @@ export function SubcontractWorkOrdersClient({
           <Flex gap={16}>
             <Controller
               control={control}
-              name="quantity"
-              render={({ field, fieldState }) => (
-                <Form.Item
-                  label="Quantity"
-                  required
-                  className="flex-1"
-                  validateStatus={fieldState.error ? 'error' : undefined}
-                  help={fieldState.error?.message}
-                >
-                  <InputNumber {...field} style={{ width: '100%' }} placeholder="e.g. 1000" />
-                </Form.Item>
-              )}
-            />
-            <Controller
-              control={control}
-              name="unit"
-              render={({ field }) => (
-                <Form.Item label="Unit" className="w-32">
-                  <Input {...field} placeholder="sqft" />
-                </Form.Item>
-              )}
-            />
-            <Controller
-              control={control}
-              name="rate"
-              render={({ field, fieldState }) => (
-                <Form.Item
-                  label="Rate"
-                  required
-                  className="flex-1"
-                  validateStatus={fieldState.error ? 'error' : undefined}
-                  help={fieldState.error?.message}
-                >
-                  <InputNumber
-                    {...field}
-                    style={{ width: '100%' }}
-                    formatter={(v) => `₹ ${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={(v) => v!.replace(/₹\s?|(,*)/g, '') as unknown as number}
-                  />
-                </Form.Item>
-              )}
-            />
-          </Flex>
-
-          <Flex gap={16}>
-            <Controller
-              control={control}
               name="gstPercentage"
               render={({ field }) => (
                 <Form.Item label="GST %" className="w-32">
@@ -481,13 +487,55 @@ export function SubcontractWorkOrdersClient({
                 </Form.Item>
               )}
             />
-            <Form.Item label="Basic Amount" className="flex-1">
-              <Input value={`₹ ${amount.toLocaleString()}`} disabled className="bg-slate-800!" />
-            </Form.Item>
-            <Form.Item label="Total with GST" className="flex-1">
-              <Input value={`₹ ${totalAmount.toLocaleString()}`} disabled className="bg-sky-900/20! border-sky-500/30!" />
-            </Form.Item>
           </Flex>
+
+          <Form.Item label="Work Order File">
+            <Upload.Dragger
+              beforeUpload={handleUpload}
+              maxCount={1}
+              accept=".pdf,.xls,.xlsx,.doc,.docx"
+              showUploadList={false}
+            >
+              <p className="ant-upload-drag-icon">
+                <UploadOutlined />
+              </p>
+              <p className="ant-upload-text">Click or drag file to this area to upload</p>
+              <p className="ant-upload-hint">Support for PDF, Excel, Word documents.</p>
+            </Upload.Dragger>
+            {uploadedFile && (
+              <Flex align="center" gap={8} className="mt-2">
+                {getFileIcon(uploadedFile.workorderKey)}
+                <Typography.Text>{uploadedFile.workorderKey}</Typography.Text>
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<FilePdfOutlined />}
+                  href={`${getApiOrigin()}${uploadedFile.workorderUrl}`}
+                  target="_blank"
+                >
+                  View
+                </Button>
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  href={`${getApiOrigin()}${uploadedFile.workorderUrl}`}
+                  target="_blank"
+                  download
+                >
+                  Download
+                </Button>
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  onClick={() => setUploadedFile(null)}
+                >
+                  Remove
+                </Button>
+              </Flex>
+            )}
+          </Form.Item>
 
           <Flex gap={16}>
             <Controller

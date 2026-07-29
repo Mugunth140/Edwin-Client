@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { ProjectOutlined } from '@ant-design/icons';
 import type { Expense, Payment, ProjectDetails, PurchaseBill, SalesInvoice, SubcontractWorkOrder } from '@/types/erp';
 import { StatusTag, cardClassName, formatCurrency, formatDate, pageTitleClassName, titleIconClassName } from './ui';
+import { getApiOrigin } from '@/lib/api-url';
 
 const { Title, Text } = Typography;
 
@@ -39,8 +40,7 @@ export function ProjectDetailsClient({ data }: Props) {
     { title: 'Subcontractor', key: 'sub', width: 160, render: (_, r) => r.subcontractor?.name ?? '-' },
     { title: 'Work Category', key: 'cat', width: 120, render: (_, r) => r.workCategory?.name ?? '-' },
     { title: 'Description', dataIndex: 'description', key: 'description', ellipsis: true },
-    { title: 'Qty', dataIndex: 'quantity', key: 'quantity', align: 'right', width: 80 },
-    { title: 'Rate', dataIndex: 'rate', key: 'rate', align: 'right', render: formatCurrency, width: 100 },
+    { title: 'Work Order', key: 'workorder', width: 100, render: (_, r) => r.workorderUrl ? <Typography.Link href={`${getApiOrigin()}${r.workorderUrl}`} target="_blank">View File</Typography.Link> : '-' },
     { title: 'Total', dataIndex: 'totalAmount', key: 'totalAmount', align: 'right', render: formatCurrency, width: 130, sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount) },
     { title: 'Status', dataIndex: 'status', key: 'status', render: (v) => <StatusTag value={v} />, width: 130 },
     { title: 'Timeline', key: 'timeline', width: 140, render: (_, r) => `${formatDate(r.startDate)} - ${formatDate(r.endDate)}` },
