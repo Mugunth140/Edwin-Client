@@ -454,6 +454,7 @@ export type TimesheetRow = {
   id?: string;
   projectId?: string | null;
   entryType: string;
+  remark?: string | null;
   monHours: number;
   tueHours: number;
   wedHours: number;

@@ -5,6 +5,8 @@ import type { ReactNode } from 'react';
 import { Alert, Button, Card, Col, Progress, Row, Skeleton, Space, Statistic, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
   DollarOutlined,
   ProjectOutlined,
   ReloadOutlined,
@@ -15,17 +17,20 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Bar,
   BarChart,
+  CartesianGrid,
   Cell,
   LabelList,
+  Legend,
   Pie,
   PieChart,
+  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 import type { DashboardData, DashboardProject, ExpenseSummary } from '@/types/erp';
 import { clientApiFetch } from '@/lib/client-api';
-import { cardClassName, formatCurrency, secondaryTextClassName, titleCase } from './ui';
+import { cardClassName, formatCurrency, mutedTextClassName, secondaryTextClassName, titleCase } from './ui';
 
 type DashboardQueryData = {
   data: DashboardData;
@@ -40,8 +45,8 @@ const emptyDashboard: DashboardData = {
   criticalActions: [],
 };
 
-const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7'];
-const chartHeight = 280;
+const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4'];
+const chartHeight = 300;
 
 const statisticClassNames = { content: 'text-[var(--text-primary)]! font-bold!' };
 
@@ -69,7 +74,7 @@ function ChartFrame({ children }: { children: (width: number, height: number) =>
   }, []);
 
   return (
-    <div ref={frameRef} className="h-70 min-w-0 w-full">
+    <div ref={frameRef} className="h-80 min-w-0 w-full">
       {width > 0 ? children(width, chartHeight) : null}
     </div>
   );
@@ -116,6 +121,20 @@ function DashboardSkeleton() {
   );
 }
 
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 shadow-lg">
+      <p className="mb-1 text-xs text-[var(--text-muted)]">{label}</p>
+      {payload.map((entry: any, i: number) => (
+        <p key={i} className="text-sm font-medium" style={{ color: entry.color }}>
+          {entry.name}: {formatCurrency(entry.value)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export function DashboardClient() {
   const {
     data: dashboardResult,
@@ -139,33 +158,48 @@ export function DashboardClient() {
   const totalCost = Number(data.revenueVsCost.totalCost || 0);
   const totalInflow = Number(data.revenueVsCost.totalInflow || 0);
   const profit = totalInflow - totalCost;
-  const maxRevenueCost = Math.max(totalRevenue, totalCost);
+  const profitPct = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : '0';
+  const isProfitable = profit >= 0;
 
-  const revenueCostData = [
-    { name: 'Inflow', amount: totalInflow },
-    { name: 'Outflow', amount: totalCost },
+  const inflowOutflowData = [
+    { name: 'Inflow', amount: totalInflow, fill: '#10b981' },
+    { name: 'Outflow', amount: totalCost, fill: '#ef4444' },
   ];
+
   const expenseChartData = expenseSummary.map((item) => ({
     name: item.category ? titleCase(item.category) : 'Expense',
     value: Number(item.total || 0),
   }));
+
+  const weeklyLabourData = (data.weeklyLabour || []).map((w) => ({
+    week: w.weekStart ? new Date(w.weekStart).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '',
+    headcount: w.headcount,
+  }));
+
+  const maxRevenueCost = Math.max(totalInflow, totalCost, 1);
 
   const projectColumns: ColumnsType<DashboardProject> = [
     {
       title: 'Project',
       dataIndex: 'name',
       sorter: (a, b) => a.name.localeCompare(b.name),
-      render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
+      render: (value: string) => (
+        <Typography.Text strong className="text-[var(--text-primary)]!">
+          {value}
+        </Typography.Text>
+      ),
     },
     {
       title: 'Completion',
       dataIndex: 'completionPct',
+      width: 200,
       sorter: (a, b) => Number(a.completionPct) - Number(b.completionPct),
       render: (pct: number | string) => (
         <Progress
           percent={Number(pct || 0)}
           size="small"
           strokeColor={{ from: '#3b82f6', to: '#10b981' }}
+          format={(p) => `${p}%`}
         />
       ),
     },
@@ -189,21 +223,22 @@ export function DashboardClient() {
       )}
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Typography.Title level={3} className="m-0! text-[var(--text-primary)]!">
-          Master Dashboard
-        </Typography.Title>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => void refetch()}
-          loading={isFetching}
-        >
+        <div>
+          <Typography.Title level={3} className="m-0! text-[var(--text-primary)]!">
+            Master Dashboard
+          </Typography.Title>
+          <Typography.Text className={mutedTextClassName}>
+            Executive overview of projects, finances, and operations
+          </Typography.Text>
+        </div>
+        <Button icon={<ReloadOutlined />} onClick={() => void refetch()} loading={isFetching}>
           Refresh
         </Button>
       </div>
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
-          <Card className={kpiCardClassNames.blue}>
+          <Card className={kpiCardClassNames.blue} size="small">
             <Statistic
               title={<Typography.Text className={secondaryTextClassName}>Total Projects</Typography.Text>}
               value={data.totalProjects}
@@ -213,7 +248,7 @@ export function DashboardClient() {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={kpiCardClassNames.green}>
+          <Card className={kpiCardClassNames.green} size="small">
             <Statistic
               title={<Typography.Text className={secondaryTextClassName}>Total Inflow</Typography.Text>}
               value={formatCurrency(totalInflow)}
@@ -223,7 +258,7 @@ export function DashboardClient() {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={kpiCardClassNames.amber}>
+          <Card className={kpiCardClassNames.amber} size="small">
             <Statistic
               title={<Typography.Text className={secondaryTextClassName}>Total Outflow</Typography.Text>}
               value={formatCurrency(totalCost)}
@@ -233,11 +268,20 @@ export function DashboardClient() {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={kpiCardClassNames.violet}>
+          <Card className={kpiCardClassNames.violet} size="small">
             <Statistic
-              title={<Typography.Text className={secondaryTextClassName}>Profit</Typography.Text>}
+              title={<Typography.Text className={secondaryTextClassName}>Net Profit</Typography.Text>}
               value={formatCurrency(profit)}
-              prefix={<TeamOutlined className="text-violet-500" />}
+              prefix={
+                isProfitable
+                  ? <ArrowUpOutlined className="text-emerald-500" />
+                  : <ArrowDownOutlined className="text-red-500" />
+              }
+              suffix={
+                <Typography.Text className={isProfitable ? 'text-emerald-500' : 'text-red-500'} style={{ fontSize: 14 }}>
+                  {isProfitable ? '+' : ''}{profitPct}%
+                </Typography.Text>
+              }
               classNames={statisticClassNames}
             />
           </Card>
@@ -246,52 +290,67 @@ export function DashboardClient() {
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={14}>
-          <Card title={<Typography.Text strong>Inflow vs Outflow</Typography.Text>} className={cardClassName}>
+          <Card
+            title={<Typography.Text strong className="text-[var(--text-primary)]!">Inflow vs Outflow</Typography.Text>}
+            className={cardClassName}
+          >
             <ChartFrame>
               {(width, height) => (
-                <BarChart width={width} height={height} data={revenueCostData}>
-                  <XAxis dataKey="name" stroke="#94a3b8" />
-                  <YAxis
-                    stroke="#94a3b8"
-                    domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-                    tickFormatter={(value) => (
-                      maxRevenueCost >= 100000
-                        ? `₹${Number(value) / 100000}L`
-                        : formatCurrency(Number(value))
-                    )}
-                  />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                  <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                    {revenueCostData.map((entry, index) => (
-                      <Cell key={entry.name} fill={chartColors[index]} />
-                    ))}
-                  </Bar>
-                </BarChart>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={inflowOutflowData} margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fontSize: 14 }} />
+                    <YAxis
+                      stroke="var(--text-muted)"
+                      tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--subtle-bg)' }} />
+                    <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                      {inflowOutflowData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </ChartFrame>
           </Card>
         </Col>
+
         <Col xs={24} lg={10}>
-          <Card title={<Typography.Text strong>Expenses by Category</Typography.Text>} className={cardClassName}>
+          <Card
+            title={<Typography.Text strong className="text-[var(--text-primary)]!">Expenses by Category</Typography.Text>}
+            className={cardClassName}
+          >
             <ChartFrame>
               {(width, height) => (
                 expenseChartData.length > 0 ? (
-                  <PieChart width={width} height={height}>
-                    <Pie
-                      data={expenseChartData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={58}
-                      outerRadius={98}
-                      paddingAngle={3}
-                    >
-                      {expenseChartData.map((entry, index) => (
-                        <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
-                      ))}
-                      <LabelList dataKey="name" position="outside" fontSize={11} />
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                  </PieChart>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={expenseChartData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={55}
+                        outerRadius={90}
+                        paddingAngle={3}
+                      >
+                        {expenseChartData.map((entry, index) => (
+                          <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend
+                        verticalAlign="bottom"
+                        iconType="circle"
+                        iconSize={8}
+                        formatter={(value: string) => (
+                          <span className="text-[var(--text-secondary)]" style={{ fontSize: 12 }}>{value}</span>
+                        )}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
                     <Typography.Text type="secondary">No expense data yet</Typography.Text>
@@ -303,16 +362,68 @@ export function DashboardClient() {
         </Col>
       </Row>
 
-      <Card title={<Typography.Text strong>Active Projects</Typography.Text>} className={cardClassName}>
-        <Table
-          dataSource={data.projects}
-          columns={projectColumns}
-          rowKey="id"
-          pagination={false}
-          size="middle"
-          locale={{ emptyText: <Space>No active projects</Space> }}
-        />
-      </Card>
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} lg={8}>
+          <Card
+            title={<Typography.Text strong className="text-[var(--text-primary)]!">Financial Summary</Typography.Text>}
+            className={cardClassName}
+          >
+            <div className="space-y-4">
+              <div>
+                <div className="mb-1 flex justify-between">
+                  <Typography.Text className={mutedTextClassName}>Inflow vs Outflow Ratio</Typography.Text>
+                  <Typography.Text strong className="text-[var(--text-primary)]!">
+                    {totalInflow > 0 ? ((totalInflow - totalCost) / totalInflow * 100).toFixed(1) : '0'}%
+                  </Typography.Text>
+                </div>
+                <Progress
+                  percent={totalInflow > 0 ? Math.min((totalInflow / maxRevenueCost) * 100, 100) : 0}
+                  showInfo={false}
+                  strokeColor="#10b981"
+                  size="small"
+                />
+              </div>
+              <div>
+                <div className="mb-1 flex justify-between">
+                  <Typography.Text className={mutedTextClassName}>Cost Ratio</Typography.Text>
+                  <Typography.Text strong className="text-[var(--text-primary)]!">
+                    {totalInflow > 0 ? ((totalCost / totalInflow) * 100).toFixed(1) : '0'}%
+                  </Typography.Text>
+                </div>
+                <Progress
+                  percent={totalInflow > 0 ? Math.min((totalCost / maxRevenueCost) * 100, 100) : 0}
+                  showInfo={false}
+                  strokeColor="#ef4444"
+                  size="small"
+                />
+              </div>
+              <div className="border-t border-[var(--border)] pt-3">
+                <div className="flex justify-between">
+                  <Typography.Text className={mutedTextClassName}>Total Revenue</Typography.Text>
+                  <Typography.Text strong className="text-[var(--text-primary)]!">{formatCurrency(totalRevenue)}</Typography.Text>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={16}>
+          <Card
+            title={<Typography.Text strong className="text-[var(--text-primary)]!">Active Projects</Typography.Text>}
+            className={cardClassName}
+            styles={{ body: { padding: 0 } }}
+          >
+            <Table
+              dataSource={data.projects}
+              columns={projectColumns}
+              rowKey="id"
+              pagination={false}
+              size="middle"
+              locale={{ emptyText: <Space>No active projects</Space> }}
+            />
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 }

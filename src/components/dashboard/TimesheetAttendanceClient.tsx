@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import {
-  Button, Card, DatePicker, Flex, InputNumber, Select, Spin, Typography, App,
+  Button, Card, DatePicker, Flex, Input, InputNumber, Select, Spin, Typography, App,
 } from 'antd';
 import {
   LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined,
@@ -33,6 +33,7 @@ type GridRow = {
   rowId?: string;
   projectId: string | null;
   hours: number[];
+  remark: string;
 };
 
 type Props = { projects: Project[] };
@@ -48,11 +49,11 @@ function emptyHours(): number[] {
 }
 
 function emptyProjectRow(): GridRow {
-  return { key: nextKey(), kind: 'project', projectId: null, hours: emptyHours() };
+  return { key: nextKey(), kind: 'project', projectId: null, hours: emptyHours(), remark: '' };
 }
 
 function emptyFixedRows(): GridRow[] {
-  return FIXED_CATEGORIES.map((c) => ({ key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours() }));
+  return FIXED_CATEGORIES.map((c) => ({ key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours(), remark: '' }));
 }
 
 function defaultRows(): GridRow[] {
@@ -77,14 +78,15 @@ function formatDate(d: Date) {
 function rowsFromServer(tsRows: any[]): GridRow[] {
   const projectRows: GridRow[] = [];
   const fixedMap = new Map<string, GridRow>();
-  for (const c of FIXED_CATEGORIES) fixedMap.set(c.kind, { key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours() });
+  for (const c of FIXED_CATEGORIES) fixedMap.set(c.kind, { key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours(), remark: '' });
 
   for (const row of tsRows) {
     const hours = DAYS.map((d) => Number((row as any)[d] || 0));
+    const remark = row.remark || '';
     if (row.entryType === 'project') {
-      projectRows.push({ key: nextKey(), kind: 'project', rowId: row.id, projectId: row.projectId || null, hours });
+      projectRows.push({ key: nextKey(), kind: 'project', rowId: row.id, projectId: row.projectId || null, hours, remark });
     } else if (fixedMap.has(row.entryType)) {
-      fixedMap.set(row.entryType, { key: nextKey(), kind: row.entryType, rowId: row.id, projectId: null, hours });
+      fixedMap.set(row.entryType, { key: nextKey(), kind: row.entryType, rowId: row.id, projectId: null, hours, remark });
     }
   }
 
@@ -96,15 +98,17 @@ function rowsToPayload(rows: GridRow[]): any[] {
   const out: any[] = [];
   for (const row of rows) {
     const total = row.hours.reduce((a, b) => a + b, 0);
+    const remark = row.remark.trim();
     if (row.kind === 'project') {
       if (!row.projectId) continue;
-    } else if (total <= 0) {
+    } else if (total <= 0 && !remark) {
       continue;
     }
     out.push({
       ...(row.rowId ? { id: row.rowId } : {}),
       ...(row.kind === 'project' ? { projectId: row.projectId } : {}),
       entryType: row.kind,
+      remark: remark || undefined,
       monHours: row.hours[0],
       tueHours: row.hours[1],
       wedHours: row.hours[2],
@@ -206,6 +210,10 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     }));
   };
 
+  const setRemark = (key: string, remark: string) => {
+    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, remark } : r)));
+  };
+
   const handleSave = () => {
     startTransition(async () => {
       try {
@@ -266,7 +274,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
         </Flex>
 
         <Spin spinning={loading}>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" style={{ marginTop: 20 }}>
           <table className="w-full border-collapse text-sm" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr>
@@ -283,6 +291,9 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                     </th>
                   );
                 })}
+                <th className="border border-[var(--border)] bg-[var(--subtle-bg)] px-2 py-2 text-left text-[var(--text-secondary)]" style={{ width: 180 }}>
+                  Remark
+                </th>
                 <th className="border border-[var(--border)] bg-[var(--subtle-bg)] px-2 py-2 text-center text-[var(--text-secondary)]" style={{ width: 56 }} />
               </tr>
             </thead>
@@ -315,6 +326,17 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       />
                     </td>
                   ))}
+                  <td className="border border-[var(--border)] p-1">
+                    <Input
+                      className="w-full"
+                      size="small"
+                      placeholder="Remark"
+                      allowClear
+                      maxLength={1000}
+                      value={row.remark}
+                      onChange={(e) => setRemark(row.key, e.target.value)}
+                    />
+                  </td>
                   <td className="border border-[var(--border)] text-center">
                     <Button
                       size="small"
@@ -328,7 +350,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
               ))}
 
               <tr>
-                <td colSpan={9} className="border border-[var(--border)] p-1.5">
+                <td colSpan={10} className="border border-[var(--border)] p-1.5">
                   <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addProjectRow} block>
                     Add Project
                   </Button>
@@ -355,6 +377,17 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       />
                     </td>
                   ))}
+                  <td className="border border-[var(--border)] p-1">
+                    <Input
+                      className="w-full"
+                      size="small"
+                      placeholder="Remark"
+                      allowClear
+                      maxLength={1000}
+                      value={row.remark}
+                      onChange={(e) => setRemark(row.key, e.target.value)}
+                    />
+                  </td>
                   <td className="border border-[var(--border)]" />
                 </tr>
               ))}
@@ -370,6 +403,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                     {t.toFixed(1)}
                   </td>
                 ))}
+                <td className="border border-[var(--border)]" />
                 <td className="border border-[var(--border)]" />
               </tr>
             </tfoot>

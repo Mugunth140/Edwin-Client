@@ -59,7 +59,8 @@ const timesheetRowSchema: ColumnDef[] = [
   { column: 'id', type: 'uuid', nullable: 'NO', default: 'gen_random_uuid()', description: 'Primary key' },
   { column: 'timesheetId', type: 'uuid', nullable: 'NO', default: '-', description: 'FK to weekly_timesheets.id' },
   { column: 'projectId', type: 'uuid', nullable: 'YES', default: '-', description: 'FK to projects.id' },
-  { column: 'entryType', type: 'varchar', nullable: 'NO', default: 'project', description: 'project / public_holiday / idle_time / leave' },
+  { column: 'entryType', type: 'varchar', nullable: 'NO', default: 'project', description: "project / holiday / idle / leave" },
+  { column: 'remark', type: 'text', nullable: 'YES', default: '-', description: 'Site engineer note for this row (e.g. reason for leave/idle time, work notes)' },
   { column: 'amount', type: 'decimal(12,2)', nullable: 'NO', default: '0', description: 'Calculated cost amount (set on approval)' },
   { column: 'monHours', type: 'decimal(5,2)', nullable: 'NO', default: '0', description: 'Monday hours' },
   { column: 'tueHours', type: 'decimal(5,2)', nullable: 'NO', default: '0', description: 'Tuesday hours' },
@@ -99,7 +100,7 @@ const schemaList = [
   { table: 'salaries', columns: salarySchema, description: 'Salary grade master table' },
   { table: 'users', columns: usersSchema, description: 'All users' },
   { table: 'weekly_timesheets', columns: weeklyTimesheetSchema, description: 'Weekly timesheet header (one per engineer per week)' },
-  { table: 'timesheet_rows', columns: timesheetRowSchema, description: 'Per-project daily hours — each row stores one project with hours mapped to monHours..sunHours columns. UI shows day-centric view: one project per day, converted to this format on save.' },
+  { table: 'timesheet_rows', columns: timesheetRowSchema, description: 'One row per project (or per Holiday/Idle/Leave category) per week, with hours mapped to monHours..sunHours columns and an optional remark. A single day can have hours split across multiple project rows.' },
   { table: 'project_categories', columns: projectCategorySchema, description: 'Admin-editable project category master table' },
   { table: 'projects', columns: projectsSchema, description: 'New classification columns added to the existing projects table' },
 ];
@@ -224,13 +225,15 @@ CREATE TABLE users (
             </Typography.Paragraph>
           )}
           {idx === 3 && (
-            <Typography.Paragraph>
-              <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+            <>
+              <Typography.Paragraph>
+                <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
 {`CREATE TABLE timesheet_rows (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "timesheetId" UUID NOT NULL REFERENCES weekly_timesheets(id),
   "projectId"   UUID REFERENCES projects(id),
   "entryType"   VARCHAR NOT NULL DEFAULT 'project',
+  "remark"      TEXT NULL,
   "monHours"    DECIMAL(5,2) NOT NULL DEFAULT 0,
   "tueHours"    DECIMAL(5,2) NOT NULL DEFAULT 0,
   "wedHours"    DECIMAL(5,2) NOT NULL DEFAULT 0,
@@ -242,8 +245,18 @@ CREATE TABLE users (
   "createdAt"   TIMESTAMP NOT NULL DEFAULT now(),
   "updatedAt"   TIMESTAMP NOT NULL DEFAULT now()
 );`}
-              </pre>
-            </Typography.Paragraph>
+                </pre>
+              </Typography.Paragraph>
+              <Typography.Paragraph className="mt-4 text-[var(--text-very-muted)] text-sm">
+                <strong>ALTER reference (adding remark to an existing timesheet_rows table):</strong>
+              </Typography.Paragraph>
+              <Typography.Paragraph>
+                <pre className="bg-[var(--card-bg)] text-[var(--text-primary)] p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+{`ALTER TABLE timesheet_rows
+  ADD COLUMN "remark" TEXT NULL;`}
+                </pre>
+              </Typography.Paragraph>
+            </>
           )}
 
           {idx === 4 && (
