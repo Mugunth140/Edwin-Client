@@ -2,16 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, Flex, Typography, Tag, Table, Space, Row, Col, Image, Button, Spin, Alert, Divider } from 'antd';
+import { Card, Flex, Typography, Tag, Table, Space, Row, Col, Image, Button, Spin, Alert, Divider, Select, message } from 'antd';
 import { CalendarOutlined, ArrowLeftOutlined, ProjectOutlined, TeamOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { clientApiFetch } from '@/lib/client-api';
 import type { DailyLabourReport, DailyWorker } from '@/types/erp';
 import { getApiOrigin } from '@/lib/api-url';
+import { useAuthStore } from '@/store/auth';
 
 export function DailyLabourDetailClient() {
   const { id } = useParams();
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const canApprove = user?.role === 'admin' || user?.role === 'accounts_manager';
   const [report, setReport] = useState<DailyLabourReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +43,32 @@ export function DailyLabourDetailClient() {
   };
 
   const totalHeadcount = report.workers.reduce((acc, w) => acc + (Number(w.count) || 1), 0);
+
+  const handleWorkerStatusChange = async (workerId: string, status: string) => {
+    try {
+      const updated = await clientApiFetch<DailyWorker>(`/daily-labour/${id}/workers/${workerId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      setReport((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          workers: prev.workers.map((w) => (w.id === workerId ? { ...w, status } : w)),
+        };
+      });
+      message.success(`Trade status updated to ${status}`);
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Failed to update status');
+    }
+  };
+
+  const STATUS_OPTIONS = [
+    { label: 'Pending', value: 'pending' },
+    { label: 'Approved', value: 'approved' },
+    { label: 'Rejected', value: 'rejected' },
+  ];
 
   const workerColumns = [
     {
@@ -77,6 +106,27 @@ export function DailyLabourDetailClient() {
       dataIndex: 'remarks',
       key: 'remarks',
       render: (text: string) => text || '-',
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      width: 130,
+      render: (_: unknown, record: DailyWorker) =>
+        canApprove ? (
+          <Select
+            defaultValue={record.status || 'pending'}
+            size="small"
+            variant="borderless"
+            className="w-full"
+            onChange={(newStatus) => handleWorkerStatusChange(record.id, newStatus)}
+            options={STATUS_OPTIONS}
+            popupMatchSelectWidth={false}
+          />
+        ) : (
+          <Tag color={record.status === 'approved' ? 'success' : record.status === 'rejected' ? 'error' : 'default'}>
+            {record.status || 'pending'}
+          </Tag>
+        ),
     },
   ];
 
