@@ -547,3 +547,20 @@ export type ProjectDetails = {
   invoices: SalesInvoice[];
   payments: Payment[];
 };
+
+export type SchemaColumn = {
+  column: string;
+  type: string;
+  nullable: string;
+  default: string;
+  description: string;
+  isPrimary: boolean;
+};
+
+export type SchemaTable = {
+  table: string;
+  description: string;
+  columns: SchemaColumn[];
+  createSql?: string;
+  alterSql?: string;
+};

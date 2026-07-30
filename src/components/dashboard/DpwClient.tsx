@@ -159,8 +159,8 @@ export function DpwClient({
       dataIndex: 'status',
       key: 'status',
       width: 130,
-      render: (status) => {
-        const colorMap = { pending: 'default', admin_approved: 'processing', approved: 'success', rejected: 'error' };
+      render: (status: string) => {
+        const colorMap: Record<string, string> = { pending: 'default', admin_approved: 'processing', approved: 'success', rejected: 'error' };
         return <Tag color={colorMap[status] || 'default'}>{status ? status.replace('_', ' ') : 'pending'}</Tag>;
       },
     },

@@ -27,6 +27,7 @@ import type {
   WeeklyTimesheet,
   ProjectCategory,
   AppUser,
+  SchemaTable,
 } from '@/types/erp';
 import { getApiBaseUrl } from './api-url';
 
@@ -103,3 +104,4 @@ export const fetchTimesheetByWeek = (weekStart: string) =>
   apiFetch<WeeklyTimesheet | null>(`/timesheet-attendance/current?weekStart=${weekStart}`);
 export const fetchTimesheets = (params?: string) =>
   apiFetch<PagedResponse<WeeklyTimesheet>>(`/timesheet-attendance/all${params ? `?${params}` : ''}`);
+export const fetchSchemas = () => apiFetch<SchemaTable[]>('/schemas');
