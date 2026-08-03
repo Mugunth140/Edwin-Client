@@ -389,6 +389,19 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                 {mode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
               </button>
 
+              {user?.role === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => router.push('/dashboard/employee-queries')}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] text-[var(--text-secondary)] transition hover:bg-[var(--subtle-hover-bg)] hover:text-[var(--text-primary)]"
+                  aria-label="Edit request notifications"
+                >
+                  <Badge count={pendingEqCount} size="small" offset={[-2, 2]}>
+                    <BellOutlined />
+                  </Badge>
+                </button>
+              )}
+
               {canSeeNotifications && (
                 <Popover
                   trigger="click"
