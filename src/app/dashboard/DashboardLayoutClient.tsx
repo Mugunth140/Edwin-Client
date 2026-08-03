@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Layout, Menu, Typography, Avatar, Dropdown, Space, App } from 'antd';
+import { Layout, Menu, Typography, Avatar, Dropdown, Space, App, Badge, Flex } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   AppstoreOutlined,
@@ -109,9 +109,37 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
   const { mode, toggle: toggleTheme } = useThemeStore();
 
+  const [pendingEqCount, setPendingEqCount] = useState(0);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (user?.role !== 'admin') {
+      setPendingEqCount(0);
+      return;
+    }
+
+    if (pathname === '/dashboard/employee-queries') {
+      localStorage.setItem('eq_last_seen_at', new Date().toISOString());
+      setPendingEqCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/backend/employee-queries?status=pending');
+        if (!res.ok || cancelled) return;
+        const data: { createdAt?: string }[] = await res.json();
+        const lastSeenAt = localStorage.getItem('eq_last_seen_at');
+        const unseen = lastSeenAt ? data.filter((q) => !q.createdAt || q.createdAt > lastSeenAt) : data;
+        if (!cancelled) setPendingEqCount(unseen.length);
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.role, pathname]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -141,20 +169,29 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
           .map((item) => {
              // eslint-disable-next-line @typescript-eslint/no-unused-vars
              const { allowedRoles, children, ...restItem } = item;
+             const label = item.key === '/dashboard/employee-queries' && pendingEqCount > 0
+               ? (
+                   <Flex align="center" justify="space-between" className="w-full">
+                     <span>{item.label}</span>
+                     <Badge count={pendingEqCount} size="small" />
+                   </Flex>
+                 )
+               : item.label;
              if (children) {
                return {
                  ...restItem,
+                 label,
                  children: children
                    .filter((child) => !child.allowedRoles || child.allowedRoles.includes(role))
                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                    .map(({ allowedRoles: _childRoles, ...restChild }) => restChild)
                }
              }
-             return restItem;
+             return { ...restItem, label };
           })
       }))
       .filter(section => section.items.length > 0);
-  }, [user]);
+  }, [user, pendingEqCount]);
 
   const navItems = useMemo(() => {
     return filteredNavigationSections.flatMap((section) => section.items);

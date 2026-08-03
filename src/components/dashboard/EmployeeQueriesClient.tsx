@@ -23,7 +23,7 @@ const STATUS_OPTIONS = [
 type Props = { queries: EmployeeQuery[] };
 
 export function EmployeeQueriesClient({ queries }: Props) {
-  const [statusFilter, setStatusFilter] = useState<string>('pending');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
 
