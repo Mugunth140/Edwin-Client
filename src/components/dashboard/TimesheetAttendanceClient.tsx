@@ -22,8 +22,28 @@ const FIXED_CATEGORIES = [
 ] as const;
 
 const STANDARD_DAILY_HOURS = 8;
+const DAY_LIMIT_HOURS = 8;
 const STANDARD_WORKING_DAYS = 6;
 const STANDARD_WEEKLY_HOURS = STANDARD_DAILY_HOURS * STANDARD_WORKING_DAYS;
+
+function clampDayTotals(rows: GridRow[]): { rows: GridRow[]; clamped: boolean } {
+  const working = rows.map((r) => ({ ...r, hours: [...r.hours] }));
+  let clamped = false;
+  for (let d = 0; d < DAYS.length; d++) {
+    const total = working.reduce((s, r) => s + (r.hours[d] || 0), 0);
+    if (total <= DAY_LIMIT_HOURS) continue;
+    let excess = total - DAY_LIMIT_HOURS;
+    clamped = true;
+    for (let i = working.length - 1; i >= 0 && excess > 0.001; i--) {
+      const cur = working[i].hours[d] || 0;
+      if (cur <= 0) continue;
+      const cut = Math.min(cur, excess);
+      working[i].hours[d] = Math.round((cur - cut) * 100) / 100;
+      excess = Math.round((excess - cut) * 100) / 100;
+    }
+  }
+  return { rows: working, clamped };
+}
 
 type FixedKind = (typeof FIXED_CATEGORIES)[number]['kind'];
 
@@ -134,7 +154,7 @@ function HoursCell({
 }) {
   const [draft, setDraft] = useState<string>(String(value || 0));
 
-  const clamp = (n: number) => Math.min(24, Math.max(0, n));
+  const clamp = (n: number) => Math.min(DAY_LIMIT_HOURS, Math.max(0, n));
 
   return (
     <Input
@@ -267,7 +287,23 @@ export function TimesheetAttendanceClient({ projects }: Props) {
   const handleSubmit = () => {
     startTransition(async () => {
       try {
-        const payloadRows = rowsToPayload(rows);
+        const missingProject = rows.some(
+          (r) => r.kind === 'project' && r.hours.some((h) => h > 0) && !r.projectId,
+        );
+        if (missingProject) {
+          message.error('Select a project for every row that has hours');
+          return;
+        }
+        const { rows: cappedRows, clamped } = clampDayTotals(rows);
+        if (clamped) {
+          setRows(cappedRows);
+          message.warning('Each day is capped at 8 hrs — extra hours removed');
+        }
+        const payloadRows = rowsToPayload(cappedRows);
+        if (payloadRows.length === 0) {
+          message.error('Enter hours for at least one day before submitting');
+          return;
+        }
         const payload = { weekStart: weekStartStr, rows: payloadRows };
         if (existingTs?.id) {
           await updateTimesheet(existingTs.id, payload);
@@ -471,9 +507,9 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                 {dayTotals.map((t, i) => (
                   <td
                     key={i}
-                    className={`border border-[var(--border)] px-2 py-2 text-center font-semibold ${t > 8 ? 'text-red-400' : 'text-[var(--text-secondary)]'}`}
+                    className={`border border-[var(--border)] px-2 py-2 text-center font-semibold ${t > DAY_LIMIT_HOURS ? 'text-red-400' : 'text-[var(--text-secondary)]'}`}
                   >
-                    {t.toFixed(1)}
+                    {Math.min(t, DAY_LIMIT_HOURS).toFixed(1)}
                   </td>
                 ))}
                 <td className="border border-[var(--border)]" />
