@@ -36,7 +36,7 @@ import {
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
-import { formatDate } from '@/components/dashboard/ui';
+import { formatDate, titleCase } from '@/components/dashboard/ui';
 import type { EmployeeQuery } from '@/types/erp';
 
 const { Sider, Content, Header } = Layout;
@@ -131,6 +131,8 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   const { mode, toggle: toggleTheme } = useThemeStore();
 
   const [pendingEqCount, setPendingEqCount] = useState(0);
+  const [pendingQueries, setPendingQueries] = useState<EmployeeQuery[]>([]);
+  const [adminNotifOpen, setAdminNotifOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -139,6 +141,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (user?.role !== 'admin') {
       setPendingEqCount(0);
+      setPendingQueries([]);
       return;
     }
 
@@ -153,7 +156,8 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
       try {
         const res = await fetch('/api/backend/employee-queries?status=pending');
         if (!res.ok || cancelled) return;
-        const data: { createdAt?: string }[] = await res.json();
+        const data: EmployeeQuery[] = await res.json();
+        setPendingQueries(data);
         const lastSeenAt = localStorage.getItem('eq_last_seen_at');
         const unseen = lastSeenAt ? data.filter((q) => !q.createdAt || q.createdAt > lastSeenAt) : data;
         if (!cancelled) setPendingEqCount(unseen.length);
@@ -161,6 +165,11 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     })();
     return () => { cancelled = true; };
   }, [user?.role, pathname]);
+
+  const markPendingSeen = () => {
+    localStorage.setItem('eq_last_seen_at', new Date().toISOString());
+    setPendingEqCount(0);
+  };
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [responses, setResponses] = useState<EmployeeQuery[]>([]);
@@ -390,16 +399,61 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
               </button>
 
               {user?.role === 'admin' && (
-                <button
-                  type="button"
-                  onClick={() => router.push('/dashboard/employee-queries')}
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] text-[var(--text-secondary)] transition hover:bg-[var(--subtle-hover-bg)] hover:text-[var(--text-primary)]"
-                  aria-label="Edit request notifications"
+                <Popover
+                  trigger="click"
+                  placement="bottomRight"
+                  open={adminNotifOpen}
+                  onOpenChange={(open) => {
+                    setAdminNotifOpen(open);
+                    if (open) markPendingSeen();
+                  }}
+                  title="Edit Requests"
+                  content={
+                    <div style={{ width: 340, maxHeight: 360, overflowY: 'auto' }}>
+                      {pendingQueries.length === 0 ? (
+                        <Typography.Text type="secondary" className="text-sm">
+                          No pending edit requests
+                        </Typography.Text>
+                      ) : (
+                        <Flex vertical gap={8}>
+                          {pendingQueries.slice(0, 20).map((q) => (
+                            <div
+                              key={q.id}
+                              className="cursor-pointer rounded-lg border border-[var(--border)] p-2 transition hover:bg-[var(--subtle-hover-bg)]"
+                              onClick={() => {
+                                setAdminNotifOpen(false);
+                                router.push('/dashboard/employee-queries');
+                              }}
+                            >
+                              <Typography.Text className="block text-sm">
+                                <strong>{q.siteEngineer?.name || 'Someone'}</strong>
+                                {q.siteEngineer?.role && ` (${titleCase(q.siteEngineer.role)})`} requested edit access for timesheet
+                              </Typography.Text>
+                              {q.timesheet && (
+                                <Typography.Text type="secondary" className="mt-1 block text-xs">
+                                  Week: {formatDate(q.timesheet.weekStart)} - {formatDate(q.timesheet.weekEnd)}
+                                </Typography.Text>
+                              )}
+                              <Typography.Text type="secondary" className="mt-1 block text-xs italic">
+                                &ldquo;{q.reason}&rdquo;
+                              </Typography.Text>
+                            </div>
+                          ))}
+                        </Flex>
+                      )}
+                    </div>
+                  }
                 >
-                  <Badge count={pendingEqCount} size="small" offset={[-2, 2]}>
-                    <BellOutlined />
-                  </Badge>
-                </button>
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] text-[var(--text-secondary)] transition hover:bg-[var(--subtle-hover-bg)] hover:text-[var(--text-primary)]"
+                    aria-label="Edit request notifications"
+                  >
+                    <Badge count={pendingEqCount} size="small" offset={[-2, 2]}>
+                      <BellOutlined />
+                    </Badge>
+                  </button>
+                </Popover>
               )}
 
               {canSeeNotifications && (
