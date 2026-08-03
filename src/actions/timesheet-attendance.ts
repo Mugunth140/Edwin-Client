@@ -43,6 +43,34 @@ export async function updateTimesheet(id: string, data: Record<string, unknown>)
   return res.json();
 }
 
+export async function submitTimesheet(id: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/timesheet-attendance/${id}/submit`, {
+    method: 'PATCH',
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Failed to submit timesheet' }));
+    throw new Error(error.message || 'Failed to submit timesheet');
+  }
+  revalidatePath('/dashboard/timesheet-attendance');
+  return res.json();
+}
+
+export async function unsubmitTimesheet(id: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/timesheet-attendance/${id}/unsubmit`, {
+    method: 'PATCH',
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Failed to reopen timesheet' }));
+    throw new Error(error.message || 'Failed to reopen timesheet');
+  }
+  revalidatePath('/dashboard/timesheet-attendance');
+  return res.json();
+}
+
 export async function deleteTimesheet(id: string) {
   const headers = await getAuthHeaders();
   const res = await fetch(`${getApiBaseUrl()}/timesheet-attendance/${id}`, {

@@ -266,7 +266,7 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
       key: 'status',
       width: 120,
       render: (_, record) => {
-        const color: Record<string, string> = { pending: 'orange', verified: 'purple', approved: 'green', rejected: 'red' };
+        const color: Record<string, string> = { pending: 'orange', submitted: 'blue', verified: 'purple', approved: 'green', rejected: 'red' };
         return <Tag color={color[record.status] || 'default'}>{record.status?.toUpperCase()}</Tag>;
       },
     },
@@ -276,7 +276,7 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
       width: 220,
       render: (_, record) => (
         <Flex gap={4} wrap="wrap">
-          {record.status === 'pending' && (
+          {(record.status === 'pending' || record.status === 'submitted') && (
             <Button size="small" type="primary" ghost onClick={() => handleTimesheetAction(record.id, 'verify')} loading={isPending}>
               Verify
             </Button>
@@ -291,7 +291,7 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
               </Button>
             </>
           )}
-          {record.status === 'pending' && (
+          {(record.status === 'pending' || record.status === 'submitted') && (
             <Button size="small" danger onClick={() => handleTimesheetAction(record.id, 'reject')} loading={isPending}>
               Reject
             </Button>

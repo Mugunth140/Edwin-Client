@@ -26,7 +26,7 @@ export type ExpenseType = {
 };
 
 export type PaymentType = 'material' | 'labour' | 'rent' | 'accommodation' | 'office_maintenance' | 'transport' | 'travel' | 'staff_expense';
-export type TimesheetStatus = 'pending' | 'verified' | 'admin_approved' | 'approved' | 'rejected';
+export type TimesheetStatus = 'pending' | 'submitted' | 'verified' | 'admin_approved' | 'approved' | 'rejected';
 export type ItemDescription = {
   id: string;
   name: string;

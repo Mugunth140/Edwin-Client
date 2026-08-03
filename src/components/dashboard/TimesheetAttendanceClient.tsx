@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import {
-  Button, Card, DatePicker, Flex, Input, InputNumber, Select, Spin, Typography, App,
+  Button, Card, DatePicker, Flex, Input, Select, Spin, Tag, Typography, App,
 } from 'antd';
 import {
-  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined,
+  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined, EditOutlined,
 } from '@ant-design/icons';
-import { saveTimesheet, updateTimesheet } from '@/actions/timesheet-attendance';
+import { saveTimesheet, updateTimesheet, submitTimesheet, unsubmitTimesheet } from '@/actions/timesheet-attendance';
 import type { Project } from '@/types/erp';
 import { cardClassName, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import dayjs from 'dayjs';
@@ -121,16 +121,58 @@ function rowsToPayload(rows: GridRow[]): any[] {
   return out;
 }
 
+function HoursCell({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  disabled: boolean;
+}) {
+  const [draft, setDraft] = useState<string>(String(value || 0));
+
+  const clamp = (n: number) => Math.min(24, Math.max(0, n));
+
+  return (
+    <Input
+      className="w-full!"
+      size="small"
+      inputMode="decimal"
+      variant="borderless"
+      disabled={disabled}
+      value={draft}
+      onChange={(e) => {
+        const sanitized = e.target.value.replace(/[^0-9.]/g, '');
+        setDraft(sanitized);
+        if (sanitized !== '' && sanitized !== '.') {
+          const n = Number(sanitized);
+          if (Number.isFinite(n)) onChange(clamp(n));
+        }
+      }}
+      onBlur={() => {
+        const n = Number(draft);
+        const clean = Number.isFinite(n) ? clamp(n) : 0;
+        setDraft(String(clean));
+        onChange(clean);
+      }}
+      style={{ textAlign: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 4 }}
+    />
+  );
+}
+
 export function TimesheetAttendanceClient({ projects }: Props) {
   const [month, setMonth] = useState<dayjs.Dayjs>(dayjs().startOf('month'));
   const [weekStart, setWeekStart] = useState<Date>(getMonday(new Date()));
   const [existingTs, setExistingTs] = useState<any>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [rows, setRows] = useState<GridRow[]>(defaultRows());
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
 
   const weekStartStr = formatDate(weekStart);
+  const todayStr = dayjs().format('YYYY-MM-DD');
 
   const weeksInMonth = useMemo(() => {
     const start = month.startOf('month').toDate();
@@ -150,6 +192,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     if (weekIndex > 0) {
       setWeekStart(weeksInMonth[weekIndex - 1]);
       setExistingTs(null);
+      setIsSubmitted(false);
       setRows(defaultRows());
     }
   };
@@ -158,6 +201,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     if (weekIndex < weeksInMonth.length - 1) {
       setWeekStart(weeksInMonth[weekIndex + 1]);
       setExistingTs(null);
+      setIsSubmitted(false);
       setRows(defaultRows());
     }
   };
@@ -169,6 +213,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
       if (res.ok) {
         const data = await res.json();
         setExistingTs(data);
+        setIsSubmitted(!!(data && data.status === 'submitted'));
         setRows(data && data.rows && data.rows.length > 0 ? rowsFromServer(data.rows) : defaultRows());
       }
     } catch { /* silent */ } finally { setLoading(false); }
@@ -202,6 +247,9 @@ export function TimesheetAttendanceClient({ projects }: Props) {
   };
 
   const setHour = (key: string, dayIdx: number, value: number) => {
+    const dateObj = new Date(weekStart);
+    dateObj.setDate(dateObj.getDate() + dayIdx);
+    if (formatDate(dateObj) !== todayStr) return;
     setRows((prev) => prev.map((r) => {
       if (r.key !== key) return r;
       const hours = [...r.hours];
@@ -228,6 +276,36 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     });
   };
 
+  const handleSubmit = () => {
+    startTransition(async () => {
+      try {
+        const payloadRows = rowsToPayload(rows);
+        const payload = { weekStart: weekStartStr, rows: payloadRows };
+        if (existingTs?.id) {
+          await updateTimesheet(existingTs.id, payload);
+          await submitTimesheet(existingTs.id);
+          message.success('Submitted');
+          loadTs();
+        }
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed to submit');
+      }
+    });
+  };
+
+  const handleUnsubmit = () => {
+    if (!existingTs?.id) return;
+    startTransition(async () => {
+      try {
+        await unsubmitTimesheet(existingTs.id);
+        message.success('Reopened — you can edit again');
+        loadTs();
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed to reopen');
+      }
+    });
+  };
+
   return (
     <div>
       <Flex justify="space-between" align="center" className={pageHeaderClassName}>
@@ -248,6 +326,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                   const m = getMonday(d.startOf('month').toDate());
                   setWeekStart(m);
                   setExistingTs(null);
+                  setIsSubmitted(false);
                   setRows(defaultRows());
                 }
               }}
@@ -267,9 +346,19 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                 Total: {totalHours.toFixed(1)} / {STANDARD_WEEKLY_HOURS.toFixed(1)} hrs
               </Typography.Text>
             </div>
-            <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={isPending}>
-              {existingTs?.id ? 'Update' : 'Save'}
-            </Button>
+            {isSubmitted && <Tag color="green">Submitted</Tag>}
+            {isSubmitted ? (
+              <>
+                <Button type="primary" disabled>Submitted</Button>
+                <Button icon={<EditOutlined />} onClick={handleUnsubmit} loading={isPending}>
+                  Edit
+                </Button>
+              </>
+            ) : (
+              <Button type="primary" icon={<SaveOutlined />} onClick={existingTs?.id ? handleSubmit : handleSave} loading={isPending}>
+                {existingTs?.id ? 'Review and Submit' : 'Save'}
+              </Button>
+            )}
           </Flex>
         </Flex>
 
@@ -305,33 +394,34 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       className="w-full"
                       placeholder="Select project"
                       allowClear
+                      disabled={isSubmitted}
                       value={row.projectId || undefined}
                       onChange={(val) => setProjectId(row.key, val || null)}
                       options={projects.map((p) => ({ label: p.name, value: p.id }))}
                       size="small"
                     />
                   </td>
-                  {DAYS.map((_, dayIdx) => (
-                    <td key={dayIdx} className="border border-[var(--border)] p-1 text-center">
-                      <InputNumber
-                        className="w-full!"
-                        size="small"
-                        min={0}
-                        max={24}
-                        step={0.5}
-                        value={row.hours[dayIdx] || 0}
-                        onChange={(v) => setHour(row.key, dayIdx, v ?? 0)}
-                        variant="borderless"
-                        style={{ textAlign: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 4 }}
-                      />
-                    </td>
-                  ))}
+                  {DAYS.map((_, dayIdx) => {
+                    const dateObj = new Date(weekStart);
+                    dateObj.setDate(dateObj.getDate() + dayIdx);
+                    const isToday = formatDate(dateObj) === todayStr;
+                    return (
+                      <td key={dayIdx} className="border border-[var(--border)] p-1 text-center">
+                        <HoursCell
+                          value={row.hours[dayIdx] || 0}
+                          onChange={(v) => setHour(row.key, dayIdx, v)}
+                          disabled={!isToday || isSubmitted}
+                        />
+                      </td>
+                    );
+                  })}
                   <td className="border border-[var(--border)] p-1">
                     <Input
                       className="w-full"
                       size="small"
                       placeholder="Remark"
                       allowClear
+                      disabled={isSubmitted}
                       maxLength={1000}
                       value={row.remark}
                       onChange={(e) => setRemark(row.key, e.target.value)}
@@ -342,6 +432,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       size="small"
                       type="text"
                       danger
+                      disabled={isSubmitted}
                       icon={<DeleteOutlined />}
                       onClick={() => removeProjectRow(row.key)}
                     />
@@ -351,7 +442,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
 
               <tr>
                 <td colSpan={10} className="border border-[var(--border)] p-1.5">
-                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addProjectRow} block>
+                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addProjectRow} disabled={isSubmitted} block>
                     Add Project
                   </Button>
                 </td>
@@ -362,27 +453,27 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                   <td className="border border-[var(--border)] px-3 py-1.5 text-[var(--text-muted)] italic">
                     {FIXED_CATEGORIES.find((c) => c.kind === row.kind)?.label}
                   </td>
-                  {DAYS.map((_, dayIdx) => (
-                    <td key={dayIdx} className="border border-[var(--border)] p-1 text-center">
-                      <InputNumber
-                        className="w-full!"
-                        size="small"
-                        min={0}
-                        max={24}
-                        step={0.5}
-                        value={row.hours[dayIdx] || 0}
-                        onChange={(v) => setHour(row.key, dayIdx, v ?? 0)}
-                        variant="borderless"
-                        style={{ textAlign: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 4 }}
-                      />
-                    </td>
-                  ))}
+                  {DAYS.map((_, dayIdx) => {
+                    const dateObj = new Date(weekStart);
+                    dateObj.setDate(dateObj.getDate() + dayIdx);
+                    const isToday = formatDate(dateObj) === todayStr;
+                    return (
+                      <td key={dayIdx} className="border border-[var(--border)] p-1 text-center">
+                        <HoursCell
+                          value={row.hours[dayIdx] || 0}
+                          onChange={(v) => setHour(row.key, dayIdx, v)}
+                          disabled={!isToday || isSubmitted}
+                        />
+                      </td>
+                    );
+                  })}
                   <td className="border border-[var(--border)] p-1">
                     <Input
                       className="w-full"
                       size="small"
                       placeholder="Remark"
                       allowClear
+                      disabled={isSubmitted}
                       maxLength={1000}
                       value={row.remark}
                       onChange={(e) => setRemark(row.key, e.target.value)}
