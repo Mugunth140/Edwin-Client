@@ -297,7 +297,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
         const { rows: cappedRows, clamped } = clampDayTotals(rows);
         if (clamped) {
           setRows(cappedRows);
-          message.warning('Each day is capped at 8 hrs — extra hours removed');
+          message.warning('Max 8 hrs per day — extra hours removed. Please enter within 8 hrs only.');
         }
         const payloadRows = rowsToPayload(cappedRows);
         if (payloadRows.length === 0) {
