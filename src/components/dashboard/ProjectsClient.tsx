@@ -337,26 +337,26 @@ export function ProjectsClient({ projects, projectCategories, users }: ProjectsC
           Add Project
         </Button>
       </Flex>
-      <Row gutter={[10, 10]} className="mb-4">
-        {[
-          { status: 'planning', label: 'Planning', color: 'processing' },
-          { status: 'in_progress', label: 'In Progress', color: 'success' },
-          { status: 'on_hold', label: 'On Hold', color: 'warning' },
-          { status: 'completed', label: 'Completed', color: 'default' },
-        ].map((item) => (
-          <Col xs={12} sm={12} md={6} key={item.status}>
-            <Card className={cardClassName} size="small">
-              <Statistic
-                title={<Tag color={item.color}>{item.label}</Tag>}
-                value={projects.filter((p) => p.status === item.status).length}
-                valueStyle={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0' }}
-              />
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
       <Card className={cardClassName} styles={{ body: { overflowX: 'auto' } }}>
+        <Row gutter={[10, 10]} className="mb-4">
+          {[
+            { status: 'planning', label: 'Planning', color: 'processing' },
+            { status: 'in_progress', label: 'In Progress', color: 'success' },
+            { status: 'on_hold', label: 'On Hold', color: 'warning' },
+            { status: 'completed', label: 'Completed', color: 'default' },
+          ].map((item) => (
+            <Col xs={12} sm={12} md={6} key={item.status}>
+              <Card className={cardClassName} size="small">
+                <Statistic
+                  title={<Tag color={item.color}>{item.label}</Tag>}
+                  value={projects.filter((p) => p.status === item.status).length}
+                  valueStyle={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0' }}
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+
         <Table
           dataSource={projects}
           columns={columns}
