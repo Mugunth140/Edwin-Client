@@ -101,6 +101,7 @@ export const fetchBalance = () => apiFetch<{ totalRevenue: number; totalCost: nu
 export const fetchPayables = () => apiFetch<PurchaseBill[]>('/accounts/payables');
 export const fetchReceivables = () => apiFetch<SalesInvoice[]>('/accounts/receivables');
 export const fetchSalaries = () => apiFetch<Salary[]>('/salaries');
+export const fetchMySalary = () => apiFetch<Salary | null>('/salaries/me');
 export const fetchTimesheetByWeek = (weekStart: string) =>
   apiFetch<WeeklyTimesheet | null>(`/timesheet-attendance/current?weekStart=${weekStart}`);
 export const fetchTimesheets = (params?: string) =>
