@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Layout, Menu, Typography, Avatar, Dropdown, Space, App, Badge, Flex } from 'antd';
+import { Layout, Menu, Typography, Avatar, Dropdown, Popover, Space, App, Badge, Flex, Tag } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   AppstoreOutlined,
   AuditOutlined,
   BankOutlined,
+  BellOutlined,
   CalendarOutlined,
   CloseOutlined,
   CreditCardOutlined,
@@ -33,6 +34,8 @@ import {
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
+import { formatDate } from '@/components/dashboard/ui';
+import type { EmployeeQuery } from '@/types/erp';
 
 const { Sider, Content, Header } = Layout;
 const { Text } = Typography;
@@ -140,6 +143,42 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     })();
     return () => { cancelled = true; };
   }, [user?.role, pathname]);
+
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [responses, setResponses] = useState<EmployeeQuery[]>([]);
+  const [unseenResponseCount, setUnseenResponseCount] = useState(0);
+  const canSeeNotifications = user?.role === 'site_engineer' || user?.role === 'purchase_team';
+
+  useEffect(() => {
+    if (!canSeeNotifications || !user) {
+      setUnseenResponseCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/backend/employee-queries');
+        if (!res.ok || cancelled) return;
+        const data: EmployeeQuery[] = await res.json();
+        const responded = data.filter((q) => q.status !== 'pending');
+        if (cancelled) return;
+        setResponses(responded);
+        const seenAt = localStorage.getItem(`eq_notif_seen_${user.id}`);
+        const unseen = seenAt
+          ? responded.filter((q) => q.respondedAt && q.respondedAt > seenAt)
+          : responded;
+        setUnseenResponseCount(unseen.length);
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [canSeeNotifications, user, pathname]);
+
+  const markResponsesSeen = () => {
+    if (!user) return;
+    localStorage.setItem(`eq_notif_seen_${user.id}`, new Date().toISOString());
+    setUnseenResponseCount(0);
+  };
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -331,6 +370,57 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
               >
                 {mode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
               </button>
+
+              {canSeeNotifications && (
+                <Popover
+                  trigger="click"
+                  placement="bottomRight"
+                  open={notifOpen}
+                  onOpenChange={(open) => {
+                    setNotifOpen(open);
+                    if (open) markResponsesSeen();
+                  }}
+                  title="Edit Request Updates"
+                  content={
+                    <div style={{ width: 320, maxHeight: 360, overflowY: 'auto' }}>
+                      {responses.length === 0 ? (
+                        <Typography.Text type="secondary" className="text-sm">
+                          No responses yet
+                        </Typography.Text>
+                      ) : (
+                        <Flex vertical gap={8}>
+                          {responses.slice(0, 20).map((r) => (
+                            <div key={r.id} className="rounded-lg border border-[var(--border)] p-2">
+                              <Flex justify="space-between" align="center">
+                                <Tag color={r.status === 'approved' ? 'green' : 'red'}>{r.status.toUpperCase()}</Tag>
+                                <Typography.Text type="secondary" className="text-xs">
+                                  {formatDate(r.respondedAt)}
+                                </Typography.Text>
+                              </Flex>
+                              <Typography.Text className="mt-1 block text-xs">{r.reason}</Typography.Text>
+                              {r.timesheet && (
+                                <Typography.Text type="secondary" className="mt-1 block text-xs">
+                                  Week: {formatDate(r.timesheet.weekStart)} - {formatDate(r.timesheet.weekEnd)}
+                                </Typography.Text>
+                              )}
+                            </div>
+                          ))}
+                        </Flex>
+                      )}
+                    </div>
+                  }
+                >
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] text-[var(--text-secondary)] transition hover:bg-[var(--subtle-hover-bg)] hover:text-[var(--text-primary)]"
+                    aria-label="Notifications"
+                  >
+                    <Badge count={unseenResponseCount} size="small" offset={[-2, 2]}>
+                      <BellOutlined />
+                    </Badge>
+                  </button>
+                </Popover>
+              )}
 
             <Dropdown
               menu={{
