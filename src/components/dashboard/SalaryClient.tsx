@@ -68,7 +68,7 @@ export function SalaryClient({ salaries }: SalaryClientProps) {
   useEffect(() => {
     if (editingSalary) {
       setValue('grades', editingSalary.grades);
-      setValue('category', editingSalary.category || 'White Collar');
+      setValue('category', (editingSalary.category as SalaryFormValues['category']) || 'White Collar');
       setValue('role', editingSalary.role || '');
       setValue('expInYears', editingSalary.expInYears);
       setValue('monthlySalary', Number(editingSalary.monthlySalary));

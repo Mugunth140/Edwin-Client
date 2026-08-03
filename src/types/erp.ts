@@ -157,6 +157,44 @@ export type SiteEngineer = {
   createdAt?: string;
 };
 
+export const OFFICE_STAFF_TYPES = [
+  'Architect',
+  'Project Coordinator',
+  'Engineer',
+  'Research Associate',
+] as const;
+
+export type OfficeStaffType = (typeof OFFICE_STAFF_TYPES)[number];
+
+export type OfficeStaff = {
+  id: string;
+  name: string;
+  email: string;
+  username?: string | null;
+  employeeId?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  staffType?: OfficeStaffType | null;
+  isActive: boolean;
+  salaryGradeId?: string | null;
+  salaryGrade?: Salary | null;
+  projects?: Project[];
+  createdAt?: string;
+};
+
+export type OfficeReport = {
+  id: string;
+  category: string;
+  title: string;
+  description?: string | null;
+  projectId?: string | null;
+  project?: Project | null;
+  fileUrl: string;
+  fileKey: string;
+  uploadedBy?: string | null;
+  createdAt?: string;
+};
+
 export type AccountsManager = {
   id: string;
   name: string;

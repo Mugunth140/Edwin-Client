@@ -29,6 +29,8 @@ import type {
   AppUser,
   SchemaTable,
   EmployeeQuery,
+  OfficeStaff,
+  OfficeReport,
 } from '@/types/erp';
 import { getApiBaseUrl } from './api-url';
 
@@ -73,6 +75,9 @@ export const fetchSubcontractWorkOrders = (subcontractorId?: string) =>
 export const fetchVendors = () => apiFetch<Vendor[]>('/vendors');
 export const fetchSubcontractors = () => apiFetch<Subcontractor[]>('/subcontractors');
 export const fetchSiteEngineers = () => apiFetch<SiteEngineer[]>('/site-engineers');
+export const fetchOfficeStaff = () => apiFetch<OfficeStaff[]>('/office-staff');
+export const fetchOfficeReports = () => apiFetch<OfficeReport[]>('/office-reports');
+export const fetchOfficeReportCategories = () => apiFetch<string[]>('/office-reports/categories');
 export const fetchAccountsManagers = () => apiFetch<AccountsManager[]>('/accounts-managers');
 export const fetchPurchaseTeam = () => apiFetch<PurchaseTeamMember[]>('/purchase-team');
 export const fetchSubcontractor = (id: string) => apiFetch<Subcontractor>(`/subcontractors/${id}`);

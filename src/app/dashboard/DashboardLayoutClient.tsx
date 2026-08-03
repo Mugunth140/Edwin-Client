@@ -9,6 +9,7 @@ import {
   AuditOutlined,
   BankOutlined,
   BellOutlined,
+  CalculatorOutlined,
   CalendarOutlined,
   CloseOutlined,
   CreditCardOutlined,
@@ -55,7 +56,7 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
   {
     title: 'Workspace',
     items: [
-      { key: '/dashboard', icon: <AppstoreOutlined />, label: 'Dashboard', allowedRoles: ['admin', 'accounts_manager', 'site_engineer', 'purchase_team'] },
+      { key: '/dashboard', icon: <AppstoreOutlined />, label: 'Dashboard', allowedRoles: ['admin', 'accounts_manager', 'site_engineer', 'purchase_team', 'office_staff'] },
       { key: '/dashboard/new', icon: <FormOutlined />, label: 'Daily Entry List', allowedRoles: ['site_engineer'] },
 
       { key: '/dashboard/expenses/new', icon: <WalletOutlined />, label: 'Expense', allowedRoles: ['site_engineer'] },
@@ -64,9 +65,11 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
       { key: '/dashboard/vendors', icon: <TeamOutlined />, label: 'Vendors', allowedRoles: ['purchase_team'] },
       { key: '/dashboard/subcontractors', icon: <TeamOutlined />, label: 'Subcontractors', allowedRoles: ['purchase_team'] },
       { key: '/dashboard/site-engineers', icon: <UserOutlined />, label: 'Site Engineers', allowedRoles: ['admin'] },
-      { key: '/dashboard/employee-queries', icon: <SolutionOutlined />, label: 'Employee Queries', allowedRoles: ['admin'] },
+      { key: '/dashboard/office-staff', icon: <TeamOutlined />, label: 'Office Staff', allowedRoles: ['admin'] },
       { key: '/dashboard/accounts-managers', icon: <BankOutlined />, label: 'Accounts Managers', allowedRoles: ['admin'] },
       { key: '/dashboard/purchase-team', icon: <TeamOutlined />, label: 'Purchase Team', allowedRoles: ['admin'] },
+      { key: '/dashboard/employee-queries', icon: <SolutionOutlined />, label: 'Employee Queries', allowedRoles: ['admin'] },
+      
       { key: '/dashboard/subcontract-work-orders', icon: <FileTextOutlined />, label: 'Subcontract WO', allowedRoles: ['purchase_team'] },
       { key: '/dashboard/material-requirement', icon: <FileSearchOutlined />, label: 'Material Requirement', allowedRoles: ['site_engineer'] },
       { key: '/dashboard/report', icon: <FileTextOutlined />, label: 'My Report', allowedRoles: ['site_engineer'] },
@@ -89,6 +92,18 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
       { key: '/dashboard/approvals', icon: <SafetyCertificateOutlined />, label: 'Approvals', allowedRoles: ['admin', 'accounts_manager'] },
       { key: '/dashboard/expenses', icon: <WalletOutlined />, label: 'Expenses', allowedRoles: ['admin', 'accounts_manager'] },
       { key: '/dashboard/payments', icon: <CreditCardOutlined />, label: 'Payments', allowedRoles: ['admin', 'accounts_manager'] },
+    ],
+  },
+  {
+    title: 'For Office Staff',
+    allowedRoles: ['admin', 'office_staff'],
+    items: [
+      { key: '/dashboard/timesheet-attendance', icon: <CalendarOutlined />, label: 'Timesheet', allowedRoles: ['office_staff'] },
+      { key: '/dashboard/expenses', icon: <WalletOutlined />, label: 'Expense', allowedRoles: ['office_staff'] },
+      { key: '/dashboard/drawings', icon: <FileImageOutlined />, label: 'Drawings', allowedRoles: ['office_staff'] },
+      { key: '/dashboard/reports', icon: <FileTextOutlined />, label: 'Reports', allowedRoles: ['office_staff'] },
+      { key: '/dashboard/estimate', icon: <CalculatorOutlined />, label: 'Estimate', allowedRoles: ['office_staff'] },
+      { key: '/dashboard/accounts/bills', icon: <FileDoneOutlined />, label: 'Bill', allowedRoles: ['office_staff'] },
     ],
   },
   {

@@ -24,5 +24,10 @@ export default function DashboardPage() {
     return <AccountsManagerDashboardClient />;
   }
 
+  if (user?.role === 'office_staff') {
+    router.push('/dashboard/timesheet-attendance');
+    return null;
+  }
+
   return <DashboardClient />;
 }
