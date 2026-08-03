@@ -28,6 +28,7 @@ import type {
   ProjectCategory,
   AppUser,
   SchemaTable,
+  EmployeeQuery,
 } from '@/types/erp';
 import { getApiBaseUrl } from './api-url';
 
@@ -105,3 +106,5 @@ export const fetchTimesheetByWeek = (weekStart: string) =>
 export const fetchTimesheets = (params?: string) =>
   apiFetch<PagedResponse<WeeklyTimesheet>>(`/timesheet-attendance/all${params ? `?${params}` : ''}`);
 export const fetchSchemas = () => apiFetch<SchemaTable[]>('/schemas');
+export const fetchEmployeeQueries = (status?: string) =>
+  apiFetch<EmployeeQuery[]>(`/employee-queries${status ? `?status=${status}` : ''}`);

@@ -512,6 +512,27 @@ export type WeeklyTimesheet = {
   };
 };
 
+export type EmployeeQueryStatus = 'pending' | 'approved' | 'rejected';
+
+export type EmployeeQuery = {
+  id: string;
+  timesheetId: string;
+  timesheet?: WeeklyTimesheet;
+  siteEngineerId: string;
+  siteEngineer?: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
+  };
+  reason: string;
+  status: EmployeeQueryStatus;
+  respondedById?: string | null;
+  respondedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type Salary = {
   id: string;
   grades: string;

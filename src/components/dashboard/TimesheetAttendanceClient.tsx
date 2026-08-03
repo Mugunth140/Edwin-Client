@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import {
-  Button, Card, DatePicker, Flex, Input, Select, Spin, Tag, Typography, App,
+  Button, Card, DatePicker, Flex, Input, Modal, Select, Spin, Tag, Typography, App,
 } from 'antd';
 import {
-  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined,
+  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined, EditOutlined,
 } from '@ant-design/icons';
 import { saveTimesheet, updateTimesheet, submitTimesheet } from '@/actions/timesheet-attendance';
-import type { Project } from '@/types/erp';
+import { createEmployeeQuery } from '@/actions/employee-queries';
+import type { Project, EmployeeQuery } from '@/types/erp';
 import { cardClassName, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import dayjs from 'dayjs';
 
@@ -190,6 +191,10 @@ export function TimesheetAttendanceClient({ projects }: Props) {
   const [rows, setRows] = useState<GridRow[]>(defaultRows());
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(false);
+  const [myQueries, setMyQueries] = useState<EmployeeQuery[]>([]);
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestReason, setRequestReason] = useState('');
+  const [requestPending, startRequestTransition] = useTransition();
   const { message } = App.useApp();
 
   const weekStartStr = formatDate(weekStart);
@@ -241,7 +246,40 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     } catch { /* silent */ } finally { setLoading(false); }
   }, [weekStartStr]);
 
-  useEffect(() => { loadTs(); }, [loadTs]);
+  const loadQueries = useCallback(async () => {
+    try {
+      const res = await fetch('/api/backend/employee-queries');
+      if (res.ok) setMyQueries(await res.json());
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => { loadTs(); loadQueries(); }, [loadTs, loadQueries]);
+
+  const latestQuery = useMemo(() => {
+    if (!existingTs?.id) return null;
+    return myQueries
+      .filter((q) => q.timesheetId === existingTs.id)
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0] || null;
+  }, [myQueries, existingTs?.id]);
+
+  const submitEditRequest = () => {
+    if (!existingTs?.id) return;
+    if (requestReason.trim().length < 5) {
+      message.error('Please describe the issue (at least 5 characters)');
+      return;
+    }
+    startRequestTransition(async () => {
+      try {
+        await createEmployeeQuery({ timesheetId: existingTs.id, reason: requestReason.trim() });
+        message.success('Edit request sent to admin');
+        setRequestModalOpen(false);
+        setRequestReason('');
+        loadQueries();
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed to send request');
+      }
+    });
+  };
 
   const dayTotals = useMemo(
     () => DAY_LABELS.map((_, dayIdx) => rows.reduce((s, r) => s + (r.hours[dayIdx] || 0), 0)),
@@ -360,6 +398,15 @@ export function TimesheetAttendanceClient({ projects }: Props) {
               </Typography.Text>
             </div>
             {isSubmitted && <Tag color="green">Submitted</Tag>}
+            {isSubmitted && (
+              latestQuery?.status === 'pending' ? (
+                <Tag color="blue">Edit Request Pending</Tag>
+              ) : (
+                <Button size="small" icon={<EditOutlined />} onClick={() => setRequestModalOpen(true)}>
+                  Request Edit
+                </Button>
+              )
+            )}
             {isFullyLocked ? (
               <Button type="primary" disabled>
                 {tsStatus === 'approved' ? 'Approved' : tsStatus === 'verified' ? 'Verified' : 'Submitted'}
@@ -523,7 +570,32 @@ export function TimesheetAttendanceClient({ projects }: Props) {
         <Typography.Text type="secondary" className="mt-2 block text-xs">
           Each day is 8 hrs — split it across projects (e.g. 4 hrs on Project A and 4 hrs on Project B). Submitted hours lock; add another project row to enter more for the same day. Use Public Holiday, Idle Time or Leave for non-project days.
         </Typography.Text>
+        {latestQuery?.status === 'rejected' && (
+          <Typography.Text type="danger" className="mt-1 block text-xs">
+            Your last edit request was rejected. You can send a new one if you still need a correction.
+          </Typography.Text>
+        )}
       </Card>
+
+      <Modal
+        title="Request Edit Access"
+        open={requestModalOpen}
+        onCancel={() => setRequestModalOpen(false)}
+        onOk={submitEditRequest}
+        okText="Send Request"
+        confirmLoading={requestPending}
+      >
+        <Typography.Paragraph type="secondary">
+          This timesheet is already submitted and locked. Describe what you entered wrong — an admin will review and can reopen it for editing.
+        </Typography.Paragraph>
+        <Input.TextArea
+          rows={4}
+          maxLength={1000}
+          value={requestReason}
+          onChange={(e) => setRequestReason(e.target.value)}
+          placeholder="e.g. Entered wrong hours on Monday, should be 6 hrs not 8"
+        />
+      </Modal>
     </div>
   );
 }
