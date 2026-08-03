@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import {
-  Button, Card, Checkbox, Drawer, Flex, Form, Modal, Select, Space, Table, Tag, Typography, App, Upload,
+  Button, Card, Checkbox, Drawer, Flex, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, App, Upload,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, UploadOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons';
+import { PlusOutlined, UploadOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, EditOutlined } from '@ant-design/icons';
 import type { Project, Vendor, VendorQuotation, PurchaseEnquiry } from '@/types/erp';
 import { cardClassName, formatDate, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import { clientApiFetch } from '@/lib/client-api';
@@ -95,6 +95,14 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
   const [vendorSections, setVendorSections] = useState<VendorSection[]>([
     { vendorId: '', itemIndices: [], file: null },
   ]);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editRecord, setEditRecord] = useState<VendorQuotation | null>(null);
+  const [editProjectId, setEditProjectId] = useState('');
+  const [editVendorId, setEditVendorId] = useState('');
+  const [editItems, setEditItems] = useState<QuotationItem[]>([]);
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -197,6 +205,71 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
     });
   };
 
+  const openEdit = (record: VendorQuotation) => {
+    setEditRecord(record);
+    setEditProjectId(record.projectId);
+    setEditVendorId(record.vendorId);
+    setEditItems(record.items.map((i) => ({ description: i.description, quantity: i.quantity })));
+    setEditFile(null);
+    setEditOpen(true);
+  };
+
+  const closeEdit = () => {
+    setEditOpen(false);
+    setEditRecord(null);
+    setEditProjectId('');
+    setEditVendorId('');
+    setEditItems([]);
+    setEditFile(null);
+  };
+
+  const updateEditItem = (idx: number, field: 'description' | 'quantity', value: string | number) => {
+    const copy = [...editItems];
+    copy[idx] = { ...copy[idx], [field]: value } as QuotationItem;
+    setEditItems(copy);
+  };
+
+  const addEditItem = () => setEditItems([...editItems, { description: '', quantity: 1 }]);
+  const removeEditItem = (idx: number) => setEditItems(editItems.filter((_, i) => i !== idx));
+
+  const submitEdit = async () => {
+    if (!editRecord) return;
+    if (!editProjectId) { message.error('Select a project'); return; }
+    if (!editVendorId) { message.error('Select a vendor'); return; }
+    if (!editItems.length || editItems.some((i) => !i.description || !i.quantity)) {
+      message.error('Fill in all item fields');
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await apiPatch(`/vendor-quotations/${editRecord.id}`, {
+        projectId: editProjectId,
+        vendorId: editVendorId,
+        items: editItems.map((i) => ({ description: i.description, quantity: Number(i.quantity) })),
+      });
+
+      if (editFile) {
+        const fd = new FormData();
+        fd.append('quotation', editFile);
+        const res = await fetch(`/api/backend/vendor-quotations/${editRecord.id}/upload`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: fd,
+        });
+        if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+      }
+
+      message.success('Quotation updated');
+      closeEdit();
+      fetchData();
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Failed to update');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const flatData = data.reduce<Array<VendorQuotation & { _groupSize: number; _isFirst: boolean }>>((acc, r, idx) => {
     const prev = data[idx - 1];
     const isNewGroup = !prev || prev.enquiryNo !== r.enquiryNo;
@@ -297,18 +370,21 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
       render: (_, r) => r.createdAt ? formatDate(r.createdAt) : '-',
     },
     {
-      title: 'Action', key: 'action', width: 80,
+      title: 'Action', key: 'action', width: 100,
       render: (_, r) => (
-        <Button type="link" danger size="small" icon={<DeleteOutlined />} onClick={() => {
-          Modal.confirm({
-            title: 'Delete quotation?',
-            onOk: () => startTransition(async () => {
-              await apiDelete(`/vendor-quotations/${r.id}`);
-              message.success('Deleted');
-              fetchData();
-            }),
-          });
-        }} />
+        <Space size={0}>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(r)} />
+          <Button type="link" danger size="small" icon={<DeleteOutlined />} onClick={() => {
+            Modal.confirm({
+              title: 'Delete quotation?',
+              onOk: () => startTransition(async () => {
+                await apiDelete(`/vendor-quotations/${r.id}`);
+                message.success('Deleted');
+                fetchData();
+              }),
+            });
+          }} />
+        </Space>
       ),
     },
   ];
@@ -459,6 +535,105 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
           <Button type="dashed" icon={<PlusOutlined />} onClick={addVendorSection} block>
             Add Another Vendor
           </Button>
+        </Flex>
+      </Drawer>
+
+      <Drawer
+        title={`Edit Enquiry — ${editRecord?.enquiryNo || ''}`}
+        size="large"
+        open={editOpen}
+        onClose={closeEdit}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button onClick={closeEdit}>Cancel</Button>
+            <Button type="primary" loading={editSaving} onClick={submitEdit}>Save</Button>
+          </Space>
+        }
+      >
+        <Flex vertical gap={16}>
+          <Form.Item label="Project" required>
+            <Select
+              placeholder="Select project"
+              showSearch
+              optionFilterProp="label"
+              value={editProjectId || undefined}
+              onChange={setEditProjectId}
+              options={projects.map((p) => ({ value: p.id, label: p.name }))}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+
+          <Form.Item label="Vendor" required>
+            <Select
+              placeholder="Select vendor"
+              showSearch
+              optionFilterProp="label"
+              value={editVendorId || undefined}
+              onChange={setEditVendorId}
+              options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+
+          <div>
+            <Typography.Text strong className="text-sm">Items</Typography.Text>
+            <Flex vertical gap={8} className="mt-2">
+              {editItems.map((item, idx) => (
+                <Flex key={idx} gap={8} align="center">
+                  <Input
+                    placeholder="Description"
+                    value={item.description}
+                    onChange={(e) => updateEditItem(idx, 'description', e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <InputNumber
+                    placeholder="Qty"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(v) => updateEditItem(idx, 'quantity', v ?? 1)}
+                    style={{ width: 100 }}
+                  />
+                  <Button
+                    type="link"
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    disabled={editItems.length <= 1}
+                    onClick={() => removeEditItem(idx)}
+                  />
+                </Flex>
+              ))}
+            </Flex>
+            <Button type="dashed" icon={<PlusOutlined />} onClick={addEditItem} block className="mt-2">
+              Add Item
+            </Button>
+          </div>
+
+          <Form.Item label="Quotation Bill">
+            {editRecord?.quotationUrl && !editFile && (
+              <Flex align="center" gap={8} className="mb-2">
+                <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => setPreviewUrl(editRecord.quotationUrl!)}>
+                  View current file
+                </Button>
+              </Flex>
+            )}
+            <Upload
+              accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx"
+              beforeUpload={async (file) => {
+                const compressed = await compressImage(file, 1920, 0.7);
+                setEditFile(compressed);
+                return false;
+              }}
+              onRemove={() => setEditFile(null)}
+              maxCount={1}
+              fileList={editFile ? [{ uid: '-1', name: editFile.name, status: 'done' }] : []}
+            >
+              <Button icon={<UploadOutlined />}>
+                {editRecord?.quotationUrl ? 'Replace Quotation Bill' : 'Upload Quotation Bill'}
+              </Button>
+            </Upload>
+          </Form.Item>
         </Flex>
       </Drawer>
 

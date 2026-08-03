@@ -146,6 +146,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
           await createPurchaseOrder({
             vendorId: section.vendorId,
             projectId,
+            enquiryNo: selectedPE || undefined,
             paymentTerms: paymentTerms || undefined,
             gstPercent: section.gstPercent || undefined,
             items,
@@ -191,6 +192,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const columns: ColumnsType<PurchaseOrder> = [
     { title: 'S.No', key: 'sno', width: 60, render: (_text, _record, index) => index + 1 },
     { title: 'PO Number', dataIndex: 'poNumber', sorter: (a, b) => a.poNumber.localeCompare(b.poNumber), render: (value: string) => <Typography.Text strong>{value}</Typography.Text> },
+    { title: 'PE Number', dataIndex: 'enquiryNo', sorter: (a, b) => (a.enquiryNo || '').localeCompare(b.enquiryNo || ''), render: (value?: string | null) => value || <Typography.Text type="secondary">-</Typography.Text> },
     { title: 'Vendor', dataIndex: ['vendor', 'name'], sorter: (a, b) => (a.vendor?.name || '').localeCompare(b.vendor?.name || ''), render: (_value, record) => record.vendor?.name || '-' },
     { title: 'Project', dataIndex: ['project', 'name'], sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''), render: (_value, record) => record.project?.name || '-' },
     { title: 'Status', dataIndex: 'status', width: 150, filters: STATUS_OPTIONS.map((opt) => ({ text: opt.label, value: opt.value })), onFilter: (value, record) => record.status === value, render: (value: string, record) =>
