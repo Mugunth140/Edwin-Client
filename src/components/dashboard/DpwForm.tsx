@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
-import { Button, Card, Col, DatePicker, Divider, Flex, Form, Input, Row, Select, Space, Typography, App, Upload, InputNumber } from 'antd';
-import { PlusOutlined, UploadOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
+import { Button, Card, Col, DatePicker, Divider, Flex, Form, Input, Row, Select, Space, Typography, App, InputNumber } from 'antd';
+import { PlusOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { createDailyLabourReport, updateDailyLabourReport, deleteDailyLabourReport } from '@/actions/daily-labour';
 import { createTrade } from '@/actions/trades';
 import type { Project, Trade, DailyLabourReport } from '@/types/erp';
 import { cardClassName } from './ui';
 import { useAuthStore } from '@/store/auth';
+import { GeoTagPhotoCapture, type GeoTagFile } from './GeoTagPhotoCapture';
 
 import { useRouter } from 'next/navigation';
 import { getApiOrigin } from '@/lib/api-url';
@@ -33,7 +34,7 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
   const [form] = Form.useForm();
 
   // Keep track of photo file lists per worker index
-  const [workerPhotos, setWorkerPhotos] = useState<Record<number, { morning: any[], evening: any[] }>>({});
+  const [workerPhotos, setWorkerPhotos] = useState<Record<number, { morning: GeoTagFile[], evening: GeoTagFile[] }>>({});
 
   // Pre-fill form if editing
   useEffect(() => {
@@ -115,7 +116,7 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
     }
   };
 
-  const handlePhotoChange = (index: number, type: 'morning' | 'evening', fileList: any[]) => {
+  const handlePhotoChange = (index: number, type: 'morning' | 'evening', fileList: GeoTagFile[]) => {
     setWorkerPhotos(prev => ({
       ...prev,
       [index]: {
@@ -267,30 +268,20 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
                     
                     <Col xs={24} md={12}>
                       <Form.Item label="Morning Photos (Max 2)">
-                        <Upload
-                          beforeUpload={() => false}
-                          listType="picture"
+                        <GeoTagPhotoCapture
                           maxCount={2}
                           fileList={workerPhotos[name]?.morning || []}
-                          onChange={({ fileList }) => handlePhotoChange(name, 'morning', fileList)}
-                          accept="image/*"
-                        >
-                          <Button icon={<UploadOutlined />} block>Photos</Button>
-                        </Upload>
+                          onChange={(fileList) => handlePhotoChange(name, 'morning', fileList)}
+                        />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item label="Evening Photos (Max 2)">
-                        <Upload
-                          beforeUpload={() => false}
-                          listType="picture"
+                        <GeoTagPhotoCapture
                           maxCount={2}
                           fileList={workerPhotos[name]?.evening || []}
-                          onChange={({ fileList }) => handlePhotoChange(name, 'evening', fileList)}
-                          accept="image/*"
-                        >
-                          <Button icon={<UploadOutlined />} block>Photos</Button>
-                        </Upload>
+                          onChange={(fileList) => handlePhotoChange(name, 'evening', fileList)}
+                        />
                       </Form.Item>
                     </Col>
 
