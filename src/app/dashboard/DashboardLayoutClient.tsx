@@ -53,6 +53,18 @@ type NavItem = {
   allowedRoles?: string[];
 };
 
+type AppNotification = {
+  id: string;
+  type: string;
+  title: string;
+  message?: string | null;
+  link?: string | null;
+  entityId?: string | null;
+  actorName?: string | null;
+  createdAt?: string;
+  isRead: boolean;
+};
+
 const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?: string[] }> = [
   {
     title: 'Workspace',
@@ -174,6 +186,8 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   const [notifOpen, setNotifOpen] = useState(false);
   const [responses, setResponses] = useState<EmployeeQuery[]>([]);
   const [unseenResponseCount, setUnseenResponseCount] = useState(0);
+  const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
+  const [unseenNotifCount, setUnseenNotifCount] = useState(0);
   const canSeeNotifications = user?.role === 'site_engineer' || user?.role === 'purchase_team';
 
   useEffect(() => {
@@ -205,6 +219,33 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     if (!user) return;
     localStorage.setItem(`eq_notif_seen_${user.id}`, new Date().toISOString());
     setUnseenResponseCount(0);
+  };
+
+  useEffect(() => {
+    if (!canSeeNotifications || !user) {
+      setAppNotifications([]);
+      setUnseenNotifCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/backend/notifications');
+        if (!res.ok || cancelled) return;
+        const data: AppNotification[] = await res.json();
+        if (cancelled) return;
+        setAppNotifications(data);
+        setUnseenNotifCount(data.filter((n) => !n.isRead).length);
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [canSeeNotifications, user, pathname]);
+
+  const markNotificationsSeen = () => {
+    if (!user) return;
+    setUnseenNotifCount(0);
+    void fetch('/api/backend/notifications/read-all', { method: 'PATCH' }).catch(() => {});
   };
 
   useEffect(() => {
@@ -463,11 +504,48 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                   open={notifOpen}
                   onOpenChange={(open) => {
                     setNotifOpen(open);
-                    if (open) markResponsesSeen();
+                    if (open) {
+                      markResponsesSeen();
+                      markNotificationsSeen();
+                    }
                   }}
-                  title="Edit Request Updates"
+                  title="Notifications"
                   content={
-                    <div style={{ width: 320, maxHeight: 360, overflowY: 'auto' }}>
+                    <div style={{ width: 340, maxHeight: 380, overflowY: 'auto' }}>
+                      {appNotifications.length > 0 && (
+                        <div className="mb-2">
+                          <Typography.Text className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-very-muted)]">
+                            Material Requirements
+                          </Typography.Text>
+                          <Flex vertical gap={8}>
+                            {appNotifications.slice(0, 10).map((n) => (
+                              <div
+                                key={n.id}
+                                className={`cursor-pointer rounded-lg border p-2 transition hover:bg-[var(--subtle-hover-bg)] ${
+                                  n.isRead ? 'border-[var(--border)] opacity-70' : 'border-sky-500/40 bg-sky-500/5'
+                                }`}
+                                onClick={() => {
+                                  setNotifOpen(false);
+                                  router.push(n.link || '/dashboard/material-requirement');
+                                }}
+                              >
+                                <Typography.Text className="block text-sm">
+                                  {n.actorName && <strong>{n.actorName}: </strong>}
+                                  {n.title} — {n.message}
+                                </Typography.Text>
+                                {n.createdAt && (
+                                  <Typography.Text type="secondary" className="mt-0.5 block text-xs">
+                                    {formatDate(n.createdAt)}
+                                  </Typography.Text>
+                                )}
+                              </div>
+                            ))}
+                          </Flex>
+                        </div>
+                      )}
+                      <Typography.Text className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-very-muted)]">
+                        Edit Request Updates
+                      </Typography.Text>
                       {responses.length === 0 ? (
                         <Typography.Text type="secondary" className="text-sm">
                           No responses yet
@@ -500,7 +578,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                     className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] text-[var(--text-secondary)] transition hover:bg-[var(--subtle-hover-bg)] hover:text-[var(--text-primary)]"
                     aria-label="Notifications"
                   >
-                    <Badge count={unseenResponseCount} size="small" offset={[-2, 2]}>
+                    <Badge count={unseenResponseCount + unseenNotifCount} size="small" offset={[-2, 2]}>
                       <BellOutlined />
                     </Badge>
                   </button>
