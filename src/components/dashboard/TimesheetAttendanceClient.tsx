@@ -5,9 +5,9 @@ import {
   Button, Card, DatePicker, Flex, Input, Select, Spin, Tag, Typography, App,
 } from 'antd';
 import {
-  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined, EditOutlined,
+  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined,
 } from '@ant-design/icons';
-import { saveTimesheet, updateTimesheet, submitTimesheet, unsubmitTimesheet } from '@/actions/timesheet-attendance';
+import { saveTimesheet, updateTimesheet, submitTimesheet } from '@/actions/timesheet-attendance';
 import type { Project } from '@/types/erp';
 import { cardClassName, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import dayjs from 'dayjs';
@@ -21,7 +21,7 @@ const FIXED_CATEGORIES = [
   { kind: 'leave', label: 'Leave' },
 ] as const;
 
-const STANDARD_DAILY_HOURS = 8.5;
+const STANDARD_DAILY_HOURS = 8;
 const STANDARD_WORKING_DAYS = 6;
 const STANDARD_WEEKLY_HOURS = STANDARD_DAILY_HOURS * STANDARD_WORKING_DAYS;
 
@@ -34,6 +34,7 @@ type GridRow = {
   projectId: string | null;
   hours: number[];
   remark: string;
+  submittedMask: number;
 };
 
 type Props = { projects: Project[] };
@@ -49,11 +50,11 @@ function emptyHours(): number[] {
 }
 
 function emptyProjectRow(): GridRow {
-  return { key: nextKey(), kind: 'project', projectId: null, hours: emptyHours(), remark: '' };
+  return { key: nextKey(), kind: 'project', projectId: null, hours: emptyHours(), remark: '', submittedMask: 0 };
 }
 
 function emptyFixedRows(): GridRow[] {
-  return FIXED_CATEGORIES.map((c) => ({ key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours(), remark: '' }));
+  return FIXED_CATEGORIES.map((c) => ({ key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours(), remark: '', submittedMask: 0 }));
 }
 
 function defaultRows(): GridRow[] {
@@ -78,15 +79,16 @@ function formatDate(d: Date) {
 function rowsFromServer(tsRows: any[]): GridRow[] {
   const projectRows: GridRow[] = [];
   const fixedMap = new Map<string, GridRow>();
-  for (const c of FIXED_CATEGORIES) fixedMap.set(c.kind, { key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours(), remark: '' });
+  for (const c of FIXED_CATEGORIES) fixedMap.set(c.kind, { key: nextKey(), kind: c.kind, projectId: null, hours: emptyHours(), remark: '', submittedMask: 0 });
 
   for (const row of tsRows) {
     const hours = DAYS.map((d) => Number((row as any)[d] || 0));
     const remark = row.remark || '';
+    const submittedMask = Number((row as any).submittedMask || 0);
     if (row.entryType === 'project') {
-      projectRows.push({ key: nextKey(), kind: 'project', rowId: row.id, projectId: row.projectId || null, hours, remark });
+      projectRows.push({ key: nextKey(), kind: 'project', rowId: row.id, projectId: row.projectId || null, hours, remark, submittedMask });
     } else if (fixedMap.has(row.entryType)) {
-      fixedMap.set(row.entryType, { key: nextKey(), kind: row.entryType, rowId: row.id, projectId: null, hours, remark });
+      fixedMap.set(row.entryType, { key: nextKey(), kind: row.entryType, rowId: row.id, projectId: null, hours, remark, submittedMask });
     }
   }
 
@@ -165,7 +167,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
   const [month, setMonth] = useState<dayjs.Dayjs>(dayjs().startOf('month'));
   const [weekStart, setWeekStart] = useState<Date>(getMonday(new Date()));
   const [existingTs, setExistingTs] = useState<any>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [rows, setRows] = useState<GridRow[]>(defaultRows());
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(false);
@@ -173,6 +174,10 @@ export function TimesheetAttendanceClient({ projects }: Props) {
 
   const weekStartStr = formatDate(weekStart);
   const todayStr = dayjs().format('YYYY-MM-DD');
+
+  const tsStatus = existingTs?.status;
+  const isSubmitted = tsStatus === 'submitted';
+  const isFullyLocked = !!existingTs && ['verified', 'admin_approved', 'approved'].includes(tsStatus);
 
   const weeksInMonth = useMemo(() => {
     const start = month.startOf('month').toDate();
@@ -192,7 +197,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     if (weekIndex > 0) {
       setWeekStart(weeksInMonth[weekIndex - 1]);
       setExistingTs(null);
-      setIsSubmitted(false);
       setRows(defaultRows());
     }
   };
@@ -201,7 +205,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     if (weekIndex < weeksInMonth.length - 1) {
       setWeekStart(weeksInMonth[weekIndex + 1]);
       setExistingTs(null);
-      setIsSubmitted(false);
       setRows(defaultRows());
     }
   };
@@ -213,7 +216,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
       if (res.ok) {
         const data = await res.json();
         setExistingTs(data);
-        setIsSubmitted(!!(data && data.status === 'submitted'));
         setRows(data && data.rows && data.rows.length > 0 ? rowsFromServer(data.rows) : defaultRows());
       }
     } catch { /* silent */ } finally { setLoading(false); }
@@ -262,20 +264,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, remark } : r)));
   };
 
-  const handleSave = () => {
-    startTransition(async () => {
-      try {
-        const payloadRows = rowsToPayload(rows);
-        const payload = { weekStart: weekStartStr, rows: payloadRows };
-        if (existingTs?.id) { await updateTimesheet(existingTs.id, payload); message.success('Updated'); }
-        else { await saveTimesheet(payload); message.success('Saved'); }
-        loadTs();
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to save');
-      }
-    });
-  };
-
   const handleSubmit = () => {
     startTransition(async () => {
       try {
@@ -284,24 +272,14 @@ export function TimesheetAttendanceClient({ projects }: Props) {
         if (existingTs?.id) {
           await updateTimesheet(existingTs.id, payload);
           await submitTimesheet(existingTs.id);
-          message.success('Submitted');
-          loadTs();
+        } else {
+          const created = await saveTimesheet(payload);
+          await submitTimesheet(created.id);
         }
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to submit');
-      }
-    });
-  };
-
-  const handleUnsubmit = () => {
-    if (!existingTs?.id) return;
-    startTransition(async () => {
-      try {
-        await unsubmitTimesheet(existingTs.id);
-        message.success('Reopened — you can edit again');
+        message.success('Submitted');
         loadTs();
       } catch (error) {
-        message.error(error instanceof Error ? error.message : 'Failed to reopen');
+        message.error(error instanceof Error ? error.message : 'Failed to submit');
       }
     });
   };
@@ -326,7 +304,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                   const m = getMonday(d.startOf('month').toDate());
                   setWeekStart(m);
                   setExistingTs(null);
-                  setIsSubmitted(false);
                   setRows(defaultRows());
                 }
               }}
@@ -347,16 +324,13 @@ export function TimesheetAttendanceClient({ projects }: Props) {
               </Typography.Text>
             </div>
             {isSubmitted && <Tag color="green">Submitted</Tag>}
-            {isSubmitted ? (
-              <>
-                <Button type="primary" disabled>Submitted</Button>
-                <Button icon={<EditOutlined />} onClick={handleUnsubmit} loading={isPending}>
-                  Edit
-                </Button>
-              </>
+            {isFullyLocked ? (
+              <Button type="primary" disabled>
+                {tsStatus === 'approved' ? 'Approved' : tsStatus === 'verified' ? 'Verified' : 'Submitted'}
+              </Button>
             ) : (
-              <Button type="primary" icon={<SaveOutlined />} onClick={existingTs?.id ? handleSubmit : handleSave} loading={isPending}>
-                {existingTs?.id ? 'Review and Submit' : 'Save'}
+              <Button type="primary" icon={<SaveOutlined />} onClick={handleSubmit} loading={isPending}>
+                Review and Submit
               </Button>
             )}
           </Flex>
@@ -387,14 +361,16 @@ export function TimesheetAttendanceClient({ projects }: Props) {
               </tr>
             </thead>
             <tbody>
-              {rows.filter((r) => r.kind === 'project').map((row) => (
+              {rows.filter((r) => r.kind === 'project').map((row) => {
+                const rowLocked = row.submittedMask !== 0;
+                return (
                 <tr key={row.key}>
                   <td className="border border-[var(--border)] px-2 py-1.5">
                     <Select
                       className="w-full"
                       placeholder="Select project"
                       allowClear
-                      disabled={isSubmitted}
+                      disabled={isFullyLocked || rowLocked}
                       value={row.projectId || undefined}
                       onChange={(val) => setProjectId(row.key, val || null)}
                       options={projects.map((p) => ({ label: p.name, value: p.id }))}
@@ -405,12 +381,13 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                     const dateObj = new Date(weekStart);
                     dateObj.setDate(dateObj.getDate() + dayIdx);
                     const isToday = formatDate(dateObj) === todayStr;
+                    const cellLocked = (row.submittedMask & (1 << dayIdx)) !== 0;
                     return (
                       <td key={dayIdx} className="border border-[var(--border)] p-1 text-center">
                         <HoursCell
                           value={row.hours[dayIdx] || 0}
                           onChange={(v) => setHour(row.key, dayIdx, v)}
-                          disabled={!isToday || isSubmitted}
+                          disabled={isFullyLocked || !isToday || cellLocked}
                         />
                       </td>
                     );
@@ -421,7 +398,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       size="small"
                       placeholder="Remark"
                       allowClear
-                      disabled={isSubmitted}
+                      disabled={isFullyLocked || rowLocked}
                       maxLength={1000}
                       value={row.remark}
                       onChange={(e) => setRemark(row.key, e.target.value)}
@@ -432,23 +409,26 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       size="small"
                       type="text"
                       danger
-                      disabled={isSubmitted}
+                      disabled={isFullyLocked || rowLocked}
                       icon={<DeleteOutlined />}
                       onClick={() => removeProjectRow(row.key)}
                     />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
 
               <tr>
                 <td colSpan={10} className="border border-[var(--border)] p-1.5">
-                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addProjectRow} disabled={isSubmitted} block>
+                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addProjectRow} disabled={isFullyLocked} block>
                     Add Project
                   </Button>
                 </td>
               </tr>
 
-              {rows.filter((r) => r.kind !== 'project').map((row) => (
+              {rows.filter((r) => r.kind !== 'project').map((row) => {
+                const rowLocked = row.submittedMask !== 0;
+                return (
                 <tr key={row.key}>
                   <td className="border border-[var(--border)] px-3 py-1.5 text-[var(--text-muted)] italic">
                     {FIXED_CATEGORIES.find((c) => c.kind === row.kind)?.label}
@@ -457,12 +437,13 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                     const dateObj = new Date(weekStart);
                     dateObj.setDate(dateObj.getDate() + dayIdx);
                     const isToday = formatDate(dateObj) === todayStr;
+                    const cellLocked = (row.submittedMask & (1 << dayIdx)) !== 0;
                     return (
                       <td key={dayIdx} className="border border-[var(--border)] p-1 text-center">
                         <HoursCell
                           value={row.hours[dayIdx] || 0}
                           onChange={(v) => setHour(row.key, dayIdx, v)}
-                          disabled={!isToday || isSubmitted}
+                          disabled={isFullyLocked || !isToday || cellLocked}
                         />
                       </td>
                     );
@@ -473,7 +454,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       size="small"
                       placeholder="Remark"
                       allowClear
-                      disabled={isSubmitted}
+                      disabled={isFullyLocked || rowLocked}
                       maxLength={1000}
                       value={row.remark}
                       onChange={(e) => setRemark(row.key, e.target.value)}
@@ -481,7 +462,8 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                   </td>
                   <td className="border border-[var(--border)]" />
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
             <tfoot>
               <tr>
@@ -489,7 +471,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                 {dayTotals.map((t, i) => (
                   <td
                     key={i}
-                    className={`border border-[var(--border)] px-2 py-2 text-center font-semibold ${t > 24 ? 'text-red-400' : 'text-[var(--text-secondary)]'}`}
+                    className={`border border-[var(--border)] px-2 py-2 text-center font-semibold ${t > 8 ? 'text-red-400' : 'text-[var(--text-secondary)]'}`}
                   >
                     {t.toFixed(1)}
                   </td>
@@ -503,7 +485,7 @@ export function TimesheetAttendanceClient({ projects }: Props) {
         </Spin>
 
         <Typography.Text type="secondary" className="mt-2 block text-xs">
-          Add a row per project — the same day can be split across multiple projects (e.g. 4 hrs on Project A and 4 hrs on Project B). Use Public Holiday, Idle Time or Leave for non-project days.
+          Each day is 8 hrs — split it across projects (e.g. 4 hrs on Project A and 4 hrs on Project B). Submitted hours lock; add another project row to enter more for the same day. Use Public Holiday, Idle Time or Leave for non-project days.
         </Typography.Text>
       </Card>
     </div>
