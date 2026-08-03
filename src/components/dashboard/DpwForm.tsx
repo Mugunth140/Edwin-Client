@@ -14,6 +14,9 @@ import { GeoTagPhotoCapture, type GeoTagFile } from './GeoTagPhotoCapture';
 import { useRouter } from 'next/navigation';
 import { getApiOrigin } from '@/lib/api-url';
 
+const MAX_PHOTOS_PER_SESSION = 5;
+const PHOTO_SLOTS = [1, 2, 3, 4, 5] as const;
+
 type Props = {
   projects: Project[];
   trades: Trade[];
@@ -51,25 +54,16 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
       });
 
       // Populate existing photos per worker
-      const photos: Record<number, { morning: any[], evening: any[] }> = {};
+      const photos: Record<number, { morning: GeoTagFile[], evening: GeoTagFile[] }> = {};
       initialValues.workers.forEach((w, index) => {
-        const morning = [];
-        if (w.morningPhoto1Url) {
-          morning.push({ uid: `-m1-${index}`, name: 'morning1.jpg', status: 'done', url: `${getApiOrigin()}${w.morningPhoto1Url}` });
-        }
-        if (w.morningPhoto2Url) {
-          morning.push({ uid: `-m2-${index}`, name: 'morning2.jpg', status: 'done', url: `${getApiOrigin()}${w.morningPhoto2Url}` });
-        }
+        const buildList = (session: 'morning' | 'evening'): GeoTagFile[] =>
+          PHOTO_SLOTS.flatMap((slot) => {
+            const url = (w as Record<string, unknown>)[`${session}Photo${slot}Url`] as string | undefined;
+            if (!url) return [];
+            return [{ uid: `-${session[0]}${slot}-${index}`, name: `${session}${slot}.jpg`, status: 'done' as const, url: `${getApiOrigin()}${url}` }];
+          });
 
-        const evening = [];
-        if (w.eveningPhoto1Url) {
-          evening.push({ uid: `-e1-${index}`, name: 'evening1.jpg', status: 'done', url: `${getApiOrigin()}${w.eveningPhoto1Url}` });
-        }
-        if (w.eveningPhoto2Url) {
-          evening.push({ uid: `-e2-${index}`, name: 'evening2.jpg', status: 'done', url: `${getApiOrigin()}${w.eveningPhoto2Url}` });
-        }
-
-        photos[index] = { morning, evening };
+        photos[index] = { morning: buildList('morning'), evening: buildList('evening') };
       });
       setWorkerPhotos(photos);
     }
@@ -137,13 +131,19 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
         const workers = values.workers?.map((w: any, index: number) => {
           const selectedTrade = localTrades.find(t => t.id === w.tradeId);
           
-          // Add photos to formData with special field names
+          // Add photos to formData with special field names, and carry
+          // through existing photo URLs (relative to API origin) for slots
+          // that weren't replaced with a new capture.
           const photos = workerPhotos[index];
-          if (photos) {
-            if (photos.morning?.[0]?.originFileObj) formData.append(`worker_${index}_morningPhoto1`, photos.morning[0].originFileObj);
-            if (photos.morning?.[1]?.originFileObj) formData.append(`worker_${index}_morningPhoto2`, photos.morning[1].originFileObj);
-            if (photos.evening?.[0]?.originFileObj) formData.append(`worker_${index}_eveningPhoto1`, photos.evening[0].originFileObj);
-            if (photos.evening?.[1]?.originFileObj) formData.append(`worker_${index}_eveningPhoto2`, photos.evening[1].originFileObj);
+          const photoUrls: Record<string, string | undefined> = {};
+          for (const session of ['morning', 'evening'] as const) {
+            PHOTO_SLOTS.forEach((slot, i) => {
+              const item = photos?.[session]?.[i];
+              if (item?.originFileObj) {
+                formData.append(`worker_${index}_${session}Photo${slot}`, item.originFileObj);
+              }
+              photoUrls[`${session}Photo${slot}Url`] = item?.url?.replace(getApiOrigin(), '') || undefined;
+            });
           }
 
           return {
@@ -154,11 +154,7 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
             inTime: w.inTime ? w.inTime.format('HH:mm:ss') : undefined,
             outTime: w.outTime ? w.outTime.format('HH:mm:ss') : undefined,
             remarks: w.remarks || '',
-            // Keep existing photo URLs if not replaced
-            morningPhoto1Url: photos?.morning?.[0]?.url?.replace(getApiOrigin(), '') || undefined,
-            morningPhoto2Url: photos?.morning?.[1]?.url?.replace(getApiOrigin(), '') || undefined,
-            eveningPhoto1Url: photos?.evening?.[0]?.url?.replace(getApiOrigin(), '') || undefined,
-            eveningPhoto2Url: photos?.evening?.[1]?.url?.replace(getApiOrigin(), '') || undefined,
+            ...photoUrls,
           };
         }) || [];
         
@@ -267,18 +263,18 @@ export function DpwForm({ projects, trades, initialValues, onSuccess, onCancel }
                     </Col>
                     
                     <Col xs={24} md={12}>
-                      <Form.Item label="Morning Photos (Max 2)">
+                      <Form.Item label={`Morning Photos (Max ${MAX_PHOTOS_PER_SESSION})`}>
                         <GeoTagPhotoCapture
-                          maxCount={2}
+                          maxCount={MAX_PHOTOS_PER_SESSION}
                           fileList={workerPhotos[name]?.morning || []}
                           onChange={(fileList) => handlePhotoChange(name, 'morning', fileList)}
                         />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
-                      <Form.Item label="Evening Photos (Max 2)">
+                      <Form.Item label={`Evening Photos (Max ${MAX_PHOTOS_PER_SESSION})`}>
                         <GeoTagPhotoCapture
-                          maxCount={2}
+                          maxCount={MAX_PHOTOS_PER_SESSION}
                           fileList={workerPhotos[name]?.evening || []}
                           onChange={(fileList) => handlePhotoChange(name, 'evening', fileList)}
                         />

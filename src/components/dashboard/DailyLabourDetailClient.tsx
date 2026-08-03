@@ -10,6 +10,14 @@ import type { DailyLabourReport, DailyWorker } from '@/types/erp';
 import { getApiOrigin } from '@/lib/api-url';
 import { useAuthStore } from '@/store/auth';
 
+const PHOTO_SLOTS = [1, 2, 3, 4, 5] as const;
+
+function getSessionPhotoUrls(worker: DailyWorker, session: 'morning' | 'evening'): string[] {
+  return PHOTO_SLOTS
+    .map((slot) => (worker as unknown as Record<string, string | null | undefined>)[`${session}Photo${slot}Url`])
+    .filter((url): url is string => Boolean(url));
+}
+
 export function DailyLabourDetailClient() {
   const { id } = useParams();
   const router = useRouter();
@@ -210,11 +218,12 @@ export function DailyLabourDetailClient() {
           
           <div className="space-y-6">
             {report.workers.map((worker, index) => {
-              const hasPhotos = worker.morningPhoto1Url || worker.morningPhoto2Url || worker.eveningPhoto1Url || worker.eveningPhoto2Url;
-              if (!hasPhotos) return null;
+              const morningUrls = getSessionPhotoUrls(worker, 'morning');
+              const eveningUrls = getSessionPhotoUrls(worker, 'evening');
+              if (morningUrls.length === 0 && eveningUrls.length === 0) return null;
 
               return (
-                <Card 
+                <Card
                   key={worker.id || index}
                   title={<Typography.Text strong className="text-sky-400">{worker.trade} - Photos</Typography.Text>}
                   className="border-[var(--border)] bg-[var(--subtle-bg)]"
@@ -224,7 +233,7 @@ export function DailyLabourDetailClient() {
                       <Typography.Text type="secondary" className="mb-2 block text-xs uppercase">Morning Session</Typography.Text>
                       <Image.PreviewGroup>
                         <Row gutter={[12, 12]}>
-                          {[worker.morningPhoto1Url, worker.morningPhoto2Url].filter(Boolean).map((url, i) => (
+                          {morningUrls.map((url, i) => (
                             <Col span={12} key={i}>
                               <Image
                                 src={`${getApiOrigin()}${url}`}
@@ -233,7 +242,7 @@ export function DailyLabourDetailClient() {
                               />
                             </Col>
                           ))}
-                          {!worker.morningPhoto1Url && !worker.morningPhoto2Url && (
+                          {morningUrls.length === 0 && (
                             <Col span={24}>
                               <Typography.Text type="secondary" italic className="text-xs">No morning photos</Typography.Text>
                             </Col>
@@ -241,12 +250,12 @@ export function DailyLabourDetailClient() {
                         </Row>
                       </Image.PreviewGroup>
                     </Col>
-                    
+
                     <Col xs={24} md={12}>
                       <Typography.Text type="secondary" className="mb-2 block text-xs uppercase">Evening Session</Typography.Text>
                       <Image.PreviewGroup>
                         <Row gutter={[12, 12]}>
-                          {[worker.eveningPhoto1Url, worker.eveningPhoto2Url].filter(Boolean).map((url, i) => (
+                          {eveningUrls.map((url, i) => (
                             <Col span={12} key={i}>
                               <Image
                                 src={`${getApiOrigin()}${url}`}
@@ -255,7 +264,7 @@ export function DailyLabourDetailClient() {
                               />
                             </Col>
                           ))}
-                          {!worker.eveningPhoto1Url && !worker.eveningPhoto2Url && (
+                          {eveningUrls.length === 0 && (
                             <Col span={24}>
                               <Typography.Text type="secondary" italic className="text-xs">No evening photos</Typography.Text>
                             </Col>

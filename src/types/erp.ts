@@ -493,8 +493,14 @@ export type DailyWorker = {
   remarks?: string | null;
   morningPhoto1Url?: string | null;
   morningPhoto2Url?: string | null;
+  morningPhoto3Url?: string | null;
+  morningPhoto4Url?: string | null;
+  morningPhoto5Url?: string | null;
   eveningPhoto1Url?: string | null;
   eveningPhoto2Url?: string | null;
+  eveningPhoto3Url?: string | null;
+  eveningPhoto4Url?: string | null;
+  eveningPhoto5Url?: string | null;
   status?: string;
 };
 
