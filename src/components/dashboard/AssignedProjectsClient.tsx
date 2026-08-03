@@ -143,7 +143,7 @@ export function AssignedProjectsClient({ siteEngineers, projects }: AssignedProj
     <div>
       <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
-          <ProjectOutlined className={titleIconClassName} style={{marginBottom: "12px"}} /> Assigned Projects
+          <ProjectOutlined className={titleIconClassName} /> Assigned Projects
         </Typography.Title>
         <Input.Search
           placeholder="Search by engineer, ID or project..."
