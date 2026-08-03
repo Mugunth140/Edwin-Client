@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import {
-  Button, Card, DatePicker, Flex, Input, InputNumber, Modal, Select, Spin, Tag, Typography, App,
+  Button, Card, DatePicker, Flex, Input, Modal, Select, Spin, Tag, Typography, App,
 } from 'antd';
 import {
-  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined, EditOutlined, ShareAltOutlined, CheckCircleOutlined,
+  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined, EditOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import { saveTimesheet, updateTimesheet, submitTimesheet } from '@/actions/timesheet-attendance';
 import { createEmployeeQuery } from '@/actions/employee-queries';
@@ -28,6 +28,8 @@ const STANDARD_DAILY_HOURS = 8;
 const DAY_LIMIT_HOURS = 8;
 const STANDARD_WORKING_DAYS = 6;
 const STANDARD_WEEKLY_HOURS = STANDARD_DAILY_HOURS * STANDARD_WORKING_DAYS;
+
+const ALL_PROJECTS_VALUE = '__ALL__';
 
 function clampDayTotals(rows: GridRow[]): { rows: GridRow[]; clamped: boolean } {
   const working = rows.map((r) => ({ ...r, hours: [...r.hours] }));
@@ -125,7 +127,7 @@ function rowsToPayload(rows: GridRow[]): any[] {
     const total = row.hours.reduce((a, b) => a + b, 0);
     const remark = row.remark.trim();
     if (row.kind === 'project') {
-      if (!row.projectId) continue;
+      if (!row.projectId || row.projectId === ALL_PROJECTS_VALUE) continue;
     } else if (total <= 0 && !remark) {
       continue;
     }
@@ -197,7 +199,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [requestReason, setRequestReason] = useState('');
   const [requestPending, startRequestTransition] = useTransition();
-  const [splitHours, setSplitHours] = useState<number | null>(null);
   const [approvePending, startApproveTransition] = useTransition();
   const { message } = App.useApp();
   const user = useAuthStore((s) => s.user);
@@ -287,47 +288,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     });
   };
 
-  const todayDayIdx = useMemo(() => {
-    return DAYS.findIndex((_, i) => {
-      const d = new Date(weekStart);
-      d.setDate(d.getDate() + i);
-      return formatDate(d) === todayStr;
-    });
-  }, [weekStart, todayStr]);
-
-  const splitHoursAcrossProjects = () => {
-    if (!splitHours || splitHours <= 0) {
-      message.error('Enter a valid number of hours');
-      return;
-    }
-    if (projects.length === 0) {
-      message.error('No active projects to split across');
-      return;
-    }
-    if (todayDayIdx === -1) {
-      message.error('Today is not in the selected week');
-      return;
-    }
-    const perProject = Math.round((splitHours / projects.length) * 100) / 100;
-    setRows((prev) => {
-      const fixedRows = prev.filter((r) => r.kind !== 'project');
-      const existingByProject = new Map(
-        prev.filter((r) => r.kind === 'project' && r.projectId).map((r) => [r.projectId as string, r]),
-      );
-      const newProjectRows: GridRow[] = projects.map((p) => {
-        const existing = existingByProject.get(p.id);
-        const hours = existing ? [...existing.hours] : emptyHours();
-        hours[todayDayIdx] = perProject;
-        return existing
-          ? { ...existing, hours }
-          : { key: nextKey(), kind: 'project', projectId: p.id, hours, remark: '', submittedMask: 0 };
-      });
-      return [...newProjectRows, ...fixedRows];
-    });
-    message.success(`Split ${splitHours} hrs across ${projects.length} projects for today`);
-    setSplitHours(null);
-  };
-
   const approveOwnTimesheet = () => {
     if (!existingTs?.id) return;
     startApproveTransition(async () => {
@@ -370,6 +330,39 @@ export function TimesheetAttendanceClient({ projects }: Props) {
     const dateObj = new Date(weekStart);
     dateObj.setDate(dateObj.getDate() + dayIdx);
     if (formatDate(dateObj) !== todayStr) return;
+
+    const target = rows.find((r) => r.key === key);
+
+    // "All Projects" row: expand into one real row per active project,
+    // evenly splitting the entered hours across them.
+    if (target?.projectId === ALL_PROJECTS_VALUE) {
+      if (projects.length === 0) {
+        message.error('No active projects to split across');
+        return;
+      }
+      const perProject = Math.round((value / projects.length) * 100) / 100;
+      setRows((prev) => {
+        const others = prev.filter((r) => r.key !== key);
+        const existingByProject = new Map(
+          others.filter((r) => r.kind === 'project' && r.projectId).map((r) => [r.projectId as string, r]),
+        );
+        const expanded: GridRow[] = projects.map((p) => {
+          const existing = existingByProject.get(p.id);
+          const hours = existing ? [...existing.hours] : emptyHours();
+          hours[dayIdx] = perProject;
+          return existing
+            ? { ...existing, hours }
+            : { key: nextKey(), kind: 'project', projectId: p.id, hours, remark: '', submittedMask: 0 };
+        });
+        const untouchedRows = others.filter(
+          (r) => !(r.kind === 'project' && expanded.some((e) => e.projectId === r.projectId)),
+        );
+        return [...expanded, ...untouchedRows];
+      });
+      message.success(`Split ${value} hrs across ${projects.length} projects for today`);
+      return;
+    }
+
     setRows((prev) => prev.map((r) => {
       if (r.key !== key) return r;
       const hours = [...r.hours];
@@ -427,33 +420,6 @@ export function TimesheetAttendanceClient({ projects }: Props) {
       </Flex>
 
       <Card className={cardClassName}>
-        {isAdmin && (
-          <Flex gap={8} align="center" className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] p-3" wrap="wrap">
-            <Typography.Text strong className="text-sm">Split hours across all projects:</Typography.Text>
-            <InputNumber
-              min={0.5}
-              max={8}
-              step={0.5}
-              placeholder="Total hrs"
-              value={splitHours}
-              onChange={setSplitHours}
-              disabled={isFullyLocked}
-              style={{ width: 110 }}
-            />
-            <Button
-              size="small"
-              icon={<ShareAltOutlined />}
-              onClick={splitHoursAcrossProjects}
-              disabled={isFullyLocked}
-            >
-              Split for Today
-            </Button>
-            <Typography.Text type="secondary" className="text-xs">
-              Evenly divides the hours across all {projects.length} active projects for today.
-            </Typography.Text>
-          </Flex>
-        )}
-
         <Flex gap={16} wrap="wrap" className="mb-4" align="center" justify="space-between">
           <Flex gap={12} align="center">
             <DatePicker
@@ -554,7 +520,10 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                       disabled={isFullyLocked || rowLocked}
                       value={row.projectId || undefined}
                       onChange={(val) => setProjectId(row.key, val || null)}
-                      options={projects.map((p) => ({ label: p.name, value: p.id }))}
+                      options={[
+                        ...(isAdmin ? [{ label: 'All Projects', value: ALL_PROJECTS_VALUE }] : []),
+                        ...projects.map((p) => ({ label: p.name, value: p.id })),
+                      ]}
                       size="small"
                     />
                   </td>
