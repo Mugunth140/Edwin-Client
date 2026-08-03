@@ -272,6 +272,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
   const visibleAppNotifications = appNotifications.filter((n) => !dismissedNotifIds.has(n.id));
   const visibleResponses = responses.filter((r) => !dismissedNotifIds.has(r.id));
+  const visiblePendingQueries = pendingQueries.filter((q) => !dismissedNotifIds.has(q.id));
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -476,21 +477,29 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                   title="Edit Requests"
                   content={
                     <div style={{ width: 340, maxHeight: 360, overflowY: 'auto' }}>
-                      {pendingQueries.length === 0 ? (
+                      {visiblePendingQueries.length === 0 ? (
                         <Typography.Text type="secondary" className="text-sm">
                           No pending edit requests
                         </Typography.Text>
                       ) : (
                         <Flex vertical gap={8}>
-                          {pendingQueries.slice(0, 20).map((q) => (
+                          {visiblePendingQueries.slice(0, 20).map((q) => (
                             <div
                               key={q.id}
-                              className="cursor-pointer rounded-lg border border-[var(--border)] p-2 transition hover:bg-[var(--subtle-hover-bg)]"
+                              className="relative cursor-pointer rounded-lg border border-[var(--border)] p-2 pr-7 transition hover:bg-[var(--subtle-hover-bg)]"
                               onClick={() => {
                                 setAdminNotifOpen(false);
                                 router.push('/dashboard/employee-queries');
                               }}
                             >
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); dismissNotification(q.id); }}
+                                className="absolute right-1.5 top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--subtle-bg)] hover:text-[var(--text-primary)]"
+                                aria-label="Dismiss notification"
+                              >
+                                <CloseOutlined style={{ fontSize: 11 }} />
+                              </button>
                               <Typography.Text className="block text-sm">
                                 <strong>{q.siteEngineer?.name || 'Someone'}</strong>
                                 {q.siteEngineer?.role && ` (${titleCase(q.siteEngineer.role)})`} requested edit access for timesheet
