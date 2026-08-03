@@ -248,6 +248,31 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     void fetch('/api/backend/notifications/read-all', { method: 'PATCH' }).catch(() => {});
   };
 
+  const [dismissedNotifIds, setDismissedNotifIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const raw = localStorage.getItem(`dismissed_notifs_${user.id}`);
+      setDismissedNotifIds(raw ? new Set(JSON.parse(raw)) : new Set());
+    } catch {
+      setDismissedNotifIds(new Set());
+    }
+  }, [user]);
+
+  const dismissNotification = (id: string) => {
+    if (!user) return;
+    setDismissedNotifIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem(`dismissed_notifs_${user.id}`, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const visibleAppNotifications = appNotifications.filter((n) => !dismissedNotifIds.has(n.id));
+  const visibleResponses = responses.filter((r) => !dismissedNotifIds.has(r.id));
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -512,16 +537,16 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                   title="Notifications"
                   content={
                     <div style={{ width: 340, maxHeight: 380, overflowY: 'auto' }}>
-                      {appNotifications.length > 0 && (
+                      {visibleAppNotifications.length > 0 && (
                         <div className="mb-2">
                           <Typography.Text className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-very-muted)]">
                             Material Requirements
                           </Typography.Text>
                           <Flex vertical gap={8}>
-                            {appNotifications.slice(0, 10).map((n) => (
+                            {visibleAppNotifications.slice(0, 10).map((n) => (
                               <div
                                 key={n.id}
-                                className={`cursor-pointer rounded-lg border p-2 transition hover:bg-[var(--subtle-hover-bg)] ${
+                                className={`relative cursor-pointer rounded-lg border p-2 pr-7 transition hover:bg-[var(--subtle-hover-bg)] ${
                                   n.isRead ? 'border-[var(--border)] opacity-70' : 'border-sky-500/40 bg-sky-500/5'
                                 }`}
                                 onClick={() => {
@@ -529,6 +554,14 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                                   router.push(n.link || '/dashboard/material-requirement');
                                 }}
                               >
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); dismissNotification(n.id); }}
+                                  className="absolute right-1.5 top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--subtle-bg)] hover:text-[var(--text-primary)]"
+                                  aria-label="Dismiss notification"
+                                >
+                                  <CloseOutlined style={{ fontSize: 11 }} />
+                                </button>
                                 <Typography.Text className="block text-sm">
                                   {n.actorName && <strong>{n.actorName}: </strong>}
                                   {n.title} — {n.message}
@@ -546,14 +579,22 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                       <Typography.Text className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-very-muted)]">
                         Edit Request Updates
                       </Typography.Text>
-                      {responses.length === 0 ? (
+                      {visibleResponses.length === 0 ? (
                         <Typography.Text type="secondary" className="text-sm">
                           No responses yet
                         </Typography.Text>
                       ) : (
                         <Flex vertical gap={8}>
-                          {responses.slice(0, 20).map((r) => (
-                            <div key={r.id} className="rounded-lg border border-[var(--border)] p-2">
+                          {visibleResponses.slice(0, 20).map((r) => (
+                            <div key={r.id} className="relative rounded-lg border border-[var(--border)] p-2 pr-7">
+                              <button
+                                type="button"
+                                onClick={() => dismissNotification(r.id)}
+                                className="absolute right-1.5 top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--subtle-bg)] hover:text-[var(--text-primary)]"
+                                aria-label="Dismiss notification"
+                              >
+                                <CloseOutlined style={{ fontSize: 11 }} />
+                              </button>
                               <Flex justify="space-between" align="center">
                                 <Tag color={r.status === 'approved' ? 'green' : 'red'}>{r.status.toUpperCase()}</Tag>
                                 <Typography.Text type="secondary" className="text-xs">
