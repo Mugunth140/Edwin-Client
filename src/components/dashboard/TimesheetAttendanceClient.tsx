@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import {
-  Button, Card, DatePicker, Flex, Input, Modal, Select, Spin, Tag, Typography, App,
+  Button, Card, DatePicker, Flex, Input, InputNumber, Modal, Select, Spin, Tag, Typography, App,
 } from 'antd';
 import {
-  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined, EditOutlined,
+  LeftOutlined, RightOutlined, SaveOutlined, ClockCircleOutlined, PlusOutlined, DeleteOutlined, EditOutlined, ShareAltOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import { saveTimesheet, updateTimesheet, submitTimesheet } from '@/actions/timesheet-attendance';
 import { createEmployeeQuery } from '@/actions/employee-queries';
+import { approveTimesheet } from '@/actions/timesheet-approval';
+import { useAuthStore } from '@/store/auth';
 import type { Project, EmployeeQuery } from '@/types/erp';
 import { cardClassName, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import dayjs from 'dayjs';
@@ -195,7 +197,11 @@ export function TimesheetAttendanceClient({ projects }: Props) {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [requestReason, setRequestReason] = useState('');
   const [requestPending, startRequestTransition] = useTransition();
+  const [splitHours, setSplitHours] = useState<number | null>(null);
+  const [approvePending, startApproveTransition] = useTransition();
   const { message } = App.useApp();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
 
   const weekStartStr = formatDate(weekStart);
   const todayStr = dayjs().format('YYYY-MM-DD');
@@ -277,6 +283,60 @@ export function TimesheetAttendanceClient({ projects }: Props) {
         loadQueries();
       } catch (error) {
         message.error(error instanceof Error ? error.message : 'Failed to send request');
+      }
+    });
+  };
+
+  const todayDayIdx = useMemo(() => {
+    return DAYS.findIndex((_, i) => {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      return formatDate(d) === todayStr;
+    });
+  }, [weekStart, todayStr]);
+
+  const splitHoursAcrossProjects = () => {
+    if (!splitHours || splitHours <= 0) {
+      message.error('Enter a valid number of hours');
+      return;
+    }
+    if (projects.length === 0) {
+      message.error('No active projects to split across');
+      return;
+    }
+    if (todayDayIdx === -1) {
+      message.error('Today is not in the selected week');
+      return;
+    }
+    const perProject = Math.round((splitHours / projects.length) * 100) / 100;
+    setRows((prev) => {
+      const fixedRows = prev.filter((r) => r.kind !== 'project');
+      const existingByProject = new Map(
+        prev.filter((r) => r.kind === 'project' && r.projectId).map((r) => [r.projectId as string, r]),
+      );
+      const newProjectRows: GridRow[] = projects.map((p) => {
+        const existing = existingByProject.get(p.id);
+        const hours = existing ? [...existing.hours] : emptyHours();
+        hours[todayDayIdx] = perProject;
+        return existing
+          ? { ...existing, hours }
+          : { key: nextKey(), kind: 'project', projectId: p.id, hours, remark: '', submittedMask: 0 };
+      });
+      return [...newProjectRows, ...fixedRows];
+    });
+    message.success(`Split ${splitHours} hrs across ${projects.length} projects for today`);
+    setSplitHours(null);
+  };
+
+  const approveOwnTimesheet = () => {
+    if (!existingTs?.id) return;
+    startApproveTransition(async () => {
+      try {
+        await approveTimesheet(existingTs.id);
+        message.success('Approved & payment created');
+        loadTs();
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : 'Failed to approve');
       }
     });
   };
@@ -367,6 +427,33 @@ export function TimesheetAttendanceClient({ projects }: Props) {
       </Flex>
 
       <Card className={cardClassName}>
+        {isAdmin && (
+          <Flex gap={8} align="center" className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--subtle-bg)] p-3" wrap="wrap">
+            <Typography.Text strong className="text-sm">Split hours across all projects:</Typography.Text>
+            <InputNumber
+              min={0.5}
+              max={8}
+              step={0.5}
+              placeholder="Total hrs"
+              value={splitHours}
+              onChange={setSplitHours}
+              disabled={isFullyLocked}
+              style={{ width: 110 }}
+            />
+            <Button
+              size="small"
+              icon={<ShareAltOutlined />}
+              onClick={splitHoursAcrossProjects}
+              disabled={isFullyLocked}
+            >
+              Split for Today
+            </Button>
+            <Typography.Text type="secondary" className="text-xs">
+              Evenly divides the hours across all {projects.length} active projects for today.
+            </Typography.Text>
+          </Flex>
+        )}
+
         <Flex gap={16} wrap="wrap" className="mb-4" align="center" justify="space-between">
           <Flex gap={12} align="center">
             <DatePicker
@@ -406,6 +493,17 @@ export function TimesheetAttendanceClient({ projects }: Props) {
                   Request Edit
                 </Button>
               )
+            )}
+            {isSubmitted && isAdmin && (
+              <Button
+                size="small"
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={approveOwnTimesheet}
+                loading={approvePending}
+              >
+                Approve & Pay
+              </Button>
             )}
             {isFullyLocked ? (
               <Button type="primary" disabled>
