@@ -27,6 +27,7 @@ export async function createSiteEngineer(data: Record<string, unknown>) {
   }
 
   revalidatePath('/dashboard/site-engineers');
+  revalidatePath('/dashboard/assigned-projects');
   return res.json();
 }
 
@@ -44,6 +45,7 @@ export async function updateSiteEngineer(id: string, data: Record<string, unknow
   }
 
   revalidatePath('/dashboard/site-engineers');
+  revalidatePath('/dashboard/assigned-projects');
   return res.json();
 }
 
@@ -60,5 +62,6 @@ export async function deleteSiteEngineer(id: string) {
   }
 
   revalidatePath('/dashboard/site-engineers');
+  revalidatePath('/dashboard/assigned-projects');
   return { success: true };
 }

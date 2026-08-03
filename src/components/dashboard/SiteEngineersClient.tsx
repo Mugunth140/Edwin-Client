@@ -8,7 +8,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined, UserOutlined } from '@ant-d
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { createSiteEngineer, deleteSiteEngineer, updateSiteEngineer } from '@/actions/site-engineers';
-import type { SiteEngineer, Project, Salary } from '@/types/erp';
+import type { SiteEngineer, Salary } from '@/types/erp';
 import {
   cardClassName,
   pageHeaderClassName,
@@ -25,7 +25,6 @@ const siteEngineerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').optional().or(z.literal('')),
   password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
   isActive: z.boolean(),
-  projectIds: z.array(z.string()).optional(),
   salaryGradeId: z.string().optional(),
 });
 
@@ -33,11 +32,10 @@ type SiteEngineerFormValues = z.infer<typeof siteEngineerSchema>;
 
 type SiteEngineersClientProps = {
   siteEngineers: SiteEngineer[];
-  projects: Project[];
   salaries: Salary[];
 };
 
-export function SiteEngineersClient({ siteEngineers, projects, salaries }: SiteEngineersClientProps) {
+export function SiteEngineersClient({ siteEngineers, salaries }: SiteEngineersClientProps) {
   const [open, setOpen] = useState(false);
   const [editingEngineer, setEditingEngineer] = useState<SiteEngineer | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -59,7 +57,6 @@ export function SiteEngineersClient({ siteEngineers, projects, salaries }: SiteE
       username: '',
       password: '',
       isActive: true,
-      projectIds: [],
       salaryGradeId: '',
     },
   });
@@ -73,7 +70,6 @@ export function SiteEngineersClient({ siteEngineers, projects, salaries }: SiteE
       setValue('address', editingEngineer.address || '');
       setValue('username', editingEngineer.username || '');
       setValue('isActive', editingEngineer.isActive);
-      setValue('projectIds', editingEngineer.projects?.map(p => p.id) || []);
       setValue('salaryGradeId', editingEngineer.salaryGradeId || '');
       setValue('password', '');
     } else {
@@ -86,7 +82,6 @@ export function SiteEngineersClient({ siteEngineers, projects, salaries }: SiteE
         username: '',
         password: '',
         isActive: true,
-        projectIds: [],
         salaryGradeId: '',
       });
     }
@@ -378,22 +373,6 @@ export function SiteEngineersClient({ siteEngineers, projects, salaries }: SiteE
                   placeholder="Select salary grade"
                   allowClear
                   options={salaries.map(s => ({ label: `${s.grades} (${s.expInYears} yrs - ₹${Number(s.monthlySalary).toLocaleString()})`, value: s.id }))}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="projectIds"
-            render={({ field }) => (
-              <Form.Item label="Assigned Projects">
-                <Select
-                  {...field}
-                  mode="multiple"
-                  placeholder="Select projects"
-                  options={projects.map(p => ({ label: p.name, value: p.id }))}
                   style={{ width: '100%' }}
                 />
               </Form.Item>

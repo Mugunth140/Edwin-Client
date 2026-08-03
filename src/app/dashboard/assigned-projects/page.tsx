@@ -1,21 +1,21 @@
-import { fetchSiteEngineers, fetchSalaries } from '@/lib/api';
-import { SiteEngineersClient } from '@/components/dashboard/SiteEngineersClient';
+import { fetchSiteEngineers, fetchProjects } from '@/lib/api';
+import { AssignedProjectsClient } from '@/components/dashboard/AssignedProjectsClient';
 import { Alert } from 'antd';
 
 async function loadData() {
   try {
-    const [siteEngineers, salaries] = await Promise.all([
+    const [siteEngineers, projects] = await Promise.all([
       fetchSiteEngineers(),
-      fetchSalaries(),
+      fetchProjects(),
     ]);
-    return { siteEngineers, salaries };
+    return { siteEngineers, projects };
   } catch (error) {
-    console.error('Failed to fetch data for site engineers:', error);
+    console.error('Failed to fetch data for assigned projects:', error);
     return null;
   }
 }
 
-export default async function SiteEngineersPage() {
+export default async function AssignedProjectsPage() {
   const data = await loadData();
 
   if (data === null) {
@@ -30,9 +30,9 @@ export default async function SiteEngineersPage() {
   }
 
   return (
-    <SiteEngineersClient
+    <AssignedProjectsClient
       siteEngineers={data.siteEngineers}
-      salaries={data.salaries}
+      projects={data.projects}
     />
   );
 }
