@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Space, Table, Typography, App } from 'antd';
+import { App, Button, Card, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined, DollarOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
@@ -18,8 +18,17 @@ import {
   titleIconClassName,
 } from './ui';
 
+const CATEGORY_OPTIONS = [
+  { value: 'White Collar', label: 'White Collar' },
+  { value: 'Blue Collar', label: 'Blue Collar' },
+];
+
 const salarySchema = z.object({
   grades: z.string().min(1, 'Grade is required'),
+  category: z.enum(['White Collar', 'Blue Collar'], {
+    message: 'Category is required',
+  }),
+  role: z.string().min(1, 'Role is required'),
   expInYears: z.string().min(1, 'Experience range is required'),
   monthlySalary: z.number().min(0, 'Must be 0 or more'),
   avgCostPerHr: z.number().min(0, 'Must be 0 or more'),
@@ -47,6 +56,8 @@ export function SalaryClient({ salaries }: SalaryClientProps) {
     resolver: zodResolver(salarySchema),
     defaultValues: {
       grades: '',
+      category: 'White Collar',
+      role: '',
       expInYears: '',
       monthlySalary: 0,
       avgCostPerHr: 0,
@@ -57,6 +68,8 @@ export function SalaryClient({ salaries }: SalaryClientProps) {
   useEffect(() => {
     if (editingSalary) {
       setValue('grades', editingSalary.grades);
+      setValue('category', editingSalary.category || 'White Collar');
+      setValue('role', editingSalary.role || '');
       setValue('expInYears', editingSalary.expInYears);
       setValue('monthlySalary', Number(editingSalary.monthlySalary));
       setValue('avgCostPerHr', Number(editingSalary.avgCostPerHr));
@@ -64,6 +77,8 @@ export function SalaryClient({ salaries }: SalaryClientProps) {
     } else {
       reset({
         grades: '',
+        category: 'White Collar',
+        role: '',
         expInYears: '',
         monthlySalary: 0,
         avgCostPerHr: 0,
@@ -100,6 +115,22 @@ export function SalaryClient({ salaries }: SalaryClientProps) {
       dataIndex: 'grades',
       sorter: (a, b) => a.grades.localeCompare(b.grades),
       render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
+    },
+    {
+      title: 'Category',
+      dataIndex: 'category',
+      width: 140,
+      sorter: (a, b) => (a.category || '').localeCompare(b.category || ''),
+      render: (value: string) => (
+        <Tag color={value === 'White Collar' ? 'blue' : 'orange'}>{value}</Tag>
+      ),
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      width: 160,
+      sorter: (a, b) => (a.role || '').localeCompare(b.role || ''),
+      render: (value: string) => <Typography.Text>{value}</Typography.Text>,
     },
     {
       title: 'Exp in Years',
@@ -239,6 +270,40 @@ export function SalaryClient({ salaries }: SalaryClientProps) {
                 help={fieldState.error?.message}
               >
                 <Input {...field} placeholder="e.g. Grade A, Grade B" />
+              </Form.Item>
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="category"
+            render={({ field, fieldState }) => (
+              <Form.Item
+                label="Category"
+                required
+                validateStatus={fieldState.error ? 'error' : undefined}
+                help={fieldState.error?.message}
+              >
+                <Select
+                  {...field}
+                  options={CATEGORY_OPTIONS}
+                  placeholder="Select category"
+                />
+              </Form.Item>
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="role"
+            render={({ field, fieldState }) => (
+              <Form.Item
+                label="Role"
+                required
+                validateStatus={fieldState.error ? 'error' : undefined}
+                help={fieldState.error?.message}
+              >
+                <Input {...field} placeholder="e.g. Site Engineer, Supervisor, Helper" />
               </Form.Item>
             )}
           />

@@ -536,6 +536,8 @@ export type EmployeeQuery = {
 export type Salary = {
   id: string;
   grades: string;
+  category?: string;
+  role?: string;
   expInYears: string;
   monthlySalary: number;
   avgCostPerHr: number;
