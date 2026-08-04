@@ -302,7 +302,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
 
   return (
     <div>
-      <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
+      <Flex justify="space-between" align="center" className={`${pageHeaderClassName} mb-8!`} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <ShoppingCartOutlined className={titleIconClassName} /> Purchase Orders
         </Typography.Title>
