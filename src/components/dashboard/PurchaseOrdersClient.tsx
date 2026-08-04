@@ -222,7 +222,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
       );
     }},
     { title: 'Created', dataIndex: 'createdAt', sorter: (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(), render: formatDate },
-    { title: 'Actions', key: 'actions', fixed: 'right', width: 100, render: (_, record) => (
+    { title: 'Actions', key: 'actions', width: 100, render: (_, record) => (
       <Space>
         <Button type="text" icon={<EditOutlined className="text-blue-500" />} title="Edit" onClick={() => handleEdit(record)} />
         <Popconfirm title="Delete Purchase Order?" description="This will permanently delete this PO." onConfirm={() => handleDelete(record.id)} okText="Yes" cancelText="No" okButtonProps={{ danger: true }}>

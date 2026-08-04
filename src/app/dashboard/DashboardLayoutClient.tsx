@@ -260,14 +260,18 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     }
   }, [user]);
 
-  const dismissNotification = (id: string) => {
+  useEffect(() => {
     if (!user) return;
-    setDismissedNotifIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      localStorage.setItem(`dismissed_notifs_${user.id}`, JSON.stringify([...next]));
-      return next;
-    });
+    try {
+      localStorage.setItem(`dismissed_notifs_${user.id}`, JSON.stringify([...dismissedNotifIds]));
+    } catch { /* ignore */ }
+  }, [dismissedNotifIds, user]);
+
+  const dismissNotification = (id: string) => {
+    setDismissedNotifIds((prev) => new Set(prev).add(id));
+    setAppNotifications((prev) => prev.filter((n) => n.id !== id));
+    setResponses((prev) => prev.filter((r) => r.id !== id));
+    setPendingQueries((prev) => prev.filter((q) => q.id !== id));
   };
 
   const visibleAppNotifications = appNotifications.filter((n) => !dismissedNotifIds.has(n.id));
@@ -494,7 +498,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                             >
                               <button
                                 type="button"
-                                onClick={(e) => { e.stopPropagation(); dismissNotification(q.id); }}
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismissNotification(q.id); }}
                                 className="absolute right-1.5 top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--subtle-bg)] hover:text-[var(--text-primary)]"
                                 aria-label="Dismiss notification"
                               >
@@ -565,7 +569,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                               >
                                 <button
                                   type="button"
-                                  onClick={(e) => { e.stopPropagation(); dismissNotification(n.id); }}
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismissNotification(n.id); }}
                                   className="absolute right-1.5 top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--subtle-bg)] hover:text-[var(--text-primary)]"
                                   aria-label="Dismiss notification"
                                 >
@@ -598,7 +602,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                             <div key={r.id} className="relative rounded-lg border border-[var(--border)] p-2 pr-7">
                               <button
                                 type="button"
-                                onClick={() => dismissNotification(r.id)}
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismissNotification(r.id); }}
                                 className="absolute right-1.5 top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--subtle-bg)] hover:text-[var(--text-primary)]"
                                 aria-label="Dismiss notification"
                               >
