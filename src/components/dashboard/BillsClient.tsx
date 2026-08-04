@@ -493,7 +493,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
                 .filter((po) => po.status === 'approved')
                 .map((po) => ({
                   value: po.id,
-                  label: `${po.poNumber} - ${po.vendor?.name || 'Unknown Vendor'}`,
+                  label: `${po.poNumber} - ${po.vendor?.name || 'Unknown Vendor'}${po.materialRequirementNo ? ` (MR Ref: ${po.materialRequirementNo})` : ''}`,
                 }))}
             />
           </Form.Item>
