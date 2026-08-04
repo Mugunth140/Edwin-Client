@@ -203,9 +203,8 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
   const columns: ColumnsType<MaterialReceived> = [
     { title: 'S.No', key: 'sno', width: 60, render: (_, __, i) => i + 1 },
     { title: 'MR Number', dataIndex: 'mrNumber', key: 'mrNumber', width: 150, render: (v: string) => <Typography.Text strong>{v}</Typography.Text> },
-    { title: 'Project', key: 'project', width: 200, responsive: ['md'], render: (_, r) => r.project ? `${r.project.name} (${r.project.projectCode || 'No Code'})` : r.projectId },
     { title: 'PO Number', key: 'po', width: 130, responsive: ['md'], render: (_, r) => r.purchaseOrder?.poNumber || r.purchaseOrderId || '-' },
-    { title: 'Material Requirement No', key: 'mrNo', width: 170, responsive: ['lg'], render: (_, r) => r.purchaseOrder?.materialRequirementNo || '-' },
+    { title: 'Project', key: 'project', width: 200, responsive: ['md'], render: (_, r) => r.project ? `${r.project.name} (${r.project.projectCode || 'No Code'})` : r.projectId },
     { title: 'Date', dataIndex: 'receivedDate', key: 'receivedDate', width: 120, responsive: ['lg'], render: (v?: string | null) => formatDate(v) },
     {
       title: 'Items',
@@ -303,9 +302,11 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
         <Typography.Title level={3} className={pageTitleClassName}>
           <InboxOutlined className={titleIconClassName} /> Material Received
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          New Material Received
-        </Button>
+        {user?.role !== 'purchase_team' && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            New Material Received
+          </Button>
+        )}
       </Flex>
 
       <Card className={cardClassName} styles={{ body: { padding: 0 } }}>

@@ -105,7 +105,8 @@ const navigationSections: Array<{ title: string; items: NavItem[]; allowedRoles?
       { key: '/dashboard/accounts', icon: <BankOutlined />, label: 'Accounts', allowedRoles: ['admin', 'accounts_manager'] },
       { key: '/dashboard/accounts/invoices', icon: <FileProtectOutlined />, label: 'Invoices', allowedRoles: ['admin', 'accounts_manager'] },
       { key: '/dashboard/accounts/bills', icon: <FileDoneOutlined />, label: 'Purchase Bills', allowedRoles: ['admin', 'accounts_manager', 'purchase_team'] },
-      { key: '/dashboard/site-engineer-attendance', icon: <TeamOutlined />, label: 'Timesheet Approvals', allowedRoles: ['admin', 'accounts_manager'] },
+      { key: '/dashboard/timesheet-attendance', icon: <CalendarOutlined />, label: 'Timesheet', allowedRoles: ['accounts_manager'] },
+      { key: '/dashboard/site-engineer-attendance', icon: <TeamOutlined />, label: 'Timesheet Approvals', allowedRoles: ['admin'] },
       { key: '/dashboard/approvals', icon: <SafetyCertificateOutlined />, label: 'Approvals', allowedRoles: ['admin', 'accounts_manager'] },
       { key: '/dashboard/expenses', icon: <WalletOutlined />, label: 'Expenses', allowedRoles: ['admin', 'accounts_manager'] },
       { key: '/dashboard/payments', icon: <CreditCardOutlined />, label: 'Payments', allowedRoles: ['admin', 'accounts_manager'] },
@@ -191,7 +192,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   const [unseenResponseCount, setUnseenResponseCount] = useState(0);
   const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
   const [unseenNotifCount, setUnseenNotifCount] = useState(0);
-  const canSeeNotifications = user?.role === 'site_engineer' || user?.role === 'purchase_team';
+  const canSeeNotifications = user?.role === 'site_engineer' || user?.role === 'purchase_team' || user?.role === 'accounts_manager';
 
   useEffect(() => {
     if (!canSeeNotifications || !user) {
@@ -556,7 +557,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                       {visibleAppNotifications.length > 0 && (
                         <div className="mb-2">
                           <Typography.Text className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-very-muted)]">
-                            Material Requirements
+                            Updates
                           </Typography.Text>
                           <Flex vertical gap={8}>
                             {visibleAppNotifications.slice(0, 10).map((n) => (
@@ -567,7 +568,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                                 }`}
                                 onClick={() => {
                                   setNotifOpen(false);
-                                  router.push(n.link || '/dashboard/material-requirement');
+                                  router.push(n.link || (user?.role === 'accounts_manager' ? '/dashboard/accounts/bills' : '/dashboard/material-requirement'));
                                 }}
                               >
                                 <button
