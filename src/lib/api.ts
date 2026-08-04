@@ -22,6 +22,7 @@ import type {
   PurchaseOrder,
   PurchaseBill,
   PurchaseEnquiry,
+  MaterialReceived,
   ProjectDetails,
   Salary,
   WeeklyTimesheet,
@@ -100,6 +101,7 @@ export const fetchDailyLabourReport = (id: string) => apiFetch<DailyLabourReport
 export const fetchDrawings = (params?: string) => apiFetch<Drawing[]>(`/drawings${params ? `?${params}` : ''}`);
 export const fetchPurchaseOrders = () => apiFetch<PurchaseOrder[]>('/purchase-orders');
 export const fetchPurchaseEnquiries = () => apiFetch<PurchaseEnquiry[]>('/purchase-enquiries');
+export const fetchMaterialReceived = () => apiFetch<MaterialReceived[]>('/material-received');
 export const fetchVendorQuotations = () => apiFetch<VendorQuotation[]>('/vendor-quotations');
 export const fetchLedger = () => apiFetch<any[]>('/accounts/ledger');
 export const fetchBalance = () => apiFetch<{ totalRevenue: number; totalCost: number }>('/accounts/balance');

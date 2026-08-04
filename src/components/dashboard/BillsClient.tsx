@@ -107,6 +107,16 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
     name: 'items',
   });
 
+  const watchedProjectId = useWatch({
+    control,
+    name: 'projectId',
+  });
+
+  const watchedPoId = useWatch({
+    control,
+    name: 'purchaseOrderId',
+  });
+
   const paymentForm = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
@@ -197,6 +207,18 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
     },
     fileList,
   };
+
+  // When a project is chosen, auto-select the matching approved Purchase Order
+  useEffect(() => {
+    if (!watchedProjectId || editingBill) return;
+    const po = purchaseOrders.find(
+      (p) => p.status === 'approved' && p.projectId === watchedProjectId,
+    );
+    if (po && po.id !== watchedPoId) {
+      handlePoSelect(po.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedProjectId, purchaseOrders]);
 
   const submit = async (values: BillFormValues) => {
     startTransition(async () => {
@@ -465,6 +487,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
               showSearch
               placeholder="Search PO number to autofill..."
               optionFilterProp="label"
+              value={watchedPoId || undefined}
               onChange={handlePoSelect}
               options={purchaseOrders
                 .filter((po) => po.status === 'approved')

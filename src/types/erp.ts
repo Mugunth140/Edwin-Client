@@ -291,6 +291,24 @@ export type PurchaseEnquiry = {
   createdAt?: string;
 };
 
+export type MaterialReceived = {
+  id: string;
+  mrNumber: string;
+  projectId: string;
+  project?: Project;
+  receivedDate?: string | null;
+  notes?: string | null;
+  items: EnquiryItem[];
+  photoUrls: string[];
+  photoKeys: string[];
+  billUrl?: string | null;
+  billKey?: string | null;
+  status: string;
+  createdBy?: string;
+  creator?: { id: string; name: string } | null;
+  createdAt?: string;
+};
+
 export type PurchaseOrder = {
   id: string;
   poNumber: string;
