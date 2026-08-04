@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition, useCallback } from 'react';
-import { Button, Card, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Select, Space, Table, Typography, Upload, App, Progress } from 'antd';
+import { Button, Card, Drawer, Flex, Form, Input, InputNumber, Popconfirm, Select, Space, Table, Typography, Upload, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { createPurchaseOrder, updatePurchaseOrderStatus, updatePurchaseOrder, deletePurchaseOrder, uploadBillFile } from '@/actions/purchase-orders';
@@ -288,19 +288,6 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     { title: 'PO', key: 'billFile', width: 120, responsive: ['lg'], render: (_, record) =>
       record.billFileUrl ? <Button type="link" size="small" icon={<FilePdfOutlined />} href={record.billFileUrl} target="_blank">View PO</Button> : <Typography.Text type="secondary">—</Typography.Text>,
     },
-    { title: 'Fulfillment', key: 'fulfillment', width: 150, responsive: ['xl'], render: (_, record) => {
-      const totalQty = record.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0;
-      const totalBilled = record.items?.reduce((sum, item) => sum + Number(item.billedQuantity || 0), 0) || 0;
-      const percent = totalQty > 0 ? Math.round((totalBilled / totalQty) * 100) : 0;
-      let status: "success" | "active" | "normal" | "exception" = "normal";
-      if (percent === 100) status = "success"; else if (percent > 0) status = "active";
-      return (
-        <Flex vertical gap={4}>
-          <Progress percent={percent} size="small" status={status} strokeColor={percent === 100 ? '#52c41a' : '#1890ff'} />
-          <Typography.Text className="text-[10px]" type="secondary">{totalBilled} / {totalQty} items billed</Typography.Text>
-        </Flex>
-      );
-    }},
     { title: 'Created', dataIndex: 'createdAt', responsive: ['lg'], sorter: (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(), render: formatDate },
     { title: 'Actions', key: 'actions', width: 100, render: (_, record) => (
       <Space>

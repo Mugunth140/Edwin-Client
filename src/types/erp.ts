@@ -466,6 +466,8 @@ export type PurchaseBill = {
   projectId?: string | null;
   project?: Project;
   amount: number | string;
+  gstPercent?: number | string | null;
+  gstAmount?: number | string | null;
   status: BillStatus;
   paidAmount: number | string;
   billDate: string;

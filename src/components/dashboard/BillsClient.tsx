@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { App, Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography, Upload, Divider, Tag } from 'antd';
+import { App, Button, Card, DatePicker, Drawer, Flex, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography, Upload, Divider } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, EyeOutlined, FileDoneOutlined, PlusOutlined, HistoryOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons';
 import { Controller, useForm, useFieldArray, useWatch } from 'react-hook-form';
@@ -39,6 +39,7 @@ const billSchema = z.object({
   vendorId: z.string().min(1, 'Select a vendor'),
   purchaseOrderId: z.string().optional(),
   amount: z.number().positive('Amount must be positive'),
+  gstPercent: z.number().optional(),
   dueDate: z.string().optional(),
   billDate: z.string().min(1, 'Select bill date'),
   projectId: z.string().optional(),
@@ -90,6 +91,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
       vendorId: '',
       purchaseOrderId: '',
       amount: 0,
+      gstPercent: 0,
       dueDate: undefined,
       billDate: new Date().toISOString().split('T')[0],
       projectId: undefined,
@@ -105,6 +107,11 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
   const watchedItems = useWatch({
     control,
     name: 'items',
+  });
+
+  const watchedGstPercent = useWatch({
+    control,
+    name: 'gstPercent',
   });
 
   const watchedProjectId = useWatch({
@@ -128,14 +135,15 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
     },
   });
 
-  // Update total amount based on items
+  // Update total amount (basic + GST) based on items and GST %
   useEffect(() => {
     if (watchedItems && watchedItems.length > 0) {
-      const total = watchedItems.reduce((sum: number, item: any) => 
+      const basicAmount = watchedItems.reduce((sum: number, item: any) =>
         sum + (Number(item?.quantity || 0) * Number(item?.rate || 0)), 0);
-      setValue('amount', total);
+      const gstAmount = basicAmount * (Number(watchedGstPercent || 0) / 100);
+      setValue('amount', basicAmount + gstAmount);
     }
-  }, [watchedItems, setValue]);
+  }, [watchedItems, watchedGstPercent, setValue]);
 
   const handleEdit = (bill: PurchaseBill) => {
     setEditingBill(bill);
@@ -144,6 +152,7 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
       purchaseOrderId: bill.purchaseOrderId || undefined,
       projectId: bill.projectId || undefined,
       amount: Number(bill.amount),
+      gstPercent: Number(bill.gstPercent || 0),
       billDate: bill.billDate,
       dueDate: bill.dueDate || undefined,
       notes: bill.notes || '',
@@ -185,12 +194,13 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
         projectId: po.projectId || undefined,
         billDate: new Date().toISOString().split('T')[0],
         amount: 0,
+        gstPercent: Number(po.gstPercent || 0),
         items: po.items?.map(item => ({
           poItemId: item.id!,
           description: item.description,
           orderedQty: Number(item.quantity),
           billedQty: Number(item.billedQuantity || 0),
-          quantity: Math.max(0, Number(item.quantity) - Number(item.billedQuantity || 0)),
+          quantity: Number(item.quantity),
           unit: item.unit,
           rate: Number(item.rate),
         })) || [],
@@ -241,8 +251,13 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
           billFileKey = fileKey;
         }
 
+        const basicAmount = (values.items || []).reduce((sum, item) =>
+          sum + Number(item.quantity || 0) * Number(item.rate || 0), 0);
+        const gstAmount = basicAmount * (Number(values.gstPercent || 0) / 100);
+
         const payload = {
           ...values,
+          gstAmount,
           billFileUrl,
           billFileKey,
           items: values.items?.map(item => ({
@@ -319,30 +334,17 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
       render: (_value, record) => record.vendor?.name || '-',
     },
     {
+      title: 'GST',
+      key: 'gst',
+      align: 'right',
+      width: 90,
+      render: (_, record) => (record.gstPercent ? `${Number(record.gstPercent)}%` : '-'),
+    },
+    {
       title: 'Total Amount',
       dataIndex: 'amount',
       align: 'right',
       render: (value) => formatCurrency(value),
-    },
-    {
-      title: 'Shortage',
-      key: 'shortage',
-      width: 120,
-      render: (_, record) => {
-        if (!record.purchaseOrder) return '-';
-        const totalOrdered = record.purchaseOrder.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0;
-        const totalBilled = record.purchaseOrder.items?.reduce((sum, item) => sum + Number(item.billedQuantity || 0), 0) || 0;
-        const diff = totalOrdered - totalBilled;
-
-        if (diff > 0) {
-          return (
-            <Tag color="orange" title={`${diff} items remaining to be billed from PO`}>
-              Shortage: {diff}
-            </Tag>
-          );
-        }
-        return <Tag color="green">Fulfilled</Tag>;
-      },
     },
     {
       title: 'Doc',
@@ -626,14 +628,8 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
 
           {fields.length > 0 && (
             <>
-              <Divider titlePlacement="left">Item Fulfillment</Divider>
-              <div className="mb-4 rounded-lg border border-orange-500/20 bg-orange-500/5 p-4">
-                <Typography.Text strong className="text-orange-400 block mb-1">
-                  Step 2: Enter Received Quantities
-                </Typography.Text>
-                <Typography.Text type="secondary" className="mb-4 block text-xs">
-                  Enter the actual quantities received from the vendor bill below to update the total amount.
-                </Typography.Text>
+              <Divider titlePlacement="left">Bill Items</Divider>
+              <div className="mb-4 rounded-lg border border-[var(--border)] p-4">
                 {fields.map((field, index) => (
                   <div key={field.id} className="mb-4 last:mb-0 border-b border-white/5 pb-4 last:border-0 last:pb-0">
                     <Flex justify="space-between" align="start" className="mb-2">
@@ -664,13 +660,8 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
                         )}
                       />
                     </Flex>
-                    <Flex gap={16} align="center">
-                      <div className="flex-1">
-                        <Typography.Text className="text-xs" type="secondary">Ordered: {watch(`items.${index}.orderedQty`)} {watch(`items.${index}.unit`)}</Typography.Text>
-                        <br />
-                        <Typography.Text className="text-xs" type="secondary">Already Billed: {watch(`items.${index}.billedQty`)}</Typography.Text>
-                      </div>
-                      <Form.Item label="This Bill Qty" className="mb-0 w-32" required>
+                    <Flex justify="flex-end">
+                      <Form.Item label="Quantity" className="mb-0 w-32" required>
                         <Controller
                           control={control}
                           name={`items.${index}.quantity`}
@@ -678,9 +669,8 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
                             <InputNumber
                               {...qtyField}
                               min={0}
-                              max={Number(watch(`items.${index}.orderedQty`)) - Number(watch(`items.${index}.billedQty`))}
                               className="w-full"
-                              status={qtyField.value === 0 ? 'warning' : undefined}
+                              addonAfter={watch(`items.${index}.unit`)}
                               onChange={(val) => qtyField.onChange(val || 0)}
                             />
                           )}
@@ -690,15 +680,39 @@ export function BillsClient({ bills, vendors, projects, purchaseOrders, userRole
                   </div>
                 ))}
 
-                <div className="mt-6 flex justify-between items-end p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                  <div>
-                    <Typography.Text type="secondary" className="text-[10px] block">Comparison</Typography.Text>
-                    <Typography.Text type="secondary" className="line-through text-xs block">PO Total: {formatCurrency((watchedItems || []).reduce((s, i) => s + (Number(i.orderedQty) * Number(i.rate)), 0))}</Typography.Text>
-                    <Typography.Text strong className="text-blue-400">Current Bill Total</Typography.Text>
-                  </div>
-                  <Typography.Title level={3} style={{ margin: 0, color: '#10b981' }}>
-                    {formatCurrency(watch('amount'))}
-                  </Typography.Title>
+                <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
+                    <Form.Item label="GST %" className="mb-0">
+                      <Controller
+                        control={control}
+                        name="gstPercent"
+                        render={({ field }) => (
+                          <InputNumber
+                            {...field}
+                            min={0}
+                            max={100}
+                            addonAfter="%"
+                            onChange={(val) => field.onChange(val ?? 0)}
+                          />
+                        )}
+                      />
+                    </Form.Item>
+                    <Form.Item label="Basic" className="mb-0">
+                      <Typography.Text strong>
+                        {formatCurrency((watchedItems || []).reduce((s, i) => s + Number(i.quantity || 0) * Number(i.rate || 0), 0))}
+                      </Typography.Text>
+                    </Form.Item>
+                    <Form.Item label="GST Amt" className="mb-0">
+                      <Typography.Text>
+                        {formatCurrency((watchedItems || []).reduce((s, i) => s + Number(i.quantity || 0) * Number(i.rate || 0), 0) * (Number(watchedGstPercent || 0) / 100))}
+                      </Typography.Text>
+                    </Form.Item>
+                    <Form.Item label="Total w/ GST" className="mb-0">
+                      <Typography.Title level={4} style={{ margin: 0, color: '#10b981' }}>
+                        {formatCurrency(watch('amount'))}
+                      </Typography.Title>
+                    </Form.Item>
+                  </Flex>
                 </div>
               </div>
             </>
