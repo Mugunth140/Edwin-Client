@@ -49,7 +49,7 @@ const peGroupByEnquiryNo = (vqs: VendorQuotation[]) => {
 
 export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDescriptions, vendorQuotations: vendorQuotationsProp }: PurchaseOrdersClientProps) {
   const user = useAuthStore((s) => s.user);
-  const canUpdateStatus = user?.role === 'admin' || user?.role === 'accounts_manager';
+  const canUpdateStatus = user?.role === 'admin' || user?.role === 'accounts_manager' || user?.role === 'purchase_team';
   const [open, setOpen] = useState(false);
   const [editingPo, setEditingPo] = useState<PurchaseOrder | null>(null);
   const [descOpen, setDescOpen] = useState(false);
@@ -65,6 +65,10 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
 
   const vendorQuotations = vendorQuotationsProp || [];
   const peGroups = useMemo(() => peGroupByEnquiryNo(vendorQuotations), [vendorQuotations]);
+
+  const statusOptions = user?.role === 'purchase_team'
+    ? STATUS_OPTIONS.filter((opt) => opt.value !== 'admin_approved')
+    : STATUS_OPTIONS;
 
   const handleEnquirySelect = useCallback((enquiryNo: string) => {
     const group = peGroups.find((g) => g.enquiryNo === enquiryNo);
@@ -109,6 +113,19 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     return { basicAmount, gstAmount, totalWithGst };
   };
 
+  const uploadBillFileIfNeeded = async (file: File) => {
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    return uploadBillFile({ name: file.name, base64 });
+  };
+
   const handleCreate = async () => {
     if (!projectId) { message.error('Select a project'); return; }
     if (!vendorSections.length) { message.error('Select a Purchase Enquiry'); return; }
@@ -120,16 +137,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     let billFileKey: string | undefined;
     if (billFile) {
       try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(',')[1]);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(billFile);
-        });
-        const result = await uploadBillFile({ name: billFile.name, base64 });
+        const result = await uploadBillFileIfNeeded(billFile);
         billFileUrl = result.fileUrl;
         billFileKey = result.fileKey;
       } catch { message.error('File upload failed'); return; }
@@ -173,7 +181,64 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     setBillFile(null);
   };
 
-  const handleEdit = (po: PurchaseOrder) => setEditingPo(po);
+  const handleEdit = (po: PurchaseOrder) => {
+    setEditingPo(po);
+    setProjectId(po.projectId);
+    setPaymentTerms(po.paymentTerms || '');
+    setVendorSections([
+      {
+        vendorId: po.vendorId,
+        vendorName: po.vendor?.name || po.vendorId,
+        items: (po.items || []).map((i) => ({
+          description: i.description,
+          quantity: Number(i.quantity),
+          unit: i.unit || 'nos',
+          rate: Number(i.rate),
+        })),
+        gstPercent: Number(po.gstPercent) || 0,
+      },
+    ]);
+    setBillFile(null);
+    setOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingPo) return;
+    if (!projectId) { message.error('Select a project'); return; }
+    const section = vendorSections[0];
+    if (!section || !section.items.some((i) => i.rate > 0)) { message.error('Enter rates for all items'); return; }
+
+    let billFileUrl = editingPo.billFileUrl || undefined;
+    let billFileKey = editingPo.billFileKey || undefined;
+    if (billFile) {
+      try {
+        const result = await uploadBillFileIfNeeded(billFile);
+        billFileUrl = result.fileUrl;
+        billFileKey = result.fileKey;
+      } catch { message.error('File upload failed'); return; }
+    }
+
+    startTransition(async () => {
+      try {
+        const items = section.items.filter((i) => i.rate > 0).map((i) => ({
+          description: i.description, quantity: i.quantity, unit: i.unit, rate: i.rate,
+        }));
+        await updatePurchaseOrder(editingPo.id, {
+          vendorId: section.vendorId,
+          projectId,
+          paymentTerms: paymentTerms || undefined,
+          gstPercent: section.gstPercent || undefined,
+          items,
+          billFileUrl,
+          billFileKey,
+        });
+        message.success('Purchase order updated');
+        handleClose();
+      } catch (err) {
+        message.error(err instanceof Error ? err.message : 'Failed to update PO');
+      }
+    });
+  };
 
   const handleDelete = (id: string) => {
     startTransition(async () => {
@@ -197,7 +262,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     { title: 'Project', key: 'project', sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''), render: (_value, record) => record.project ? `${record.project.name} (${record.project.projectCode || 'No Code'})` : '-' },
     { title: 'Status', dataIndex: 'status', width: 150, filters: STATUS_OPTIONS.map((opt) => ({ text: opt.label, value: opt.value })), onFilter: (value, record) => record.status === value, render: (value: string, record) =>
       canUpdateStatus ? (
-        <Select defaultValue={value} size="small" variant="borderless" className="w-full" onChange={(newStatus) => handleStatusChange(record.id, newStatus)} options={STATUS_OPTIONS} popupMatchSelectWidth={false} styles={{ popup: { root: { minWidth: 140 } } }} disabled={isPending} />
+        <Select defaultValue={value} size="small" variant="borderless" className="w-full" onChange={(newStatus) => handleStatusChange(record.id, newStatus)} options={statusOptions} popupMatchSelectWidth={false} styles={{ popup: { root: { minWidth: 140 } } }} disabled={isPending} />
       ) : (
         <Typography.Text>{value.charAt(0).toUpperCase() + value.slice(1)}</Typography.Text>
       ),
@@ -257,7 +322,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
           editingPo ? (
             <Space>
               <Button onClick={handleClose}>Cancel</Button>
-              <Button type="primary" loading={isPending} onClick={() => {}}>Update</Button>
+              <Button type="primary" loading={isPending} onClick={handleUpdate}>Update</Button>
             </Space>
           ) : (
             <Space>

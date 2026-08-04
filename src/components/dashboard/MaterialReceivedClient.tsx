@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Card, Drawer, Flex, Form, Input, Popconfirm, Select, Space, Table, Typography, Upload, App, InputNumber, Image, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { RcFile } from 'antd/es/upload/interface';
-import { DeleteOutlined, FilePdfOutlined, PlusOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons';
 import { Controller, useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { createMaterialReceived, updateMaterialReceived, deleteMaterialReceived, uploadMaterialFile } from '@/actions/material-received';
@@ -68,7 +68,7 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
     },
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: 'items' });
 
   const watchedProjectId = useWatch({ control, name: 'projectId' });
   const watchedPoId = useWatch({ control, name: 'purchaseOrderId' });
@@ -81,6 +81,15 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
       setValue('projectId', po.projectId);
     }
   }, [watchedPoId, watchedProjectId, purchaseOrders, setValue]);
+
+  // When a PO is chosen, auto-fill its line items (description & quantity)
+  useEffect(() => {
+    if (!watchedPoId || editing) return;
+    const po = purchaseOrders.find((p) => p.id === watchedPoId);
+    if (po?.items?.length) {
+      replace(po.items.map((i) => ({ description: i.description, quantity: Number(i.quantity) })));
+    }
+  }, [watchedPoId, editing, purchaseOrders, replace]);
 
   // When a project is chosen, auto-select a PO belonging to it
   useEffect(() => {
@@ -181,6 +190,7 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
     { title: 'MR Number', dataIndex: 'mrNumber', key: 'mrNumber', width: 150, render: (v: string) => <Typography.Text strong>{v}</Typography.Text> },
     { title: 'Project', key: 'project', width: 200, render: (_, r) => r.project ? `${r.project.name} (${r.project.projectCode || 'No Code'})` : r.projectId },
     { title: 'PO Number', key: 'po', width: 130, render: (_, r) => r.purchaseOrder?.poNumber || r.purchaseOrderId || '-' },
+    { title: 'PE Number', key: 'pe', width: 130, render: (_, r) => r.purchaseOrder?.enquiryNo || '-' },
     { title: 'Date', dataIndex: 'receivedDate', key: 'receivedDate', width: 120, render: (v?: string | null) => formatDate(v) },
     {
       title: 'Items',
@@ -235,7 +245,7 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
       width: 90,
       render: (_, record) => (
         <Space>
-          <Button type="text" icon={<PlusOutlined className="text-blue-500" />} title="Edit" onClick={() => openEdit(record)} />
+          <Button type="text" icon={<EditOutlined className="text-blue-500" />} title="Edit" onClick={() => openEdit(record)} />
           <Popconfirm
             title="Delete this record?"
             onConfirm={() =>

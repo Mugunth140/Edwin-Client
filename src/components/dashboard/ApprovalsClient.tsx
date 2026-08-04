@@ -14,10 +14,9 @@ import dayjs from 'dayjs';
 import { updateBillStatus } from '@/actions/invoices';
 import { updateExpenseStatus } from '@/actions/expenses';
 import { updateSubcontractWorkOrderStatus } from '@/actions/subcontract-work-orders';
-import { updatePurchaseOrderStatus } from '@/actions/purchase-orders';
 import { updateDailyLabourReportStatus } from '@/actions/daily-labour';
 import { verifyTimesheet, approveTimesheet, rejectTimesheet } from '@/actions/timesheet-approval';
-import type { PurchaseBill, Expense, PurchaseOrder, SubcontractWorkOrder, DailyLabourReport, WeeklyTimesheet, TimesheetStatus } from '@/types/erp';
+import type { PurchaseBill, Expense, SubcontractWorkOrder, DailyLabourReport, WeeklyTimesheet, TimesheetStatus } from '@/types/erp';
 import {
   StatusTag,
   cardClassName,
@@ -47,13 +46,12 @@ const TIMESHEET_STATUS_OPTIONS = [
 type Props = {
   bills: PurchaseBill[];
   expenses: Expense[];
-  purchaseOrders: PurchaseOrder[];
   subcontractWorkOrders: SubcontractWorkOrder[];
   dailyReports: DailyLabourReport[];
   timesheets: WeeklyTimesheet[];
 };
 
-export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWorkOrders, dailyReports, timesheets }: Props) {
+export function ApprovalsClient({ bills, expenses, subcontractWorkOrders, dailyReports, timesheets }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
@@ -89,20 +87,6 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
       return true;
     });
   }, [bills, dateRange, searchText, statusFilter]);
-
-  const filteredPurchaseOrders = useMemo(() => {
-    const from = dateRange[0]?.format('YYYY-MM-DD');
-    const to = dateRange[1]?.format('YYYY-MM-DD');
-    return purchaseOrders.filter((po) => {
-      if (from && to) {
-        const d = typeof po.createdAt === 'string' ? po.createdAt.split('T')[0] : '';
-        if (d < from || d > to) return false;
-      }
-      if (statusFilter && po.status !== statusFilter) return false;
-      if (searchText && !po.poNumber?.toLowerCase().includes(searchText.toLowerCase()) && !po.vendor?.name?.toLowerCase().includes(searchText.toLowerCase())) return false;
-      return true;
-    });
-  }, [purchaseOrders, dateRange, searchText, statusFilter]);
 
   const filteredSwo = useMemo(() => {
     const from = dateRange[0]?.format('YYYY-MM-DD');
@@ -166,13 +150,6 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
     });
   };
 
-  const handlePoStatusChange = (id: string, status: string) => {
-    startTransition(async () => {
-      try { await updatePurchaseOrderStatus(id, status); message.success('PO status updated'); }
-      catch (error) { message.error(error instanceof Error ? error.message : 'Failed'); }
-    });
-  };
-
   const handleDailyStatusChange = (id: string, status: string) => {
     startTransition(async () => {
       try { await updateDailyLabourReportStatus(id, status); message.success('Daily report status updated'); }
@@ -212,13 +189,6 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
     approved: filteredBills.filter((b) => b.status === 'approved').length,
     rejected: filteredBills.filter((b) => b.status === 'rejected').length,
   }), [filteredBills]);
-
-  const poCounts = useMemo(() => ({
-    pending: filteredPurchaseOrders.filter((po) => po.status === 'pending').length,
-    admin_approved: filteredPurchaseOrders.filter((po) => po.status === 'admin_approved').length,
-    approved: filteredPurchaseOrders.filter((po) => po.status === 'approved').length,
-    rejected: filteredPurchaseOrders.filter((po) => po.status === 'rejected').length,
-  }), [filteredPurchaseOrders]);
 
   const swoCounts = useMemo(() => ({
     pending: filteredSwo.filter((s) => s.status === 'pending').length,
@@ -321,32 +291,6 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
         <Select
           defaultValue={record.status || 'pending'} size="small" variant="borderless" className="w-full"
           onChange={(newStatus) => handleDailyStatusChange(record.id, newStatus)}
-          options={APPROVAL_STATUS_OPTIONS} popupMatchSelectWidth={false} disabled={isPending}
-        />
-      ),
-    },
-  ];
-
-  const poColumns: ColumnsType<PurchaseOrder> = [
-    { title: '#', key: 'sno', width: 50, render: (_, __, i) => i + 1 },
-    { title: 'PO Number', dataIndex: 'poNumber' },
-    { title: 'Vendor', key: 'vendor', render: (_, record) => record.vendor?.name || '-' },
-    { title: 'Project', key: 'project', render: (_, record) => record.project?.name || '-' },
-    { title: 'Amount', dataIndex: 'totalAmount', align: 'right', render: (value) => `₹${Number(value).toLocaleString()}` },
-    {
-      title: 'PO', key: 'billFile', width: 120,
-      render: (_, record) =>
-        record.billFileUrl ? (
-          <Button type="link" size="small" icon={<FilePdfOutlined />} href={record.billFileUrl} target="_blank">View PO</Button>
-        ) : <Typography.Text type="secondary">—</Typography.Text>,
-    },
-    { title: 'Created At', dataIndex: 'createdAt', render: formatDate },
-    {
-      title: 'Status', key: 'status', width: 140,
-      render: (_, record) => (
-        <Select
-          defaultValue={record.status || 'pending'} size="small" variant="borderless" className="w-full"
-          onChange={(newStatus) => handlePoStatusChange(record.id, newStatus)}
           options={APPROVAL_STATUS_OPTIONS} popupMatchSelectWidth={false} disabled={isPending}
         />
       ),
@@ -612,11 +556,6 @@ export function ApprovalsClient({ bills, expenses, purchaseOrders, subcontractWo
               key: 'swo',
               label: <span><FileDoneOutlined /> Subcontract Work Orders</span>,
               children: renderContent(swoCounts, filteredSwo, swoColumns, 'No subcontract work orders'),
-            },
-            {
-              key: 'po',
-              label: <span><FileDoneOutlined /> Purchase Orders</span>,
-              children: renderContent(poCounts, filteredPurchaseOrders, poColumns, 'No purchase orders'),
             },
             {
               key: 'daily',

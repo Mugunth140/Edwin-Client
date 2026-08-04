@@ -4,6 +4,11 @@ const API_BASE = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http
 const API_ORIGIN = API_BASE.replace(/\/api\/v1$/, '').replace(/\/api$/, '');
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '15mb',
+    },
+  },
   async rewrites() {
     return [
       {
