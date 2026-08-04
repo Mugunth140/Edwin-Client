@@ -35,16 +35,17 @@ const STATUS_OPTIONS = [
 type PoItem = { description: string; quantity: number; unit: string; rate: number };
 type VendorPoSection = { vendorId: string; vendorName: string; items: PoItem[]; gstPercent: number };
 
+const approvedQuotations = (vqs: VendorQuotation[]) => vqs.filter((vq) => vq.status === 'approved');
+
 const peGroupByGroupId = (vqs: VendorQuotation[]) => {
   const map = new Map<string, VendorQuotation[]>();
-  for (const vq of vqs) {
-    if (vq.status === 'approved') {
-      const key = vq.groupId;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(vq);
-    }
+  for (const vq of approvedQuotations(vqs)) {
+    if (!map.has(vq.groupId)) map.set(vq.groupId, []);
+    map.get(vq.groupId)!.push(vq);
   }
-  return Array.from(map.entries()).map(([groupId, quotations]) => ({ groupId, quotations }));
+  return Array.from(map.entries())
+    .filter(([, quotations]) => quotations.length > 1)
+    .map(([groupId, quotations]) => ({ groupId, quotations }));
 };
 
 export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDescriptions, vendorQuotations: vendorQuotationsProp }: PurchaseOrdersClientProps) {
@@ -58,39 +59,50 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedQuotationId, setSelectedQuotationId] = useState<string | null>(null);
   const [selectedMRNo, setSelectedMRNo] = useState<string | null>(null);
   const [projectId, setProjectId] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [vendorSections, setVendorSections] = useState<VendorPoSection[]>([]);
 
-  const vendorQuotations = vendorQuotationsProp || [];
+  const vendorQuotations = useMemo(() => vendorQuotationsProp || [], [vendorQuotationsProp]);
+  const peOptions = useMemo(() => approvedQuotations(vendorQuotations), [vendorQuotations]);
   const peGroups = useMemo(() => peGroupByGroupId(vendorQuotations), [vendorQuotations]);
 
   const statusOptions = user?.role === 'purchase_team'
     ? STATUS_OPTIONS.filter((opt) => opt.value !== 'admin_approved')
     : STATUS_OPTIONS;
 
-  const handleEnquirySelect = useCallback((groupId: string) => {
-    const group = peGroups.find((g) => g.groupId === groupId);
-    if (!group) return;
-    setSelectedGroupId(groupId);
-    setSelectedMRNo(group.quotations[0].materialRequirement?.enquiryNo || null);
-    setProjectId(group.quotations[0].projectId);
-    setVendorSections(
-      group.quotations.map((q) => ({
-        vendorId: q.vendorId,
-        vendorName: q.vendor?.name || q.vendorId,
-        items: q.items.map((i) => ({
-          description: i.description,
-          quantity: Number(i.quantity),
-          unit: 'nos',
-          rate: 0,
-        })),
-        gstPercent: 0,
-      }))
-    );
-  }, [peGroups]);
+  const quotationToSection = (q: VendorQuotation): VendorPoSection => ({
+    vendorId: q.vendorId,
+    vendorName: q.vendor?.name || q.vendorId,
+    items: q.items.map((i) => ({
+      description: i.description,
+      quantity: Number(i.quantity),
+      unit: 'nos',
+      rate: 0,
+    })),
+    gstPercent: 0,
+  });
+
+  const handleEnquirySelect = useCallback((value: string) => {
+    if (value.startsWith('group:')) {
+      const groupId = value.slice('group:'.length);
+      const group = peGroups.find((g) => g.groupId === groupId);
+      if (!group) return;
+      setSelectedQuotationId(value);
+      setSelectedMRNo(group.quotations[0].materialRequirement?.enquiryNo || null);
+      setProjectId(group.quotations[0].projectId);
+      setVendorSections(group.quotations.map(quotationToSection));
+      return;
+    }
+    const q = peOptions.find((vq) => vq.id === value);
+    if (!q) return;
+    setSelectedQuotationId(value);
+    setSelectedMRNo(q.materialRequirement?.enquiryNo || null);
+    setProjectId(q.projectId);
+    setVendorSections([quotationToSection(q)]);
+  }, [peOptions, peGroups]);
 
   const updateItemRate = (vIdx: number, iIdx: number, rate: number) => {
     setVendorSections((prev) => {
@@ -176,7 +188,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const handleClose = () => {
     setOpen(false);
     setEditingPo(null);
-    setSelectedGroupId(null);
+    setSelectedQuotationId(null);
     setSelectedMRNo(null);
     setProjectId('');
     setPaymentTerms('');
@@ -336,25 +348,38 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         }
       >
         <Form layout="vertical">
-          {!editingPo && peGroups.length > 0 && (
+          {!editingPo && peOptions.length > 0 && (
             <Form.Item label="MR Ref" className="mb-6 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
               <Select
                 showSearch
-                placeholder="Search MR Ref..."
+                placeholder="Search MR Ref or vendor..."
                 optionFilterProp="label"
                 onChange={handleEnquirySelect}
-                value={selectedGroupId || undefined}
-                options={peGroups.map((g) => {
-                  const mrRef = g.quotations[0]?.materialRequirement?.enquiryNo;
-                  const vendorNames = g.quotations.map((q) => q.vendor?.name).filter(Boolean).join(', ');
-                  const projectName = g.quotations[0]?.project?.name || 'Unknown project';
-                  return {
-                    value: g.groupId,
-                    label: mrRef
-                      ? `${mrRef} — ${projectName} (${vendorNames})`
-                      : `${projectName} — ${vendorNames} (${formatDate(g.quotations[0]?.createdAt)})`,
-                  };
-                })}
+                value={selectedQuotationId || undefined}
+                options={[
+                  ...peGroups.map((g) => {
+                    const mrRef = g.quotations[0]?.materialRequirement?.enquiryNo;
+                    const projectName = g.quotations[0]?.project?.name || 'Unknown project';
+                    const vendorCount = g.quotations.length;
+                    return {
+                      value: `group:${g.groupId}`,
+                      label: mrRef
+                        ? `${mrRef} — All Vendors (${vendorCount}) (${projectName})`
+                        : `${projectName} — All Vendors (${vendorCount}) (${formatDate(g.quotations[0]?.createdAt)})`,
+                    };
+                  }),
+                  ...peOptions.map((q) => {
+                    const mrRef = q.materialRequirement?.enquiryNo;
+                    const vendorName = q.vendor?.name || q.vendorId;
+                    const projectName = q.project?.name || 'Unknown project';
+                    return {
+                      value: q.id,
+                      label: mrRef
+                        ? `${mrRef} — ${vendorName} (${projectName})`
+                        : `${projectName} — ${vendorName} (${formatDate(q.createdAt)})`,
+                    };
+                  }),
+                ].sort((a, b) => a.label.localeCompare(b.label))}
               />
             </Form.Item>
           )}
