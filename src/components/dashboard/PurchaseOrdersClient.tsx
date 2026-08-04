@@ -194,7 +194,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     { title: 'PO Number', dataIndex: 'poNumber', sorter: (a, b) => a.poNumber.localeCompare(b.poNumber), render: (value: string) => <Typography.Text strong>{value}</Typography.Text> },
     { title: 'PE Number', dataIndex: 'enquiryNo', sorter: (a, b) => (a.enquiryNo || '').localeCompare(b.enquiryNo || ''), render: (value?: string | null) => value || <Typography.Text type="secondary">-</Typography.Text> },
     { title: 'Vendor', dataIndex: ['vendor', 'name'], sorter: (a, b) => (a.vendor?.name || '').localeCompare(b.vendor?.name || ''), render: (_value, record) => record.vendor?.name || '-' },
-    { title: 'Project', dataIndex: ['project', 'name'], sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''), render: (_value, record) => record.project?.name || '-' },
+    { title: 'Project', key: 'project', sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''), render: (_value, record) => record.project ? `${record.project.name} (${record.project.projectCode || 'No Code'})` : '-' },
     { title: 'Status', dataIndex: 'status', width: 150, filters: STATUS_OPTIONS.map((opt) => ({ text: opt.label, value: opt.value })), onFilter: (value, record) => record.status === value, render: (value: string, record) =>
       canUpdateStatus ? (
         <Select defaultValue={value} size="small" variant="borderless" className="w-full" onChange={(newStatus) => handleStatusChange(record.id, newStatus)} options={STATUS_OPTIONS} popupMatchSelectWidth={false} styles={{ popup: { root: { minWidth: 140 } } }} disabled={isPending} />

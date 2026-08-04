@@ -284,90 +284,90 @@ export function EngineerReportClient() {
               </>
             ),
           },
-          {
-            key: 'timesheets',
-            label: (
-              <Space><CalendarOutlined /><Typography.Text strong>Timesheets ({data.timesheets.length})</Typography.Text></Space>
-            ),
-            children: (
-              <>
-                <Flex gap={8} wrap className="mb-4"  style={{ marginBottom: 24 }}>
-                  <Select
-                    allowClear
-                    placeholder="Filter by month"
-                    style={{ width: 180 }}
-                    value={tsMonth}
-                    onChange={(v) => setTsMonth(v ?? null)}
-                    options={monthOptions}
-                  />
-                  <DatePicker.RangePicker
-                    format="DD/MM/YYYY"
-                    placeholder={['From date', 'To date']}
-                    onChange={(_, dateStrings) => {
-                      setTsDateRange(dateStrings[0] && dateStrings[1] ? [dateStrings[0], dateStrings[1]] : null);
-                    }}
-                  />
-                </Flex>
-                <Flex gap={8} className="mb-4"  style={{ marginBottom: 24 }}>
-                  <Card size="small" className="flex-1! border! border-blue-500/20!">
-                    <Statistic
-                      title="Filtered Hours"
-                      value={filteredTS.reduce((s, t) => s + t.totalHours, 0).toFixed(2)}
-                      valueStyle={{ color: '#3b82f6', fontSize: 20 }}
-                    />
-                  </Card>
-                  <Card size="small" className="flex-1! border! border-emerald-500/20!">
-                    <Statistic
-                      title="Filtered Earned"
-                      value={`₹${filteredTS.reduce((s, t) => s + t.earnedAmount, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                      valueStyle={{ color: '#10b981', fontSize: 20 }}
-                    />
-                  </Card>
-                </Flex>
-                <Table
+          // {
+          //   key: 'timesheets',
+          //   label: (
+          //     <Space><CalendarOutlined /><Typography.Text strong>Timesheets ({data.timesheets.length})</Typography.Text></Space>
+          //   ),
+          //   children: (
+          //     <>
+          //       <Flex gap={8} wrap className="mb-4"  style={{ marginBottom: 24 }}>
+          //         <Select
+          //           allowClear
+          //           placeholder="Filter by month"
+          //           style={{ width: 180 }}
+          //           value={tsMonth}
+          //           onChange={(v) => setTsMonth(v ?? null)}
+          //           options={monthOptions}
+          //         />
+          //         <DatePicker.RangePicker
+          //           format="DD/MM/YYYY"
+          //           placeholder={['From date', 'To date']}
+          //           onChange={(_, dateStrings) => {
+          //             setTsDateRange(dateStrings[0] && dateStrings[1] ? [dateStrings[0], dateStrings[1]] : null);
+          //           }}
+          //         />
+          //       </Flex>
+          //       <Flex gap={8} className="mb-4"  style={{ marginBottom: 24 }}>
+          //         <Card size="small" className="flex-1! border! border-blue-500/20!">
+          //           <Statistic
+          //             title="Filtered Hours"
+          //             value={filteredTS.reduce((s, t) => s + t.totalHours, 0).toFixed(2)}
+          //             valueStyle={{ color: '#3b82f6', fontSize: 20 }}
+          //           />
+          //         </Card>
+          //         <Card size="small" className="flex-1! border! border-emerald-500/20!">
+          //           <Statistic
+          //             title="Filtered Earned"
+          //             value={`₹${filteredTS.reduce((s, t) => s + t.earnedAmount, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+          //             valueStyle={{ color: '#10b981', fontSize: 20 }}
+          //           />
+          //         </Card>
+          //       </Flex>
+          //       <Table
                 
-                  dataSource={filteredTS}
-                  columns={[
-                    { title: '#', key: 'sno', width: 50, render: (_: unknown, __: unknown, i: number) => i + 1 },
-                    { title: 'Week Start', dataIndex: 'weekStart', key: 'weekStart', render: (v: string) => fmt(v) },
-                      { title: 'Week End', dataIndex: 'weekEnd', key: 'weekEnd', render: (v: string) => fmt(v) },
-                    { title: 'Total Hours', dataIndex: 'totalHours', key: 'totalHours', width: 100 },
-                    {
-                      title: 'Earned Amount', dataIndex: 'earnedAmount', key: 'earnedAmount', width: 130,
-                      render: (v: number) => `₹${v.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                    },
-                    {
-                      title: 'Status', dataIndex: 'status', key: 'status', width: 110,
-                      render: (v: string) => <Tag color={STATUS_COLORS[v] || 'default'}>{STATUS_OPTIONS[v] || v}</Tag>,
-                    },
-                  ]}
-                  rowKey="id"
-                  pagination={false}
-                  size="small"
-                />
-              </>
-            ),
-          },
-          {
-            key: 'attendance',
-            label: (
-              <Space><UserOutlined /><Typography.Text strong>Daily Attendance (Last 30 Days) — {data.attendanceLogs.length} records</Typography.Text></Space>
-            ),
-            children: (
-              <Table
-                dataSource={data.attendanceLogs}
-                columns={[
-                  { title: '#', key: 'sno', width: 50, render: (_: unknown, __: unknown, i: number) => i + 1 },
-                  { title: 'Date', dataIndex: 'date', key: 'date', render: (v: string) => fmt(v) },
-                  { title: 'Project', dataIndex: 'projectName', key: 'projectName' },
-                  { title: 'Headcount', dataIndex: 'headcount', key: 'headcount', width: 120 },
-                ]}
-                rowKey={(_, i) => String(i)}
-                pagination={false}
-                size="small"
-              />
-            ),
-          },
+          //         dataSource={filteredTS}
+          //         columns={[
+          //           { title: '#', key: 'sno', width: 50, render: (_: unknown, __: unknown, i: number) => i + 1 },
+          //           { title: 'Week Start', dataIndex: 'weekStart', key: 'weekStart', render: (v: string) => fmt(v) },
+          //             { title: 'Week End', dataIndex: 'weekEnd', key: 'weekEnd', render: (v: string) => fmt(v) },
+          //           { title: 'Total Hours', dataIndex: 'totalHours', key: 'totalHours', width: 100 },
+          //           {
+          //             title: 'Earned Amount', dataIndex: 'earnedAmount', key: 'earnedAmount', width: 130,
+          //             render: (v: number) => `₹${v.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          //           },
+          //           {
+          //             title: 'Status', dataIndex: 'status', key: 'status', width: 110,
+          //             render: (v: string) => <Tag color={STATUS_COLORS[v] || 'default'}>{STATUS_OPTIONS[v] || v}</Tag>,
+          //           },
+          //         ]}
+          //         rowKey="id"
+          //         pagination={false}
+          //         size="small"
+          //       />
+          //     </>
+          //   ),
+          // },
+          // {
+          //   key: 'attendance',
+          //   label: (
+          //     <Space><UserOutlined /><Typography.Text strong>Daily Attendance (Last 30 Days) — {data.attendanceLogs.length} records</Typography.Text></Space>
+          //   ),
+          //   children: (
+          //     <Table
+          //       dataSource={data.attendanceLogs}
+          //       columns={[
+          //         { title: '#', key: 'sno', width: 50, render: (_: unknown, __: unknown, i: number) => i + 1 },
+          //         { title: 'Date', dataIndex: 'date', key: 'date', render: (v: string) => fmt(v) },
+          //         { title: 'Project', dataIndex: 'projectName', key: 'projectName' },
+          //         { title: 'Headcount', dataIndex: 'headcount', key: 'headcount', width: 120 },
+          //       ]}
+          //       rowKey={(_, i) => String(i)}
+          //       pagination={false}
+          //       size="small"
+          //     />
+          //   ),
+          // },
         ]}
       />
     </div>
