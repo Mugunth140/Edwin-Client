@@ -2,7 +2,7 @@
 
 import { Alert, Button, Card, Col, Progress, Row, Skeleton, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { CheckCircleOutlined, CloseCircleOutlined, ProjectOutlined, ReloadOutlined, ShoppingCartOutlined, FileTextOutlined, SendOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CloseCircleOutlined, ProjectOutlined, ReloadOutlined, ShoppingCartOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import type { DashboardData, DashboardProject } from '@/types/erp';
 import { clientApiFetch } from '@/lib/client-api';
@@ -140,39 +140,22 @@ export function EngineerDashboardClient() {
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <Card className="rounded-xl! border! border-emerald-500/20! bg-linear-to-br! from-emerald-500/15! to-emerald-500/5!">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-500 text-xl">
-                <CheckCircleOutlined />
+            <Typography.Text className={secondaryTextClassName}>MR Status</Typography.Text>
+            <div className="mt-2 flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <CheckCircleOutlined className="text-emerald-500" />
+                <span className="text-lg font-bold text-[var(--text-primary)]">{data.materialRequirementCounts?.approved ?? 0}</span>
+                <span className={secondaryTextClassName}>Approved</span>
               </div>
-              <div>
-                <Typography.Text className={secondaryTextClassName}>Approved</Typography.Text>
-                <div className="text-2xl font-bold text-[var(--text-primary)]">{data.materialRequirementCounts?.approved ?? 0}</div>
+              <div className="flex items-center gap-2">
+                <CloseCircleOutlined className="text-red-500" />
+                <span className="text-lg font-bold text-[var(--text-primary)]">{data.materialRequirementCounts?.rejected ?? 0}</span>
+                <span className={secondaryTextClassName}>Rejected</span>
               </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="rounded-xl! border! border-red-500/20! bg-linear-to-br! from-red-500/15! to-red-500/5!">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-500/20 text-red-500 text-xl">
-                <CloseCircleOutlined />
-              </div>
-              <div>
-                <Typography.Text className={secondaryTextClassName}>Rejected</Typography.Text>
-                <div className="text-2xl font-bold text-[var(--text-primary)]">{data.materialRequirementCounts?.rejected ?? 0}</div>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="rounded-xl! border! border-orange-500/20! bg-linear-to-br! from-orange-500/15! to-orange-500/5!">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/20 text-orange-500 text-xl">
-                <ShoppingCartOutlined />
-              </div>
-              <div>
-                <Typography.Text className={secondaryTextClassName}>Pending MRs</Typography.Text>
-                <div className="text-2xl font-bold text-[var(--text-primary)]">{data.materialRequirementCounts?.pending ?? 0}</div>
+              <div className="flex items-center gap-2">
+                <ShoppingCartOutlined className="text-orange-500" />
+                <span className="text-lg font-bold text-[var(--text-primary)]">{data.materialRequirementCounts?.pending ?? 0}</span>
+                <span className={secondaryTextClassName}>Pending</span>
               </div>
             </div>
           </Card>
@@ -186,45 +169,6 @@ export function EngineerDashboardClient() {
               <div>
                 <Typography.Text className={secondaryTextClassName}>Timesheets (This Month)</Typography.Text>
                 <div className="text-2xl font-bold text-[var(--text-primary)]">{data.timesheetCounts?.total ?? 0}</div>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="rounded-xl! border! border-emerald-500/20! bg-linear-to-br! from-emerald-500/15! to-emerald-500/5!">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-500 text-xl">
-                <CheckCircleOutlined />
-              </div>
-              <div>
-                <Typography.Text className={secondaryTextClassName}>TS Approved</Typography.Text>
-                <div className="text-2xl font-bold text-[var(--text-primary)]">{data.timesheetCounts?.approved ?? 0}</div>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="rounded-xl! border! border-blue-500/20! bg-linear-to-br! from-blue-500/15! to-blue-500/5!">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/20 text-blue-500 text-xl">
-                <SendOutlined />
-              </div>
-              <div>
-                <Typography.Text className={secondaryTextClassName}>TS Submitted</Typography.Text>
-                <div className="text-2xl font-bold text-[var(--text-primary)]">{data.timesheetCounts?.submitted ?? 0}</div>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="rounded-xl! border! border-gray-500/20! bg-linear-to-br! from-gray-500/15! to-gray-500/5!">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-500/20 text-gray-500 text-xl">
-                <FileTextOutlined />
-              </div>
-              <div>
-                <Typography.Text className={secondaryTextClassName}>TS Draft</Typography.Text>
-                <div className="text-2xl font-bold text-[var(--text-primary)]">{data.timesheetCounts?.draft ?? 0}</div>
               </div>
             </div>
           </Card>

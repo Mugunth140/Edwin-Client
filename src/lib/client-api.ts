@@ -42,3 +42,4 @@ export async function clientApiFetch<T>(path: string, options: RequestInit = {})
 
 export const fetchPurchaseDashboard = () => clientApiFetch<any>('/dashboard/purchase');
 export const fetchEngineerDashboard = () => clientApiFetch<any>('/dashboard/engineer');
+export const fetchPurchaseAssignedProjects = () => clientApiFetch<unknown[]>('/dashboard/purchase/projects');

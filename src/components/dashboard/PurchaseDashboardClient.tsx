@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Col, Row, Statistic, Table, Typography, Progress, Flex, Alert, Spin, Divider } from 'antd';
-import { ShoppingCartOutlined, FileDoneOutlined, HistoryOutlined, WarningOutlined } from '@ant-design/icons';
+import { ShoppingCartOutlined, InboxOutlined, FileTextOutlined, WarningOutlined, ProjectOutlined } from '@ant-design/icons';
 import { fetchPurchaseDashboard } from '@/lib/client-api';
-import { formatCurrency, formatDate } from './ui';
+import { StatusTag, formatDate } from './ui';
 
 export function PurchaseDashboardClient() {
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,11 @@ export function PurchaseDashboardClient() {
       key: 'vendorName',
     },
     {
+      title: 'Project',
+      dataIndex: 'projectName',
+      key: 'projectName',
+    },
+    {
       title: 'Fulfillment',
       key: 'fulfillment',
       render: (_: any, record: any) => (
@@ -51,13 +58,6 @@ export function PurchaseDashboardClient() {
         </Flex>
       ),
     },
-    {
-      title: 'Total Amount',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      align: 'right' as const,
-      render: (val: number) => formatCurrency(val),
-    }
   ];
 
   return (
@@ -66,43 +66,74 @@ export function PurchaseDashboardClient() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="bg-blue-500/10 border border-blue-500/20">
+          <Card
+            bordered={false}
+            hoverable
+            className="bg-cyan-500/10 border border-cyan-500/20 cursor-pointer"
+            onClick={() => router.push('/dashboard/my-assigned-projects')}
+          >
             <Statistic
-              title={<span className="text-blue-400">Total Payables</span>}
-              value={data.kpis.totalPayable}
-              precision={2}
-              prefix={<ShoppingCartOutlined className="mr-2" />}
-              formatter={(val) => formatCurrency(val)}
+              title={<span className="text-cyan-400">Assigned Projects</span>}
+              value={data.kpis.assignedProjectCount}
+              prefix={<ProjectOutlined className="mr-2" />}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="bg-orange-500/10 border border-orange-500/20">
+          <Card
+            bordered={false}
+            hoverable
+            className="bg-blue-500/10 border border-blue-500/20 cursor-pointer"
+            onClick={() => router.push('/dashboard/material-requirement')}
+          >
             <Statistic
-              title={<span className="text-orange-400">Unpaid Bills</span>}
-              value={data.kpis.unpaidBillCount}
-              prefix={<WarningOutlined className="mr-2" />}
-              suffix="Bills"
+              title={<span className="text-blue-400">Material Requirements</span>}
+              value={data.kpis.materialRequirementCount}
+              prefix={<FileTextOutlined className="mr-2" />}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="bg-green-500/10 border border-green-500/20">
+          <Card
+            bordered={false}
+            hoverable
+            className="bg-purple-500/10 border border-purple-500/20 cursor-pointer"
+            onClick={() => router.push('/dashboard/material-received')}
+          >
+            <Statistic
+              title={<span className="text-purple-400">Material Received</span>}
+              value={data.kpis.materialReceivedCount}
+              prefix={<InboxOutlined className="mr-2" />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card
+            bordered={false}
+            hoverable
+            className="bg-green-500/10 border border-green-500/20 cursor-pointer"
+            onClick={() => router.push('/dashboard/purchase-orders')}
+          >
             <Statistic
               title={<span className="text-green-400">Active POs</span>}
               value={data.kpis.activePOCount}
-              prefix={<FileDoneOutlined className="mr-2" />}
+              prefix={<ShoppingCartOutlined className="mr-2" />}
               suffix="Pending"
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="bg-purple-500/10 border border-purple-500/20">
+          <Card
+            bordered={false}
+            hoverable
+            className="bg-orange-500/10 border border-orange-500/20 cursor-pointer"
+            onClick={() => router.push('/dashboard/accounts/bills')}
+          >
             <Statistic
-              title={<span className="text-purple-400">Recent PO Value</span>}
-              value={data.kpis.totalPOValue}
-              prefix={<HistoryOutlined className="mr-2" />}
-              formatter={(val) => formatCurrency(val)}
+              title={<span className="text-orange-400">Bills</span>}
+              value={data.kpis.unpaidBillCount}
+              prefix={<WarningOutlined className="mr-2" />}
+              suffix="Bills"
             />
           </Card>
         </Col>
@@ -128,29 +159,29 @@ export function PurchaseDashboardClient() {
                 <Flex key={bill.id} justify="space-between" align="center" className="pb-3 border-b border-white/5 last:border-0">
                   <div>
                     <Typography.Text className="block">{bill.billNumber}</Typography.Text>
-                    <Typography.Text type="secondary" className="text-xs">{bill.vendor?.name}</Typography.Text>
+                    <Typography.Text type="secondary" className="text-xs">{bill.vendorName}</Typography.Text>
                   </div>
                   <div className="text-right">
-                    <Typography.Text strong className="block">{formatCurrency(bill.amount)}</Typography.Text>
-                    <Typography.Text type="secondary" className="text-[10px]">{formatDate(bill.billDate)}</Typography.Text>
+                    <StatusTag value={bill.status} />
+                    <Typography.Text type="secondary" className="text-[10px] block mt-1">{formatDate(bill.billDate)}</Typography.Text>
                   </div>
                 </Flex>
               ))}
             </div>
-            
+
             <Divider className="my-4 border-white/5" />
-            
+
             <Typography.Text strong className="mb-3 block">Latest POs</Typography.Text>
             <div className="space-y-4">
               {data.recentActivity.pos.map((po: any) => (
                 <Flex key={po.id} justify="space-between" align="center" className="pb-3 border-b border-white/5 last:border-0">
                   <div>
                     <Typography.Text className="block">{po.poNumber}</Typography.Text>
-                    <Typography.Text type="secondary" className="text-xs">{po.vendor?.name}</Typography.Text>
+                    <Typography.Text type="secondary" className="text-xs">{po.vendorName}</Typography.Text>
                   </div>
                   <div className="text-right">
-                    <Typography.Text strong className="block">{formatCurrency(po.totalAmount)}</Typography.Text>
-                    <Typography.Text type="secondary" className="text-[10px]">{formatDate(po.createdAt)}</Typography.Text>
+                    <StatusTag value={po.status} />
+                    <Typography.Text type="secondary" className="text-[10px] block mt-1">{formatDate(po.createdAt)}</Typography.Text>
                   </div>
                 </Flex>
               ))}
