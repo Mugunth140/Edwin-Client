@@ -317,6 +317,7 @@ export type PurchaseOrder = {
   vendorId: string;
   projectId: string;
   enquiryNo?: string | null;
+  materialRequirementNo?: string | null;
   vendor?: Vendor;
   project?: Project;
   paymentTerms?: string | null;

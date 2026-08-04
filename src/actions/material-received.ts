@@ -37,6 +37,18 @@ export async function updateMaterialReceived(id: string, data: Record<string, un
   return res.json();
 }
 
+export async function updateMaterialReceivedStatus(id: string, status: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${getApiBaseUrl()}/material-received/${id}/status`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error('Failed to update status');
+  revalidatePath('/dashboard/material-received');
+  return res.json();
+}
+
 export async function uploadMaterialFile(data: { name: string; base64: string }) {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;

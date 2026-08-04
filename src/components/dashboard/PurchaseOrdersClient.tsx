@@ -59,6 +59,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const { message } = App.useApp();
 
   const [selectedPE, setSelectedPE] = useState<string | null>(null);
+  const [selectedMRNo, setSelectedMRNo] = useState<string | null>(null);
   const [projectId, setProjectId] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [vendorSections, setVendorSections] = useState<VendorPoSection[]>([]);
@@ -74,6 +75,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     const group = peGroups.find((g) => g.enquiryNo === enquiryNo);
     if (!group) return;
     setSelectedPE(enquiryNo);
+    setSelectedMRNo(group.quotations[0].materialRequirement?.enquiryNo || null);
     setProjectId(group.quotations[0].projectId);
     setVendorSections(
       group.quotations.map((q) => ({
@@ -155,6 +157,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
             vendorId: section.vendorId,
             projectId,
             enquiryNo: selectedPE || undefined,
+            materialRequirementNo: selectedMRNo || undefined,
             paymentTerms: paymentTerms || undefined,
             gstPercent: section.gstPercent || undefined,
             items,
@@ -175,6 +178,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
     setOpen(false);
     setEditingPo(null);
     setSelectedPE(null);
+    setSelectedMRNo(null);
     setProjectId('');
     setPaymentTerms('');
     setVendorSections([]);

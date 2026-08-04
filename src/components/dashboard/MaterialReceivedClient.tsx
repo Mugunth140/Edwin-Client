@@ -8,9 +8,15 @@ import type { RcFile } from 'antd/es/upload/interface';
 import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons';
 import { Controller, useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { z } from 'zod';
-import { createMaterialReceived, updateMaterialReceived, deleteMaterialReceived, uploadMaterialFile } from '@/actions/material-received';
+import { createMaterialReceived, updateMaterialReceived, deleteMaterialReceived, uploadMaterialFile, updateMaterialReceivedStatus } from '@/actions/material-received';
 import type { Project, MaterialReceived, ItemDescription, PurchaseOrder } from '@/types/erp';
+import { useAuthStore } from '@/store/auth';
 import { cardClassName, formatDate, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
+
+const STATUS_OPTIONS = [
+  { label: 'Pending', value: 'pending' },
+  { label: 'Verified', value: 'verified' },
+];
 
 type Props = {
   records: MaterialReceived[];
@@ -44,6 +50,8 @@ function readFileAsBase64(file: File): Promise<string> {
 }
 
 export function MaterialReceivedClient({ records, projects, itemDescriptions, purchaseOrders }: Props) {
+  const user = useAuthStore((s) => s.user);
+  const canUpdateStatus = user?.role === 'admin' || user?.role === 'accounts_manager' || user?.role === 'purchase_team';
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MaterialReceived | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -170,6 +178,13 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
     });
   };
 
+  const handleStatusChange = (id: string, status: string) => {
+    startTransition(async () => {
+      try { await updateMaterialReceivedStatus(id, status); message.success('Status updated'); }
+      catch (error) { message.error(error instanceof Error ? error.message : 'Failed to update status'); }
+    });
+  };
+
   const openCreate = () => {
     setEditing(null);
     setPhotos([]);
@@ -190,7 +205,7 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
     { title: 'MR Number', dataIndex: 'mrNumber', key: 'mrNumber', width: 150, render: (v: string) => <Typography.Text strong>{v}</Typography.Text> },
     { title: 'Project', key: 'project', width: 200, render: (_, r) => r.project ? `${r.project.name} (${r.project.projectCode || 'No Code'})` : r.projectId },
     { title: 'PO Number', key: 'po', width: 130, render: (_, r) => r.purchaseOrder?.poNumber || r.purchaseOrderId || '-' },
-    { title: 'PE Number', key: 'pe', width: 130, render: (_, r) => r.purchaseOrder?.enquiryNo || '-' },
+    { title: 'Material Requirement No', key: 'mrNo', width: 170, render: (_, r) => r.purchaseOrder?.materialRequirementNo || '-' },
     { title: 'Date', dataIndex: 'receivedDate', key: 'receivedDate', width: 120, render: (v?: string | null) => formatDate(v) },
     {
       title: 'Items',
@@ -237,7 +252,17 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions, pu
           <Typography.Text type="secondary">—</Typography.Text>
         ),
     },
-    { title: 'Status', key: 'status', width: 110, render: (_, r) => <Tag color={r.status === 'pending' ? 'orange' : 'green'}>{(r.status || 'pending').toUpperCase()}</Tag> },
+    { title: 'Status', key: 'status', width: 140, render: (_, r) =>
+      canUpdateStatus ? (
+        <Select
+          defaultValue={r.status || 'pending'} size="small" variant="borderless" className="w-full"
+          onChange={(newStatus) => handleStatusChange(r.id, newStatus)}
+          options={STATUS_OPTIONS} popupMatchSelectWidth={false} disabled={isPending}
+        />
+      ) : (
+        <Tag color={r.status === 'pending' ? 'orange' : 'green'}>{(r.status || 'pending').toUpperCase()}</Tag>
+      ),
+    },
     { title: 'Created', dataIndex: 'createdAt', key: 'createdAt', width: 120, render: (v?: string) => formatDate(v) },
     {
       title: 'Actions',
