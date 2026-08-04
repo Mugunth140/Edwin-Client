@@ -1,48 +1,38 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
-import { App, Button, Card, DatePicker, Flex, Input, Select, Table, Tabs, Tag, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { EyeOutlined, SearchOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
-import type { WeeklyTimesheet, Project } from '@/types/erp';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { verifyTimesheet, approveTimesheet, rejectTimesheet } from '@/actions/timesheet-approval';
-import { cardClassName, formatCurrency, formatDate, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
-import dayjs from 'dayjs';
-
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const DAYS = ['monHours', 'tueHours', 'wedHours', 'thuHours', 'friHours', 'satHours', 'sunHours'] as const;
-
-const STATUS_OPTIONS = [
-  { label: 'All', value: '' },
-  { label: 'Pending', value: 'pending' },
-  { label: 'Admin Approved', value: 'admin_approved' },
-  { label: 'Approved', value: 'approved' },
-  { label: 'Rejected', value: 'rejected' },
-];
+import { Avatar, Badge, Card, Col, Empty, Flex, Input, Row, Tabs, Tag, Typography } from 'antd';
+import { SearchOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import type { WeeklyTimesheet } from '@/types/erp';
+import { cardClassName, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 
 const TAB_ROLES = [
-  { key: 'site_engineer', label: 'Site Engineer' },
+  { key: 'site_engineer', label: 'Site Engineers' },
   { key: 'purchase_team', label: 'Purchase Team' },
+  { key: 'office_staff', label: 'Office Team' },
+  { key: 'accounts_manager', label: 'Accounts' },
 ];
 
 type Props = {
-  projects: Project[];
   timesheets: WeeklyTimesheet[];
 };
 
-export function SiteEngineerAttendanceClient({ projects, timesheets }: Props) {
+type PersonSummary = {
+  id: string;
+  name: string;
+  email?: string;
+  count: number;
+  pendingCount: number;
+};
+
+export function SiteEngineerAttendanceClient({ timesheets }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [engineerFilter, setEngineerFilter] = useState<string>('');
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
   const [activeTab, setActiveTab] = useState('site_engineer');
-  const { message } = App.useApp();
+  const [peopleSearch, setPeopleSearch] = useState('');
 
   const timesheetsByRole = useMemo(() => {
-    const map: Record<string, WeeklyTimesheet[]> = { site_engineer: [], purchase_team: [] };
+    const map: Record<string, WeeklyTimesheet[]> = { site_engineer: [], purchase_team: [], office_staff: [], accounts_manager: [] };
     for (const ts of timesheets) {
       const role = ts.siteEngineer?.role || '';
       if (map[role]) map[role].push(ts);
@@ -50,205 +40,39 @@ export function SiteEngineerAttendanceClient({ projects, timesheets }: Props) {
     return map;
   }, [timesheets]);
 
-  const currentList = timesheetsByRole[activeTab] || [];
+  const currentRoleList = useMemo(() => timesheetsByRole[activeTab] || [], [timesheetsByRole, activeTab]);
 
-  const engineers = useMemo(() => {
-    const map = new Map<string, { id: string; name: string }>();
-    for (const ts of currentList) {
-      if (ts.siteEngineer && !map.has(ts.siteEngineer.id)) {
-        map.set(ts.siteEngineer.id, { id: ts.siteEngineer.id, name: ts.siteEngineer.name });
+  const people = useMemo(() => {
+    const map = new Map<string, PersonSummary>();
+    for (const ts of currentRoleList) {
+      if (!ts.siteEngineer) continue;
+      const existing = map.get(ts.siteEngineer.id);
+      const isPendingStatus = ts.status === 'pending';
+      if (existing) {
+        existing.count += 1;
+        if (isPendingStatus) existing.pendingCount += 1;
+      } else {
+        map.set(ts.siteEngineer.id, {
+          id: ts.siteEngineer.id,
+          name: ts.siteEngineer.name,
+          email: ts.siteEngineer.email,
+          count: 1,
+          pendingCount: isPendingStatus ? 1 : 0,
+        });
       }
     }
-    return Array.from(map.values());
-  }, [currentList]);
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [currentRoleList]);
 
-  const filtered = useMemo(() => {
-    const from = dateRange[0]?.format('YYYY-MM-DD');
-    const to = dateRange[1]?.format('YYYY-MM-DD');
-    return currentList.filter((ts) => {
-      if (statusFilter && ts.status !== statusFilter) return false;
-      if (engineerFilter && ts.siteEngineerId !== engineerFilter) return false;
-      if (from && to) {
-        const d = typeof ts.weekStart === 'string' ? ts.weekStart.split('T')[0] : '';
-        if (d < from || d > to) return false;
-      }
-      if (searchText) {
-        const name = ts.siteEngineer?.name?.toLowerCase() || '';
-        const email = ts.siteEngineer?.email?.toLowerCase() || '';
-        if (!name.includes(searchText.toLowerCase()) && !email.includes(searchText.toLowerCase())) return false;
-      }
-      return true;
-    });
-  }, [currentList, dateRange, searchText, statusFilter, engineerFilter]);
-
-  const handleVerify = (id: string) => {
-    startTransition(async () => {
-      try { await verifyTimesheet(id); message.success('Timesheet verified'); } catch (e: any) { message.error(e.message); }
-    });
-  };
-
-  const handleApprove = (id: string) => {
-    startTransition(async () => {
-      try { await approveTimesheet(id); message.success('Timesheet approved & payment created'); } catch (e: any) { message.error(e.message); }
-    });
-  };
-
-  const handleReject = (id: string) => {
-    startTransition(async () => {
-      try { await rejectTimesheet(id); message.success('Timesheet rejected'); } catch (e: any) { message.error(e.message); }
-    });
-  };
-
-  const calcCost = (ts: WeeklyTimesheet) => {
-    const avgCostPerHr = Number(ts.siteEngineer?.salaryGrade?.avgCostPerHr || 0);
-    return Number(ts.totalHours || 0) * avgCostPerHr;
-  };
-
-  const columns: ColumnsType<WeeklyTimesheet> = [
-    {
-      title: 'Engineer', key: 'engineer', width: 200,
-      render: (_, record) => (
-        <Flex align="center" gap={6}>
-          <UserOutlined className="text-sky-400" />
-          <Typography.Text strong className="text-[var(--text-primary)]">{record.siteEngineer?.name || record.siteEngineerId}</Typography.Text>
-        </Flex>
-      ),
-    },
-    {
-      title: 'Email', key: 'email', width: 200,
-      render: (_, record) => (
-        <Typography.Text className="text-[var(--text-muted)] text-sm">{record.siteEngineer?.email || '-'}</Typography.Text>
-      ),
-    },
-    {
-      title: 'Week', key: 'week', width: 220,
-      render: (_, record) => (
-        <Typography.Text className="text-[var(--text-secondary)]">{formatDate(record.weekStart)} - {formatDate(record.weekEnd)}</Typography.Text>
-      ),
-    },
-    {
-      title: 'Total Hours', dataIndex: 'totalHours', width: 120, align: 'right',
-      render: (v) => <Typography.Text strong className="text-sky-300">{Number(v || 0).toFixed(1)} hrs</Typography.Text>,
-    },
-    {
-      title: 'Total Cost', key: 'cost', width: 120, align: 'right',
-      render: (_, record) => <Typography.Text className="text-emerald-400">{formatCurrency(calcCost(record))}</Typography.Text>,
-    },
-    {
-      title: 'Daily Projects', key: 'projects', width: 320,
-      render: (_, record) => {
-        const FIXED_LABELS: Record<string, string> = { holiday: 'Holiday', idle: 'Idle', leave: 'Leave' };
-        const dayInfo: { label: string; parts: string[] }[] = [];
-        for (let d = 0; d < 7; d++) {
-          const parts: string[] = [];
-          for (const row of record.rows || []) {
-            const h = Number((row as any)[DAYS[d]] || 0);
-            if (h <= 0) continue;
-            if (row.entryType === 'project') {
-              const name = projects.find((p) => p.id === row.projectId)?.name || 'Project';
-              parts.push(`${name} ${h}h`);
-            } else {
-              parts.push(`${FIXED_LABELS[row.entryType] || row.entryType} ${h}h`);
-            }
-          }
-          dayInfo.push({ label: DAY_LABELS[d], parts });
-        }
-        return (
-          <Flex wrap="wrap" gap={4}>
-            {dayInfo.map((d) => (
-              d.parts.length > 0
-                ? <Tag key={d.label} className="text-xs">{d.label}: {d.parts.join(', ')}</Tag>
-                : <Tag key={d.label} className="text-xs opacity-40">{d.label}: -</Tag>
-            ))}
-          </Flex>
-        );
-      },
-    },
-    {
-      title: 'Status', key: 'status', width: 150,
-      render: (_, record) => {
-        const color: Record<string, string> = { pending: 'orange', verified: 'purple', admin_approved: 'blue', approved: 'green', rejected: 'red' };
-        return (
-          <Select
-            value={record.status}
-            size="small"
-            variant="borderless"
-            className="w-full"
-            style={{ color: color[record.status] || undefined, fontWeight: 600 }}
-            onChange={(newStatus) => {
-              if (newStatus === record.status) return;
-              if (newStatus === 'verified') handleVerify(record.id);
-              else if (newStatus === 'admin_approved' || newStatus === 'approved') handleApprove(record.id);
-              else if (newStatus === 'rejected') handleReject(record.id);
-            }}
-            options={STATUS_OPTIONS.filter((o) => o.value)}
-            popupMatchSelectWidth={false}
-            disabled={isPending}
-          />
-        );
-      },
-    },
-    {
-      title: 'Actions', key: 'actions', width: 100,
-      render: (_, record) => (
-        <Flex gap={4} wrap="wrap">
-          <Button size="small" icon={<EyeOutlined />} onClick={() => router.push(`/dashboard/timesheet-attendance`)}>
-            View
-          </Button>
-        </Flex>
-      ),
-    },
-  ];
-
-  const renderTable = (dataSource: WeeklyTimesheet[]) => (
-    <>
-      <Flex gap={12} wrap="wrap" className="mb-4" align="center">
-        <Input.Search
-          placeholder="Search..."
-          allowClear
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          prefix={<SearchOutlined className="text-[var(--text-muted)]" />}
-          style={{ width: 240 }}
-        />
-        <Select
-          allowClear
-          placeholder="Engineer"
-          className="w-44"
-          value={engineerFilter || undefined}
-          onChange={(val) => setEngineerFilter(val || '')}
-          options={engineers.map((e) => ({ label: e.name, value: e.id }))}
-        />
-        <Select
-          allowClear
-          placeholder="Status"
-          className="w-36"
-          value={statusFilter || undefined}
-          onChange={(val) => setStatusFilter(val || '')}
-          options={STATUS_OPTIONS}
-        />
-        <DatePicker.RangePicker
-          value={dateRange[0] || dateRange[1] ? dateRange : [null, null]}
-          onChange={(dates) => setDateRange(dates ? [dates[0], dates[1]] : [null, null])}
-          allowClear
-          placeholder={['From', 'To']}
-        />
-      </Flex>
-
-      <Table
-        dataSource={dataSource}
-        columns={columns}
-        rowKey="id"
-        pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (t) => `${t} timesheets` }}
-        scroll={{ x: 1400 }}
-        locale={{ emptyText: 'No timesheets found' }}
-      />
-    </>
-  );
+  const filteredPeople = useMemo(() => {
+    if (!peopleSearch) return people;
+    const q = peopleSearch.toLowerCase();
+    return people.filter((p) => p.name.toLowerCase().includes(q) || p.email?.toLowerCase().includes(q));
+  }, [people, peopleSearch]);
 
   return (
     <div>
-      <Flex justify="space-between" align="center" className={pageHeaderClassName}>
+      <Flex justify="space-between" align="center" className={pageHeaderClassName} gap={16} wrap="wrap">
         <Typography.Title level={3} className={pageTitleClassName}>
           <TeamOutlined className={titleIconClassName} /> Attendance
         </Typography.Title>
@@ -257,11 +81,71 @@ export function SiteEngineerAttendanceClient({ projects, timesheets }: Props) {
       <Card className={cardClassName}>
         <Tabs
           activeKey={activeTab}
-          onChange={(key) => { setActiveTab(key); setSearchText(''); setStatusFilter(''); setEngineerFilter(''); }}
+          onChange={(key) => { setActiveTab(key); setPeopleSearch(''); }}
           items={TAB_ROLES.map((tab) => ({
             key: tab.key,
-            label: tab.label,
-            children: renderTable(filtered),
+            label: (
+              <span>
+                {tab.label}
+                {(timesheetsByRole[tab.key] || []).length > 0 && (
+                  <Tag className="ml-2" bordered={false}>
+                    {new Set((timesheetsByRole[tab.key] || []).map((t) => t.siteEngineerId)).size}
+                  </Tag>
+                )}
+              </span>
+            ),
+            children: (
+              <>
+                <Input.Search
+                  placeholder="Search by name or email..."
+                  allowClear
+                  value={peopleSearch}
+                  onChange={(e) => setPeopleSearch(e.target.value)}
+                  prefix={<SearchOutlined className="text-[var(--text-muted)]" />}
+                  className="mb-4 max-w-sm"
+                />
+
+                {filteredPeople.length === 0 ? (
+                  <Empty description={`No ${TAB_ROLES.find((t) => t.key === activeTab)?.label.toLowerCase()} timesheets yet`} />
+                ) : (
+                  <Row gutter={[16, 16]}>
+                    {filteredPeople.map((person) => (
+                      <Col key={person.id} xs={24} sm={12} md={8} lg={6}>
+                        <Card
+                          hoverable
+                          className={`${cardClassName} cursor-pointer h-full`}
+                          onClick={() => router.push(`/dashboard/site-engineer-attendance/${person.id}`)}
+                        >
+                          <Flex align="center" gap={12}>
+                            <Badge count={person.pendingCount} size="small">
+                              <Avatar size={44} icon={<UserOutlined />} className="bg-sky-500/20! text-sky-300!" />
+                            </Badge>
+                            <div className="min-w-0 flex-1">
+                              <Typography.Text strong className="block truncate text-[var(--text-primary)]">
+                                {person.name}
+                              </Typography.Text>
+                              <Typography.Text className="block truncate text-xs text-[var(--text-muted)]">
+                                {person.email || '-'}
+                              </Typography.Text>
+                            </div>
+                          </Flex>
+                          <Flex justify="space-between" align="center" className="mt-3 pt-3 border-t border-[var(--border)]">
+                            <Typography.Text className="text-xs text-[var(--text-muted)]">
+                              {person.count} timesheet{person.count > 1 ? 's' : ''}
+                            </Typography.Text>
+                            {person.pendingCount > 0 ? (
+                              <Tag color="orange">{person.pendingCount} pending</Tag>
+                            ) : (
+                              <Tag color="green">Up to date</Tag>
+                            )}
+                          </Flex>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                )}
+              </>
+            ),
           }))}
         />
       </Card>
