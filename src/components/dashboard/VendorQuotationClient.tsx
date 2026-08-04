@@ -164,7 +164,7 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
 
     startTransition(async () => {
       try {
-        let groupEnquiryNo: string | null = null;
+        let groupId: string | null = null;
 
         for (let i = 0; i < vendorSections.length; i++) {
           const section = vendorSections[i];
@@ -179,10 +179,10 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
             items,
             materialRequirementId: selectedMR || undefined,
           };
-          if (groupEnquiryNo) body.enquiryNo = groupEnquiryNo;
+          if (groupId) body.groupId = groupId;
 
           const quotation = await apiPost('/vendor-quotations', body);
-          if (!groupEnquiryNo) groupEnquiryNo = quotation.enquiryNo;
+          if (!groupId) groupId = quotation.groupId;
 
           if (section.file) {
             const fd = new FormData();
@@ -272,9 +272,9 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
 
   const flatData = data.reduce<Array<VendorQuotation & { _groupSize: number; _isFirst: boolean }>>((acc, r, idx) => {
     const prev = data[idx - 1];
-    const isNewGroup = !prev || prev.enquiryNo !== r.enquiryNo;
+    const isNewGroup = !prev || prev.groupId !== r.groupId;
     const groupSize = isNewGroup
-      ? data.slice(idx).findIndex((x) => x.enquiryNo !== r.enquiryNo)
+      ? data.slice(idx).findIndex((x) => x.groupId !== r.groupId)
       : 0;
     const realGroupSize = groupSize === -1 ? data.length - idx : groupSize > 0 ? groupSize : 0;
     acc.push({ ...r, _groupSize: isNewGroup ? (realGroupSize || 1) : 0, _isFirst: isNewGroup });
@@ -290,10 +290,6 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
         const sno = flatData.slice(0, idx + 1).filter((x) => x._isFirst).length;
         return sno;
       },
-    },
-    {
-      title: 'Enquiry No', dataIndex: 'enquiryNo', key: 'enquiryNo', width: 140,
-      onCell: (r) => ({ rowSpan: r._isFirst ? r._groupSize : 0 }),
     },
     {
       title: 'MR Ref', key: 'mr', width: 130,
@@ -539,7 +535,7 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
       </Drawer>
 
       <Drawer
-        title={`Edit Enquiry — ${editRecord?.enquiryNo || ''}`}
+        title={`Edit Enquiry — ${editRecord?.vendor?.name || ''}`}
         size="large"
         open={editOpen}
         onClose={closeEdit}

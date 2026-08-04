@@ -35,16 +35,16 @@ const STATUS_OPTIONS = [
 type PoItem = { description: string; quantity: number; unit: string; rate: number };
 type VendorPoSection = { vendorId: string; vendorName: string; items: PoItem[]; gstPercent: number };
 
-const peGroupByEnquiryNo = (vqs: VendorQuotation[]) => {
+const peGroupByGroupId = (vqs: VendorQuotation[]) => {
   const map = new Map<string, VendorQuotation[]>();
   for (const vq of vqs) {
     if (vq.status === 'approved') {
-      const key = vq.enquiryNo;
+      const key = vq.groupId;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(vq);
     }
   }
-  return Array.from(map.entries()).map(([enquiryNo, quotations]) => ({ enquiryNo, quotations }));
+  return Array.from(map.entries()).map(([groupId, quotations]) => ({ groupId, quotations }));
 };
 
 export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDescriptions, vendorQuotations: vendorQuotationsProp }: PurchaseOrdersClientProps) {
@@ -58,23 +58,23 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const [isPending, startTransition] = useTransition();
   const { message } = App.useApp();
 
-  const [selectedPE, setSelectedPE] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedMRNo, setSelectedMRNo] = useState<string | null>(null);
   const [projectId, setProjectId] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [vendorSections, setVendorSections] = useState<VendorPoSection[]>([]);
 
   const vendorQuotations = vendorQuotationsProp || [];
-  const peGroups = useMemo(() => peGroupByEnquiryNo(vendorQuotations), [vendorQuotations]);
+  const peGroups = useMemo(() => peGroupByGroupId(vendorQuotations), [vendorQuotations]);
 
   const statusOptions = user?.role === 'purchase_team'
     ? STATUS_OPTIONS.filter((opt) => opt.value !== 'admin_approved')
     : STATUS_OPTIONS;
 
-  const handleEnquirySelect = useCallback((enquiryNo: string) => {
-    const group = peGroups.find((g) => g.enquiryNo === enquiryNo);
+  const handleEnquirySelect = useCallback((groupId: string) => {
+    const group = peGroups.find((g) => g.groupId === groupId);
     if (!group) return;
-    setSelectedPE(enquiryNo);
+    setSelectedGroupId(groupId);
     setSelectedMRNo(group.quotations[0].materialRequirement?.enquiryNo || null);
     setProjectId(group.quotations[0].projectId);
     setVendorSections(
@@ -156,7 +156,6 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
           await createPurchaseOrder({
             vendorId: section.vendorId,
             projectId,
-            enquiryNo: selectedPE || undefined,
             materialRequirementNo: selectedMRNo || undefined,
             paymentTerms: paymentTerms || undefined,
             gstPercent: section.gstPercent || undefined,
@@ -177,7 +176,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const handleClose = () => {
     setOpen(false);
     setEditingPo(null);
-    setSelectedPE(null);
+    setSelectedGroupId(null);
     setSelectedMRNo(null);
     setProjectId('');
     setPaymentTerms('');
@@ -261,7 +260,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const columns: ColumnsType<PurchaseOrder> = [
     { title: 'S.No', key: 'sno', width: 60, render: (_text, _record, index) => index + 1 },
     { title: 'PO Number', dataIndex: 'poNumber', sorter: (a, b) => a.poNumber.localeCompare(b.poNumber), render: (value: string) => <Typography.Text strong>{value}</Typography.Text> },
-    { title: 'PE Number', dataIndex: 'enquiryNo', sorter: (a, b) => (a.enquiryNo || '').localeCompare(b.enquiryNo || ''), render: (value?: string | null) => value || <Typography.Text type="secondary">-</Typography.Text> },
+    { title: 'MR Ref', dataIndex: 'materialRequirementNo', sorter: (a, b) => (a.materialRequirementNo || '').localeCompare(b.materialRequirementNo || ''), render: (value?: string | null) => value || <Typography.Text type="secondary">-</Typography.Text> },
     { title: 'Vendor', dataIndex: ['vendor', 'name'], sorter: (a, b) => (a.vendor?.name || '').localeCompare(b.vendor?.name || ''), render: (_value, record) => record.vendor?.name || '-' },
     { title: 'Project', key: 'project', sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''), render: (_value, record) => record.project ? `${record.project.name} (${record.project.projectCode || 'No Code'})` : '-' },
     { title: 'Status', dataIndex: 'status', width: 150, filters: STATUS_OPTIONS.map((opt) => ({ text: opt.label, value: opt.value })), onFilter: (value, record) => record.status === value, render: (value: string, record) =>
@@ -338,17 +337,24 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
       >
         <Form layout="vertical">
           {!editingPo && peGroups.length > 0 && (
-            <Form.Item label="Import from Purchase Enquiry" className="mb-6 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+            <Form.Item label="MR Ref" className="mb-6 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
               <Select
                 showSearch
-                placeholder="Search PE number..."
+                placeholder="Search MR Ref..."
                 optionFilterProp="label"
                 onChange={handleEnquirySelect}
-                value={selectedPE || undefined}
-                options={peGroups.map((g) => ({
-                  value: g.enquiryNo,
-                  label: `${g.enquiryNo} (${g.quotations.length} vendor${g.quotations.length > 1 ? 's' : ''})`,
-                }))}
+                value={selectedGroupId || undefined}
+                options={peGroups.map((g) => {
+                  const mrRef = g.quotations[0]?.materialRequirement?.enquiryNo;
+                  const vendorNames = g.quotations.map((q) => q.vendor?.name).filter(Boolean).join(', ');
+                  const projectName = g.quotations[0]?.project?.name || 'Unknown project';
+                  return {
+                    value: g.groupId,
+                    label: mrRef
+                      ? `${mrRef} — ${projectName} (${vendorNames})`
+                      : `${projectName} — ${vendorNames} (${formatDate(g.quotations[0]?.createdAt)})`,
+                  };
+                })}
               />
             </Form.Item>
           )}

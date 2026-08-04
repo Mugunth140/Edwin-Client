@@ -316,7 +316,6 @@ export type PurchaseOrder = {
   poNumber: string;
   vendorId: string;
   projectId: string;
-  enquiryNo?: string | null;
   materialRequirementNo?: string | null;
   vendor?: Vendor;
   project?: Project;
@@ -614,7 +613,7 @@ export type Salary = {
 
 export type VendorQuotation = {
   id: string;
-  enquiryNo: string;
+  groupId: string;
   projectId: string;
   vendorId: string;
   project?: Project;
