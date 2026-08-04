@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import type { PurchaseEnquiry } from '@/types/erp';
+import type { PurchaseEnquiry, EnquiryItem } from '@/types/erp';
 import { formatDate } from './ui';
 
 const TEAL = '#0f766e';
@@ -123,10 +123,12 @@ const styles = StyleSheet.create({
 
 interface Props {
   enquiry: PurchaseEnquiry;
+  items?: EnquiryItem[];
+  vendorName?: string;
 }
 
-export function PurchaseEnquiryPdf({ enquiry }: Props) {
-  const items = enquiry.items || [];
+export function PurchaseEnquiryPdf({ enquiry, items: itemsOverride, vendorName }: Props) {
+  const items = itemsOverride || enquiry.items || [];
 
   return (
     <Document>
@@ -166,6 +168,12 @@ export function PurchaseEnquiryPdf({ enquiry }: Props) {
         </View>
 
         <View style={styles.mainGrid}>
+          {vendorName && (
+            <View style={styles.vendorSection}>
+              <Text style={styles.sectionLabel}>Addressed To</Text>
+              <Text style={styles.vendorName}>{vendorName}</Text>
+            </View>
+          )}
           <View style={styles.projectSection}>
             <Text style={styles.sectionLabel}>Enquiry Info</Text>
             <Text style={[styles.vendorText, { marginTop: 4 }]}>Total Items: {items.length}</Text>

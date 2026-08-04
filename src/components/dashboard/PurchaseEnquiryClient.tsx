@@ -2,15 +2,15 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, App, InputNumber } from 'antd';
+import { Button, Card, Checkbox, Drawer, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, App, InputNumber } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, FilePdfOutlined, PlusOutlined, ShoppingCartOutlined, SplitCellsOutlined } from '@ant-design/icons';
 import { Controller, useForm, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
 import { createPurchaseEnquiry, updatePurchaseEnquiry, deletePurchaseEnquiry, updatePurchaseEnquiryStatus } from '@/actions/purchase-enquiries';
 import { createItemDescription, deleteItemDescription } from '@/actions/item-descriptions';
-import type { Project, Vendor, PurchaseEnquiry, ItemDescription } from '@/types/erp';
+import type { Project, Vendor, PurchaseEnquiry, ItemDescription, EnquiryItem } from '@/types/erp';
 import { cardClassName, formatDate, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 import { PurchaseEnquiryPdf } from './PurchaseEnquiryPdf';
 import { useAuthStore } from '@/store/auth';
@@ -19,6 +19,7 @@ type Props = {
   enquiries: PurchaseEnquiry[];
   projects: Project[];
   itemDescriptions: ItemDescription[];
+  vendors: Vendor[];
 };
 
 const itemSchema = z.object({
@@ -46,10 +47,12 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: 'red',
 };
 
-export function PurchaseEnquiryClient({ enquiries, projects, itemDescriptions }: Props) {
+export function PurchaseEnquiryClient({ enquiries, projects, itemDescriptions, vendors }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PurchaseEnquiry | null>(null);
   const [previewEnquiry, setPreviewEnquiry] = useState<PurchaseEnquiry | null>(null);
+  const [previewItems, setPreviewItems] = useState<EnquiryItem[] | null>(null);
+  const [previewVendorName, setPreviewVendorName] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isClient, setIsClient] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
@@ -57,6 +60,37 @@ export function PurchaseEnquiryClient({ enquiries, projects, itemDescriptions }:
   const { message } = App.useApp();
   const user = useAuthStore((s) => s.user);
   const isSiteEngineer = user?.role === 'site_engineer';
+
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [splitEnquiry, setSplitEnquiry] = useState<PurchaseEnquiry | null>(null);
+  const [splitVendorId, setSplitVendorId] = useState('');
+  const [splitItemIndices, setSplitItemIndices] = useState<number[]>([]);
+
+  const openSplit = (record: PurchaseEnquiry) => {
+    setSplitEnquiry(record);
+    setSplitVendorId('');
+    setSplitItemIndices([]);
+    setSplitOpen(true);
+  };
+
+  const closeSplit = () => {
+    setSplitOpen(false);
+    setSplitEnquiry(null);
+    setSplitVendorId('');
+    setSplitItemIndices([]);
+  };
+
+  const generateSplitPdf = () => {
+    if (!splitEnquiry) return;
+    if (!splitVendorId) { message.error('Select a vendor'); return; }
+    if (!splitItemIndices.length) { message.error('Select at least one item'); return; }
+    const vendor = vendors.find((v) => v.id === splitVendorId);
+    const items = splitItemIndices.map((idx) => splitEnquiry.items[idx]);
+    setPreviewEnquiry(splitEnquiry);
+    setPreviewItems(items);
+    setPreviewVendorName(vendor?.name || null);
+    closeSplit();
+  };
 
   useEffect(() => { setIsClient(true); }, []);
 
@@ -172,7 +206,7 @@ export function PurchaseEnquiryClient({ enquiries, projects, itemDescriptions }:
     {
       title: 'Actions',
       key: 'actions',
-      width: isSiteEngineer ? 160 : 80,
+      width: isSiteEngineer ? 160 : 120,
       render: (_, record) => (
         <Space>
           {isSiteEngineer && (
@@ -190,8 +224,22 @@ export function PurchaseEnquiryClient({ enquiries, projects, itemDescriptions }:
             type="link"
             size="small"
             icon={<FilePdfOutlined />}
-            onClick={() => setPreviewEnquiry(record)}
+            title="Preview full PDF"
+            onClick={() => {
+              setPreviewEnquiry(record);
+              setPreviewItems(null);
+              setPreviewVendorName(null);
+            }}
           />
+          {!isSiteEngineer && (
+            <Button
+              type="link"
+              size="small"
+              icon={<SplitCellsOutlined />}
+              title="Split items by vendor & generate PDF"
+              onClick={() => openSplit(record)}
+            />
+          )}
           {isSiteEngineer && (
             <Popconfirm title="Delete this enquiry?" onConfirm={() => startTransition(async () => {
               try {
@@ -420,15 +468,63 @@ export function PurchaseEnquiryClient({ enquiries, projects, itemDescriptions }:
         </Flex>
       </Drawer>
 
+      <Drawer
+        title={`Split by Vendor — ${splitEnquiry?.enquiryNo || ''}`}
+        size="large"
+        open={splitOpen}
+        onClose={closeSplit}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button onClick={closeSplit}>Cancel</Button>
+            <Button type="primary" icon={<FilePdfOutlined />} onClick={generateSplitPdf}>Generate PDF</Button>
+          </Space>
+        }
+      >
+        <Flex vertical gap={16}>
+          <Typography.Text type="secondary">
+            Pick a vendor and the items to send them. You can repeat this for each vendor if the requirement is split across more than one.
+          </Typography.Text>
+
+          <Form.Item label="Vendor" required>
+            <Select
+              placeholder="Select vendor"
+              showSearch
+              optionFilterProp="label"
+              value={splitVendorId || undefined}
+              onChange={setSplitVendorId}
+              options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+
+          <div>
+            <Typography.Text strong className="text-sm">Items for this vendor</Typography.Text>
+            <Checkbox.Group value={splitItemIndices} className="mt-2 block" onChange={(v) => setSplitItemIndices(v as number[])}>
+              <Flex vertical gap={4}>
+                {splitEnquiry?.items.map((item, idx) => (
+                  <Checkbox key={idx} value={idx}>
+                    {item.description} — Qty: {item.quantity}
+                  </Checkbox>
+                ))}
+              </Flex>
+            </Checkbox.Group>
+          </div>
+        </Flex>
+      </Drawer>
+
       <Modal
-        title={`Material Requirement — ${previewEnquiry?.enquiryNo || ''}`}
+        title={`Material Requirement — ${previewEnquiry?.enquiryNo || ''}${previewVendorName ? ` (${previewVendorName})` : ''}`}
         open={!!previewEnquiry}
-        onCancel={() => setPreviewEnquiry(null)}
+        onCancel={() => { setPreviewEnquiry(null); setPreviewItems(null); setPreviewVendorName(null); }}
         width="90%"
         style={{ top: 20 }}
         footer={
           previewEnquiry && isClient ? (
-            <PDFDownloadLink document={<PurchaseEnquiryPdf enquiry={previewEnquiry} />} fileName={`${previewEnquiry.enquiryNo}.pdf`}>
+            <PDFDownloadLink
+              document={<PurchaseEnquiryPdf enquiry={previewEnquiry} items={previewItems ?? undefined} vendorName={previewVendorName ?? undefined} />}
+              fileName={previewVendorName ? `${previewEnquiry.enquiryNo}-${previewVendorName}.pdf` : `${previewEnquiry.enquiryNo}.pdf`}
+            >
               {({ loading }) => <Button type="primary" icon={<FilePdfOutlined />} loading={loading}>Download PDF</Button>}
             </PDFDownloadLink>
           ) : null
@@ -436,7 +532,7 @@ export function PurchaseEnquiryClient({ enquiries, projects, itemDescriptions }:
       >
         {previewEnquiry && isClient && (
           <PDFViewer style={{ width: '100%', height: '80vh' }} showToolbar>
-            <PurchaseEnquiryPdf enquiry={previewEnquiry} />
+            <PurchaseEnquiryPdf enquiry={previewEnquiry} items={previewItems ?? undefined} vendorName={previewVendorName ?? undefined} />
           </PDFViewer>
         )}
       </Modal>
