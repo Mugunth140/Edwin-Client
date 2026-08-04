@@ -6,16 +6,17 @@ import { Button, Card, Drawer, Flex, Form, Input, Popconfirm, Select, Space, Tab
 import type { ColumnsType } from 'antd/es/table';
 import type { RcFile } from 'antd/es/upload/interface';
 import { DeleteOutlined, FilePdfOutlined, PlusOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons';
-import { Controller, useForm, useFieldArray } from 'react-hook-form';
+import { Controller, useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { createMaterialReceived, updateMaterialReceived, deleteMaterialReceived, uploadMaterialFile } from '@/actions/material-received';
-import type { Project, MaterialReceived, ItemDescription } from '@/types/erp';
+import type { Project, MaterialReceived, ItemDescription, PurchaseOrder } from '@/types/erp';
 import { cardClassName, formatDate, pageHeaderClassName, pageTitleClassName, titleIconClassName } from './ui';
 
 type Props = {
   records: MaterialReceived[];
   projects: Project[];
   itemDescriptions: ItemDescription[];
+  purchaseOrders: PurchaseOrder[];
 };
 
 const itemSchema = z.object({
@@ -25,6 +26,7 @@ const itemSchema = z.object({
 
 const mrSchema = z.object({
   projectId: z.string().min(1, 'Select a project'),
+  purchaseOrderId: z.string().optional(),
   receivedDate: z.string().optional(),
   notes: z.string().optional(),
   items: z.array(itemSchema).min(1, 'Add at least one item'),
@@ -41,7 +43,7 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
-export function MaterialReceivedClient({ records, projects, itemDescriptions }: Props) {
+export function MaterialReceivedClient({ records, projects, itemDescriptions, purchaseOrders }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MaterialReceived | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -53,11 +55,13 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions }: 
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<MrFormValues>({
     resolver: zodResolver(mrSchema),
     defaultValues: {
       projectId: '',
+      purchaseOrderId: '',
       receivedDate: '',
       notes: '',
       items: [{ description: '', quantity: 1 }],
@@ -66,10 +70,34 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions }: 
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
 
+  const watchedProjectId = useWatch({ control, name: 'projectId' });
+  const watchedPoId = useWatch({ control, name: 'purchaseOrderId' });
+
+  // When a PO is chosen, auto-fill the project
+  useEffect(() => {
+    if (!watchedPoId) return;
+    const po = purchaseOrders.find((p) => p.id === watchedPoId);
+    if (po && po.projectId && !watchedProjectId) {
+      setValue('projectId', po.projectId);
+    }
+  }, [watchedPoId, watchedProjectId, purchaseOrders, setValue]);
+
+  // When a project is chosen, auto-select a PO belonging to it
+  useEffect(() => {
+    if (!watchedProjectId || editing) return;
+    const po = purchaseOrders.find(
+      (p) => p.status === 'approved' && p.projectId === watchedProjectId,
+    );
+    if (po && po.id !== watchedPoId) {
+      setValue('purchaseOrderId', po.id);
+    }
+  }, [watchedProjectId, purchaseOrders, editing, watchedPoId, setValue]);
+
   useEffect(() => {
     if (editing) {
       reset({
         projectId: editing.projectId,
+        purchaseOrderId: editing.purchaseOrderId || '',
         receivedDate: editing.receivedDate || '',
         notes: editing.notes || '',
         items: editing.items?.length
@@ -137,7 +165,7 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions }: 
     setEditing(null);
     setPhotos([]);
     setBillFile(null);
-    reset({ projectId: '', receivedDate: '', notes: '', items: [{ description: '', quantity: 1 }] });
+    reset({ projectId: '', purchaseOrderId: '', receivedDate: '', notes: '', items: [{ description: '', quantity: 1 }] });
     setOpen(true);
   };
 
@@ -152,6 +180,7 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions }: 
     { title: 'S.No', key: 'sno', width: 60, render: (_, __, i) => i + 1 },
     { title: 'MR Number', dataIndex: 'mrNumber', key: 'mrNumber', width: 150, render: (v: string) => <Typography.Text strong>{v}</Typography.Text> },
     { title: 'Project', key: 'project', width: 200, render: (_, r) => r.project ? `${r.project.name} (${r.project.projectCode || 'No Code'})` : r.projectId },
+    { title: 'PO Number', key: 'po', width: 130, render: (_, r) => r.purchaseOrder?.poNumber || r.purchaseOrderId || '-' },
     { title: 'Date', dataIndex: 'receivedDate', key: 'receivedDate', width: 120, render: (v?: string | null) => formatDate(v) },
     {
       title: 'Items',
@@ -272,6 +301,28 @@ export function MaterialReceivedClient({ records, projects, itemDescriptions }: 
         }
       >
         <Flex vertical gap={16}>
+          <Controller
+            control={control}
+            name="purchaseOrderId"
+            render={({ field }) => (
+              <Form.Item label="Purchase Order">
+                <Select
+                  {...field}
+                  showSearch
+                  allowClear
+                  placeholder="Search PO number..."
+                  optionFilterProp="label"
+                  options={purchaseOrders
+                    .filter((po) => po.status === 'approved')
+                    .map((po) => ({
+                      value: po.id,
+                      label: `${po.poNumber} - ${po.vendor?.name || 'Unknown Vendor'}`,
+                    }))}
+                />
+              </Form.Item>
+            )}
+          />
+
           <Controller
             control={control}
             name="projectId"

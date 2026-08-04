@@ -296,6 +296,8 @@ export type MaterialReceived = {
   mrNumber: string;
   projectId: string;
   project?: Project;
+  purchaseOrderId?: string | null;
+  purchaseOrder?: PurchaseOrder;
   receivedDate?: string | null;
   notes?: string | null;
   items: EnquiryItem[];
