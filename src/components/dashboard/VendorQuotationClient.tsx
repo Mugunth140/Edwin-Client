@@ -292,7 +292,7 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
       },
     },
     {
-      title: 'MR Ref', key: 'mr', width: 130,
+      title: 'MR Ref', key: 'mr', width: 130, responsive: ['md'],
       onCell: (r) => ({ rowSpan: r._isFirst ? r._groupSize : 0 }),
       render: (_, r) => r.materialRequirement?.enquiryNo || '-',
     },
@@ -302,7 +302,7 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
       render: (_, r) => r.project?.name || r.projectId,
     },
     {
-      title: 'MR Items', key: 'mrItems', width: 200,
+      title: 'MR Items', key: 'mrItems', width: 200, responsive: ['lg'],
       onCell: (r) => ({ rowSpan: r._isFirst ? r._groupSize : 0 }),
       render: (_, r) => {
         const items = r.materialRequirement?.items?.length ? r.materialRequirement.items : r.items;
@@ -327,7 +327,7 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
       ),
     },
     {
-      title: 'Quotation', key: 'quotation', width: 120,
+      title: 'Quotation', key: 'quotation', width: 120, responsive: ['lg'],
       render: (_, r) =>
         r.quotationUrl ? (
           <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => setPreviewUrl(r.quotationUrl!)}>
@@ -361,7 +361,7 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
       />
     )},
     {
-      title: 'Date', key: 'createdAt', width: 110,
+      title: 'Date', key: 'createdAt', width: 110, responsive: ['lg'],
       onCell: (r) => ({ rowSpan: r._isFirst ? r._groupSize : 0 }),
       render: (_, r) => r.createdAt ? formatDate(r.createdAt) : '-',
     },
@@ -396,7 +396,7 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
         </Button>
       </Flex>
 
-      <Card className={cardClassName}>
+      <Card className={cardClassName} styles={{ body: { padding: 0 } }}>
         <Table
           dataSource={flatData}
           columns={columns}
@@ -405,7 +405,7 @@ export function VendorQuotationClient({ vendors, projects }: Props) {
           size="small"
           loading={loading}
           locale={{ emptyText: 'No purchase enquiries yet' }}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 

@@ -260,9 +260,9 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
   const columns: ColumnsType<PurchaseOrder> = [
     { title: 'S.No', key: 'sno', width: 60, render: (_text, _record, index) => index + 1 },
     { title: 'PO Number', dataIndex: 'poNumber', sorter: (a, b) => a.poNumber.localeCompare(b.poNumber), render: (value: string) => <Typography.Text strong>{value}</Typography.Text> },
-    { title: 'MR Ref', dataIndex: 'materialRequirementNo', sorter: (a, b) => (a.materialRequirementNo || '').localeCompare(b.materialRequirementNo || ''), render: (value?: string | null) => value || <Typography.Text type="secondary">-</Typography.Text> },
+    { title: 'MR Ref', dataIndex: 'materialRequirementNo', responsive: ['md'], sorter: (a, b) => (a.materialRequirementNo || '').localeCompare(b.materialRequirementNo || ''), render: (value?: string | null) => value || <Typography.Text type="secondary">-</Typography.Text> },
     { title: 'Vendor', dataIndex: ['vendor', 'name'], sorter: (a, b) => (a.vendor?.name || '').localeCompare(b.vendor?.name || ''), render: (_value, record) => record.vendor?.name || '-' },
-    { title: 'Project', key: 'project', sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''), render: (_value, record) => record.project ? `${record.project.name} (${record.project.projectCode || 'No Code'})` : '-' },
+    { title: 'Project', key: 'project', responsive: ['md'], sorter: (a, b) => (a.project?.name || '').localeCompare(b.project?.name || ''), render: (_value, record) => record.project ? `${record.project.name} (${record.project.projectCode || 'No Code'})` : '-' },
     { title: 'Status', dataIndex: 'status', width: 150, filters: STATUS_OPTIONS.map((opt) => ({ text: opt.label, value: opt.value })), onFilter: (value, record) => record.status === value, render: (value: string, record) =>
       canUpdateStatus ? (
         <Select defaultValue={value} size="small" variant="borderless" className="w-full" onChange={(newStatus) => handleStatusChange(record.id, newStatus)} options={statusOptions} popupMatchSelectWidth={false} styles={{ popup: { root: { minWidth: 140 } } }} disabled={isPending} />
@@ -270,13 +270,13 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         <Typography.Text>{value.charAt(0).toUpperCase() + value.slice(1)}</Typography.Text>
       ),
     },
-    { title: 'Basic Amount', dataIndex: 'totalAmount', align: 'right', sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount), render: (value: number | string) => formatCurrency(value) },
-    { title: 'GST', key: 'gst', align: 'right', width: 100, render: (_, r) => (r.gstPercent ? `${Number(r.gstPercent)}%` : '-') },
-    { title: 'Total w/ GST', key: 'totalWithGst', align: 'right', width: 130, sorter: (a, b) => Number(a.totalWithGst || 0) - Number(b.totalWithGst || 0), render: (_, r) => formatCurrency(r.totalWithGst || r.totalAmount) },
-    { title: 'PO', key: 'billFile', width: 120, render: (_, record) =>
+    { title: 'Basic Amount', dataIndex: 'totalAmount', align: 'right', responsive: ['lg'], sorter: (a, b) => Number(a.totalAmount) - Number(b.totalAmount), render: (value: number | string) => formatCurrency(value) },
+    { title: 'GST', key: 'gst', align: 'right', width: 100, responsive: ['xl'], render: (_, r) => (r.gstPercent ? `${Number(r.gstPercent)}%` : '-') },
+    { title: 'Total w/ GST', key: 'totalWithGst', align: 'right', width: 130, responsive: ['lg'], sorter: (a, b) => Number(a.totalWithGst || 0) - Number(b.totalWithGst || 0), render: (_, r) => formatCurrency(r.totalWithGst || r.totalAmount) },
+    { title: 'PO', key: 'billFile', width: 120, responsive: ['lg'], render: (_, record) =>
       record.billFileUrl ? <Button type="link" size="small" icon={<FilePdfOutlined />} href={record.billFileUrl} target="_blank">View PO</Button> : <Typography.Text type="secondary">—</Typography.Text>,
     },
-    { title: 'Fulfillment', key: 'fulfillment', width: 150, render: (_, record) => {
+    { title: 'Fulfillment', key: 'fulfillment', width: 150, responsive: ['xl'], render: (_, record) => {
       const totalQty = record.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0;
       const totalBilled = record.items?.reduce((sum, item) => sum + Number(item.billedQuantity || 0), 0) || 0;
       const percent = totalQty > 0 ? Math.round((totalBilled / totalQty) * 100) : 0;
@@ -289,7 +289,7 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         </Flex>
       );
     }},
-    { title: 'Created', dataIndex: 'createdAt', sorter: (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(), render: formatDate },
+    { title: 'Created', dataIndex: 'createdAt', responsive: ['lg'], sorter: (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(), render: formatDate },
     { title: 'Actions', key: 'actions', width: 100, render: (_, record) => (
       <Space>
         <Button type="text" icon={<EditOutlined className="text-blue-500" />} title="Edit" onClick={() => handleEdit(record)} />
@@ -311,8 +311,8 @@ export function PurchaseOrdersClient({ purchaseOrders, projects, vendors, itemDe
         </Button>
       </Flex>
 
-      <Card className={cardClassName}>
-        <Table dataSource={purchaseOrders} columns={columns} rowKey="id" size="middle" scroll={{ x: 1300 }} pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} POs` }} />
+      <Card className={cardClassName} styles={{ body: { padding: 0 } }}>
+        <Table dataSource={purchaseOrders} columns={columns} rowKey="id" size="middle" scroll={{ x: 'max-content' }} pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} POs` }} />
       </Card>
 
       <Drawer
